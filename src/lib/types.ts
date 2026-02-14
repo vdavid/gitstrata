@@ -26,13 +26,25 @@ export interface AnalysisResult {
 	days: DayStats[];
 }
 
+/** Categorized error types for user-facing messages */
+export type ErrorKind =
+	| 'not-found'
+	| 'auth-required'
+	| 'cors-proxy-down'
+	| 'network-lost'
+	| 'repo-too-large'
+	| 'indexeddb-full'
+	| 'cancelled'
+	| 'unknown';
+
 /** Progress updates from the worker */
 export type ProgressEvent =
 	| { type: 'clone'; phase: string; loaded: number; total: number }
 	| { type: 'process'; current: number; total: number; date: string }
 	| { type: 'day-result'; day: DayStats }
 	| { type: 'done'; result: AnalysisResult }
-	| { type: 'error'; message: string };
+	| { type: 'error'; message: string; kind: ErrorKind }
+	| { type: 'size-warning'; estimatedBytes: number };
 
 /** Definition for a recognized language in the registry */
 export interface LanguageDefinition {

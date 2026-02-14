@@ -42,7 +42,11 @@ export const cloneRepo = async (
 
 	// Ensure directory exists (lightning-fs supports promises.mkdir)
 	try {
-		const pfs = (fs as unknown as { promises: { mkdir: (path: string, opts?: { recursive?: boolean }) => Promise<void> } }).promises;
+		const pfs = (
+			fs as unknown as {
+				promises: { mkdir: (path: string, opts?: { recursive?: boolean }) => Promise<void> };
+			}
+		).promises;
 		await pfs.mkdir(dir, { recursive: true });
 	} catch {
 		// Directory may already exist

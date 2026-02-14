@@ -62,9 +62,7 @@ describe('parseRepoUrl', () => {
 	});
 
 	it('throws when path has no repo', () => {
-		expect(() => parseRepoUrl('https://github.com/onlyone')).toThrow(
-			'owner and repository name'
-		);
+		expect(() => parseRepoUrl('https://github.com/onlyone')).toThrow('owner and repository name');
 	});
 });
 

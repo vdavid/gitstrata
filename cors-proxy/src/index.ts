@@ -6,7 +6,7 @@ const corsHeaders = {
 	'Access-Control-Allow-Origin': '*',
 	'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
 	'Access-Control-Allow-Headers': 'Content-Type, Git-Protocol, Authorization',
-	'Access-Control-Expose-Headers': 'Content-Type, Content-Length',
+	'Access-Control-Expose-Headers': 'Content-Type, Content-Length'
 };
 
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
@@ -41,21 +41,36 @@ app.all('*', async (c) => {
 	}
 
 	// The target URL is everything after the proxy host's `/`
-	const targetUrl = c.req.path.slice(1) + (c.req.url.includes('?') ? '?' + c.req.url.split('?')[1] : '');
+	const targetUrl =
+		c.req.path.slice(1) + (c.req.url.includes('?') ? '?' + c.req.url.split('?')[1] : '');
 
 	if (!targetUrl || !targetUrl.startsWith('http')) {
-		return c.text('Missing or invalid target URL. Pass the full URL as the path.', 400, corsHeaders);
+		return c.text(
+			'Missing or invalid target URL. Pass the full URL as the path.',
+			400,
+			corsHeaders
+		);
 	}
 
 	if (!isAllowedGitPath(targetUrl)) {
-		return c.text('Forbidden. Only git protocol paths (/info/refs, /git-upload-pack) are allowed.', 403, corsHeaders);
+		return c.text(
+			'Forbidden. Only git protocol paths (/info/refs, /git-upload-pack) are allowed.',
+			403,
+			corsHeaders
+		);
 	}
 
 	const headers = new Headers();
 	for (const [key, value] of c.req.raw.headers.entries()) {
 		// Forward relevant headers, skip hop-by-hop and host headers
 		const lower = key.toLowerCase();
-		if (lower === 'host' || lower === 'cf-connecting-ip' || lower === 'cf-ray' || lower.startsWith('cf-')) continue;
+		if (
+			lower === 'host' ||
+			lower === 'cf-connecting-ip' ||
+			lower === 'cf-ray' ||
+			lower.startsWith('cf-')
+		)
+			continue;
 		headers.set(key, value);
 	}
 
@@ -65,21 +80,26 @@ app.all('*', async (c) => {
 			headers,
 			body: c.req.method !== 'GET' && c.req.method !== 'HEAD' ? c.req.raw.body : undefined,
 			// @ts-expect-error Cloudflare-specific option to disable following redirects
-			redirect: 'follow',
+			redirect: 'follow'
 		});
 
 		const responseHeaders = new Headers(corsHeaders);
 		for (const [key, value] of response.headers.entries()) {
 			const lower = key.toLowerCase();
 			// Pass through content headers
-			if (lower === 'content-type' || lower === 'content-length' || lower === 'content-encoding' || lower === 'cache-control') {
+			if (
+				lower === 'content-type' ||
+				lower === 'content-length' ||
+				lower === 'content-encoding' ||
+				lower === 'cache-control'
+			) {
 				responseHeaders.set(key, value);
 			}
 		}
 
 		return new Response(response.body, {
 			status: response.status,
-			headers: responseHeaders,
+			headers: responseHeaders
 		});
 	} catch (error) {
 		const message = error instanceof Error ? error.message : 'Unknown error';

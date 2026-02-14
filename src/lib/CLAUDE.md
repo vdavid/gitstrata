@@ -9,11 +9,13 @@ run client-side in a Web Worker.
 - `languages.ts` — Language registry (~35 languages), extension mapping, test file/dir pattern matching,
   Rust inline test detection. `.h` defaults to C but reassigns to C++ when `.cpp`/`.cc`/`.cxx` files exist.
 - `url.ts` — Repo URL parsing and normalization (GitHub/GitLab/Bitbucket, owner/repo shorthand)
-- `cache.ts` — IndexedDB results cache using `idb`
+- `cache.ts` — IndexedDB results cache using `idb`, with size tracking, LRU eviction (500 MB limit),
+  and `formatBytes` helper
 - `git/clone.ts` — Clone/fetch using isomorphic-git + lightning-fs, default branch detection via `getRemoteInfo`
 - `git/history.ts` — Commit log grouped by date, consecutive date generation, gap filling
 - `git/count.ts` — Line counting per commit tree, prod/test classification, blob dedup caching
-- `worker/analyzer.worker.ts` — Web Worker entry point (Comlink), orchestrates the full pipeline
+- `worker/analyzer.worker.ts` — Web Worker entry point (Comlink), orchestrates full pipeline and
+  incremental refresh (`analyzeIncremental` fetches only new commits, processes new days, merges)
 - `worker/analyzer.api.ts` — Comlink wrapper for main thread consumption
 
 ## Key patterns
@@ -23,3 +25,6 @@ run client-side in a Web Worker.
   avoids redundant classification
 - Date gaps are filled by carrying forward the previous day's stats with `comments: ["-"]`
 - Languages without test heuristics have no prod/test split (LanguageCount.prod/test stay undefined)
+- Cache exports backwards-compatible aliases (`cacheResult`, `getCachedResult`, etc.) alongside new
+  names (`saveResult`, `getResult`, `deleteRepo`, `clearAll`)
+- Incremental refresh: `analyzeIncremental` uses `git.fetch` + processes only days after last cached date

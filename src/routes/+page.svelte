@@ -3,9 +3,9 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { parseRepoUrl } from '$lib/url';
-	import { getCachedResult, cacheResult } from '$lib/cache';
+	import { getResult, saveResult } from '$lib/cache';
 	import { createAnalyzer, type AnalyzerHandle } from '$lib/worker/analyzer.api';
-	import type { AnalysisResult, DayStats, ProgressEvent } from '$lib/types';
+	import type { AnalysisResult, DayStats, ErrorKind, ProgressEvent } from '$lib/types';
 	import RepoInput from '$lib/components/RepoInput.svelte';
 	import CloneProgress from '$lib/components/CloneProgress.svelte';
 	import ProcessProgress from '$lib/components/ProcessProgress.svelte';
@@ -19,6 +19,7 @@
 
 	let phase = $state<Phase>('idle');
 	let errorMessage = $state('');
+	let errorKind = $state<ErrorKind>('unknown');
 
 	// Clone progress
 	let clonePhase = $state('');
@@ -48,6 +49,12 @@
 
 	// Share link feedback
 	let shareCopied = $state(false);
+
+	// Focus management: reference to progress area
+	let progressAreaEl: HTMLDivElement | undefined = $state();
+
+	// Last repo input for retry
+	let lastRepoInput = $state('');
 
 	// Read ?repo= from URL on initial load
 	const initialRepo = $derived.by(() => {
@@ -91,6 +98,7 @@
 	const resetState = () => {
 		phase = 'idle';
 		errorMessage = '';
+		errorKind = 'unknown';
 		clonePhase = '';
 		cloneLoaded = 0;
 		cloneTotal = 0;
@@ -142,12 +150,15 @@
 				stopTimer();
 				result = event.result;
 				phase = 'done';
-				cacheResult(event.result);
+				saveResult(event.result);
 				break;
 			case 'error':
 				stopTimer();
 				phase = 'error';
 				errorMessage = event.message;
+				errorKind = event.kind;
+				break;
+			case 'size-warning':
 				break;
 		}
 	};
@@ -175,13 +186,14 @@
 		// Cancel any running analysis
 		cancel();
 		resetState();
+		lastRepoInput = repoInput;
 
 		try {
 			const parsed = parseRepoUrl(repoInput);
 			updateQueryParam(repoInput);
 
 			// Check cache first
-			const cached = await getCachedResult(parsed.url);
+			const cached = await getResult(parsed.url);
 			if (cached) {
 				cachedResult = cached;
 				result = cached;
@@ -193,12 +205,19 @@
 			startTimer('clone');
 
 			analyzer = createAnalyzer();
+
+			// Move focus to progress area for screen readers
+			requestAnimationFrame(() => {
+				progressAreaEl?.focus();
+			});
+
 			await analyzer.analyze(repoInput, corsProxy, handleProgress);
 		} catch (e) {
 			stopTimer();
 			if (phase !== 'error') {
 				phase = 'error';
 				errorMessage = e instanceof Error ? e.message : 'Analysis failed';
+				errorKind = 'unknown';
 			}
 		}
 	};
@@ -206,16 +225,28 @@
 	const cancel = () => {
 		stopTimer();
 		if (analyzer) {
+			analyzer.cancel();
 			analyzer.terminate();
 			analyzer = undefined;
 		}
 		phase = 'idle';
 	};
 
+	const retry = () => {
+		if (lastRepoInput) {
+			startAnalysis(lastRepoInput);
+		}
+	};
+
 	const refresh = async () => {
 		if (!result) return;
-		cachedResult = undefined;
+		const previousResult = result;
 		const repoUrl = result.repoUrl;
+
+		// Keep showing cached results while refreshing
+		streamingDays = [...previousResult.days];
+		streamingLanguages = [...previousResult.detectedLanguages];
+		cachedResult = previousResult;
 		result = undefined;
 
 		phase = 'cloning';
@@ -223,12 +254,18 @@
 
 		try {
 			analyzer = createAnalyzer();
-			await analyzer.analyze(repoUrl, corsProxy, handleProgress);
+			await analyzer.analyzeIncremental(
+				repoUrl,
+				corsProxy,
+				previousResult,
+				handleProgress
+			);
 		} catch (e) {
 			stopTimer();
 			if (phase !== 'error') {
 				phase = 'error';
 				errorMessage = e instanceof Error ? e.message : 'Refresh failed';
+				errorKind = 'unknown';
 			}
 		}
 	};
@@ -239,6 +276,11 @@
 		setTimeout(() => (shareCopied = false), 2000);
 	};
 
+	/** Whether the error kind supports a retry button */
+	const retryable = $derived(
+		errorKind === 'cors-proxy-down' || errorKind === 'network-lost' || errorKind === 'unknown'
+	);
+
 	const displayDays = $derived(result?.days ?? streamingDays);
 	const displayLanguages = $derived(result?.detectedLanguages ?? streamingLanguages);
 	const isStreaming = $derived(phase === 'processing' && !result);
@@ -248,13 +290,15 @@
 	<title>git strata — see your codebase's heartbeat</title>
 </svelte:head>
 
-<div class="space-y-8">
+<div class="space-y-6 sm:space-y-8">
 	<!-- Hero section -->
 	<div class="text-center">
-		<h1 class="text-4xl font-bold tracking-tight text-[var(--color-text)] sm:text-5xl">
+		<h1
+			class="text-3xl font-bold tracking-tight text-[var(--color-text)] sm:text-4xl lg:text-5xl"
+		>
 			See your codebase's heartbeat
 		</h1>
-		<p class="mx-auto mt-3 max-w-xl text-lg text-[var(--color-text-secondary)]">
+		<p class="mx-auto mt-3 max-w-xl text-base text-[var(--color-text-secondary)] sm:text-lg">
 			Visualize how any public Git repository grows over time, broken down by language.
 			Everything runs in your browser.
 		</p>
@@ -277,40 +321,62 @@
 			role="alert"
 		>
 			<p class="text-sm text-[var(--color-error)]">{errorMessage}</p>
-			<button
-				onclick={() => (phase = 'idle')}
-				class="mt-2 text-sm text-[var(--color-accent)] hover:underline"
-			>
-				Try again
-			</button>
+			<div class="mt-2 flex items-center gap-3">
+				{#if retryable}
+					<button
+						onclick={retry}
+						class="rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-sm font-medium
+							text-white transition-colors hover:bg-[var(--color-accent-hover)]"
+					>
+						Retry
+					</button>
+				{/if}
+				<button
+					onclick={() => (phase = 'idle')}
+					class="text-sm text-[var(--color-accent)] hover:underline"
+				>
+					{retryable ? 'Cancel' : 'Try another repo'}
+				</button>
+			</div>
 		</div>
 	{/if}
 
-	<!-- Clone progress -->
-	{#if phase === 'cloning'}
-		<div class="mx-auto max-w-2xl">
-			<CloneProgress
-				phase={clonePhase}
-				loaded={cloneLoaded}
-				total={cloneTotal}
-				elapsedMs={cloneElapsed}
-				oncancel={cancel}
-			/>
-		</div>
-	{/if}
+	<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+	<!-- Progress area (focus target for screen readers) -->
+	<div
+		bind:this={progressAreaEl}
+		tabindex={-1}
+		class="outline-none"
+		role="status"
+		aria-live="polite"
+		aria-atomic="false"
+	>
+		<!-- Clone progress -->
+		{#if phase === 'cloning'}
+			<div class="mx-auto max-w-2xl">
+				<CloneProgress
+					phase={clonePhase}
+					loaded={cloneLoaded}
+					total={cloneTotal}
+					elapsedMs={cloneElapsed}
+					oncancel={cancel}
+				/>
+			</div>
+		{/if}
 
-	<!-- Process progress -->
-	{#if phase === 'processing'}
-		<div class="mx-auto max-w-2xl">
-			<ProcessProgress
-				current={processCurrent}
-				total={processTotal}
-				date={processDate}
-				elapsedMs={processElapsed}
-				oncancel={cancel}
-			/>
-		</div>
-	{/if}
+		<!-- Process progress -->
+		{#if phase === 'processing'}
+			<div class="mx-auto max-w-2xl">
+				<ProcessProgress
+					current={processCurrent}
+					total={processTotal}
+					date={processDate}
+					elapsedMs={processElapsed}
+					oncancel={cancel}
+				/>
+			</div>
+		{/if}
+	</div>
 
 	<!-- Results -->
 	{#if displayDays.length > 0}

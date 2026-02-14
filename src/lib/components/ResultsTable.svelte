@@ -79,6 +79,11 @@
 		return sortDir === 'asc' ? ' \u2191' : ' \u2193';
 	};
 
+	const ariaSort = (key: SortKey): 'ascending' | 'descending' | 'none' => {
+		if (sortKey !== key) return 'none';
+		return sortDir === 'asc' ? 'ascending' : 'descending';
+	};
+
 	// CSV generation
 	const generateCsv = (): string => {
 		const columns = ['date', ...visibleLanguages.map(langName)];
@@ -157,10 +162,10 @@
 	</div>
 
 	<div class="overflow-x-auto rounded-xl border border-[var(--color-border)]">
-		<table class="w-full text-sm">
+		<table class="w-full text-sm" aria-label="Lines of code by date and language">
 			<thead>
 				<tr class="border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
-					<th class="px-3 py-2 text-left font-medium text-[var(--color-text-secondary)]" scope="col">
+					<th class="px-3 py-2 text-left font-medium text-[var(--color-text-secondary)]" scope="col" aria-sort={ariaSort('date')}>
 						<button
 							class="hover:text-[var(--color-text)] transition-colors"
 							onclick={() => toggleSort('date')}
@@ -169,7 +174,7 @@
 						</button>
 					</th>
 					{#each visibleLanguages as langId}
-						<th class="px-3 py-2 text-right font-medium text-[var(--color-text-secondary)]" scope="col">
+						<th class="px-3 py-2 text-right font-medium text-[var(--color-text-secondary)]" scope="col" aria-sort={ariaSort(langId)}>
 							<button
 								class="hover:text-[var(--color-text)] transition-colors"
 								onclick={() => toggleSort(langId)}
@@ -179,7 +184,7 @@
 						</th>
 					{/each}
 					{#if hasOther}
-						<th class="px-3 py-2 text-right font-medium text-[var(--color-text-secondary)]" scope="col">
+						<th class="px-3 py-2 text-right font-medium text-[var(--color-text-secondary)]" scope="col" aria-sort={ariaSort('other')}>
 							<button
 								class="hover:text-[var(--color-text)] transition-colors"
 								onclick={() => toggleSort('other')}
@@ -188,7 +193,7 @@
 							</button>
 						</th>
 					{/if}
-					<th class="px-3 py-2 text-right font-medium text-[var(--color-text-secondary)]" scope="col">
+					<th class="px-3 py-2 text-right font-medium text-[var(--color-text-secondary)]" scope="col" aria-sort={ariaSort('total')}>
 						<button
 							class="hover:text-[var(--color-text)] transition-colors"
 							onclick={() => toggleSort('total')}

@@ -1,19 +1,22 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
-	import { listCachedRepos, deleteCachedResult, clearCache } from '$lib/cache';
+	import {
+		listCachedRepos,
+		deleteRepo,
+		clearAll,
+		getTotalSize,
+		formatBytes,
+		type CachedRepoInfo
+	} from '$lib/cache';
 
-	interface CachedRepo {
-		repoUrl: string;
-		analyzedAt: string;
-		lastAccessed: string;
-	}
-
-	let repos = $state<CachedRepo[]>([]);
+	let repos = $state<CachedRepoInfo[]>([]);
+	let totalSize = $state(0);
 	let expanded = $state(false);
 
 	const load = async () => {
 		if (!browser) return;
 		repos = await listCachedRepos();
+		totalSize = await getTotalSize();
 	};
 
 	$effect(() => {
@@ -21,12 +24,12 @@
 	});
 
 	const handleDelete = async (repoUrl: string) => {
-		await deleteCachedResult(repoUrl);
+		await deleteRepo(repoUrl);
 		await load();
 	};
 
 	const handleClearAll = async () => {
-		await clearCache();
+		await clearAll();
 		await load();
 	};
 
@@ -42,7 +45,6 @@
 		}
 	};
 
-	/** Extract owner/repo from a normalized URL */
 	const shortName = (url: string): string => {
 		try {
 			const parsed = new URL(url);
@@ -57,10 +59,12 @@
 	<div class="mx-auto max-w-2xl">
 		<button
 			onclick={() => (expanded = !expanded)}
+			aria-expanded={expanded}
 			class="text-sm text-[var(--color-text-secondary)] transition-colors
 				hover:text-[var(--color-text)]"
 		>
-			{expanded ? 'Hide' : 'Manage'} cached repos ({repos.length})
+			{expanded ? 'Hide' : 'Manage'} cached repos ({repos.length},
+			{formatBytes(totalSize)})
 		</button>
 
 		{#if expanded}
@@ -71,6 +75,9 @@
 				<div class="mb-3 flex items-center justify-between">
 					<p class="text-sm font-medium text-[var(--color-text)]">
 						Cached repos
+						<span class="font-normal text-[var(--color-text-tertiary)]">
+							({formatBytes(totalSize)} total)
+						</span>
 					</p>
 					<button
 						onclick={handleClearAll}
@@ -80,14 +87,16 @@
 					</button>
 				</div>
 				<ul class="space-y-2">
-					{#each repos as repo}
+					{#each repos as repo (repo.repoUrl)}
 						<li class="flex items-center justify-between gap-3 text-sm">
 							<div class="min-w-0 flex-1">
 								<p class="truncate font-mono text-[var(--color-text)]">
 									{shortName(repo.repoUrl)}
 								</p>
 								<p class="text-xs text-[var(--color-text-tertiary)]">
-									Analyzed {formatDate(repo.analyzedAt)}
+									Analyzed {formatDate(repo.analyzedAt)} · {formatBytes(
+										repo.sizeBytes
+									)}
 								</p>
 							</div>
 							<button

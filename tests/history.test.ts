@@ -4,13 +4,7 @@ import { generateConsecutiveDates, fillDateGaps, type DailyCommit } from '../src
 describe('generateConsecutiveDates', () => {
 	it('generates dates between start and end inclusive', () => {
 		const dates = generateConsecutiveDates('2024-01-01', '2024-01-05');
-		expect(dates).toEqual([
-			'2024-01-01',
-			'2024-01-02',
-			'2024-01-03',
-			'2024-01-04',
-			'2024-01-05'
-		]);
+		expect(dates).toEqual(['2024-01-01', '2024-01-02', '2024-01-03', '2024-01-04', '2024-01-05']);
 	});
 
 	it('returns single date when start equals end', () => {
@@ -65,9 +59,7 @@ describe('fillDateGaps', () => {
 	});
 
 	it('handles single commit', () => {
-		const commits: DailyCommit[] = [
-			{ date: '2024-01-15', hash: 'abc', messages: ['only'] }
-		];
+		const commits: DailyCommit[] = [{ date: '2024-01-15', hash: 'abc', messages: ['only'] }];
 		const result = fillDateGaps(commits);
 		expect(result).toHaveLength(1);
 		expect(result[0].commit?.hash).toBe('abc');

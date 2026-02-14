@@ -383,7 +383,7 @@
 
 <div class="space-y-3">
 	<!-- View toggles + reset zoom -->
-	<div class="flex flex-wrap items-center gap-2">
+	<div class="flex flex-wrap items-center gap-2" role="group" aria-label="Chart view mode">
 		{#each [
 			{ mode: 'all' as ViewMode, label: 'All' },
 			{ mode: 'prod-vs-test' as ViewMode, label: 'Prod vs test' },
@@ -391,6 +391,7 @@
 		] as toggle}
 			<button
 				onclick={() => (viewMode = toggle.mode)}
+				aria-pressed={viewMode === toggle.mode}
 				class="rounded-md px-3 py-1.5 text-sm font-medium transition-colors
 					{viewMode === toggle.mode
 					? 'bg-[var(--color-accent)] text-white'
@@ -410,7 +411,7 @@
 	</div>
 
 	<!-- Chart canvas -->
-	<div class="relative h-80 w-full sm:h-96 lg:h-[28rem]">
+	<div class="relative h-64 w-full sm:h-80 md:h-96 lg:h-[28rem] xl:h-[32rem]">
 		<canvas
 			bind:this={canvasEl}
 			aria-label={ariaLabel}

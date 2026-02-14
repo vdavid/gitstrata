@@ -8,6 +8,13 @@ export interface AnalyzerHandle {
 		corsProxy: string | undefined,
 		onProgress: (event: ProgressEvent) => void
 	) => Promise<AnalysisResult>;
+	analyzeIncremental: (
+		repoInput: string,
+		corsProxy: string | undefined,
+		cachedResult: AnalysisResult,
+		onProgress: (event: ProgressEvent) => void
+	) => Promise<AnalysisResult>;
+	cancel: () => void;
 	terminate: () => void;
 }
 
@@ -22,6 +29,17 @@ export const createAnalyzer = (): AnalyzerHandle => {
 	return {
 		analyze: async (repoInput, corsProxy, onProgress) => {
 			return api.analyze(repoInput, corsProxy, Comlink.proxy(onProgress));
+		},
+		analyzeIncremental: async (repoInput, corsProxy, cachedResult, onProgress) => {
+			return api.analyzeIncremental(
+				repoInput,
+				corsProxy,
+				cachedResult,
+				Comlink.proxy(onProgress)
+			);
+		},
+		cancel: () => {
+			api.cancel();
 		},
 		terminate: () => {
 			worker.terminate();

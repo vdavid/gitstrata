@@ -1,14 +1,7 @@
 import type { LanguageDefinition } from './types';
 
 /** Directory names that indicate test code (global defaults) */
-export const defaultTestDirPatterns = [
-	'test',
-	'tests',
-	'__tests__',
-	'e2e',
-	'testutil',
-	'testdata'
-];
+export const defaultTestDirPatterns = ['test', 'tests', '__tests__', 'e2e', 'testutil', 'testdata'];
 
 /**
  * Count lines inside Rust #[cfg(test)] blocks using brace-depth tracking.
@@ -295,9 +288,7 @@ export const getLanguages = (): readonly LanguageDefinition[] => languages;
  * Check if the repo has C++ files, and if so, reassign .h to C++.
  * Call this once per commit tree before processing files.
  */
-export const resolveHeaderLanguage = (
-	extensions: Set<string>
-): Map<string, LanguageDefinition> => {
+export const resolveHeaderLanguage = (extensions: Set<string>): Map<string, LanguageDefinition> => {
 	const map = new Map(extensionToLanguageMap);
 	const hasCpp = extensions.has('.cpp') || extensions.has('.cc') || extensions.has('.cxx');
 	if (hasCpp) {
