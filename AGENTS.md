@@ -41,16 +41,13 @@ Core structure:
 Run the smallest set of checks possible for efficiency while maintaining confidence.
 
 - Running a single test: `pnpm vitest run -t "<test_name>"`
-- Running all checks: `./scripts/check.sh`
-- Running specific checks: `./scripts/check.sh --check prettier` or `--check gofmt,go-vet`
+- Run all: `./scripts/check.sh`
+- Running specific checks: `./scripts/check.sh --check {prettier,eslint,svelte-check,vitest,pnpm-audit,gofmt,go-vet,staticcheck,go-tests}`
 - CI mode (no auto-fixing): `./scripts/check.sh --ci`
 - See also: `./scripts/check.sh --help`
 
-Available checks (can use `--check` with IDs or nicknames):
-
-- Frontend (SvelteKit): `prettier` → `eslint` → `svelte-check` → `vitest` (chain)
-- Frontend (pnpm): `pnpm-audit`
-- Scripts (Go): `gofmt` → `go-vet` → `staticcheck`, `go-tests` (depends on `go-vet`)
+Frontend (SvelteKit): `prettier` → `eslint` → `svelte-check` → `vitest` | `pnpm-audit`
+Scripts (Go): `gofmt` → `go-vet` → `go-tests` | `gofmt` → `staticcheck`
 
 ## TypeScript
 
