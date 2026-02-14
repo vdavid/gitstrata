@@ -28,7 +28,7 @@ Core structure:
     - `lib/types.ts` - Shared type definitions
     - `app.css` - Tailwind v4 import + CSS custom properties
 - `cors-proxy/` - Cloudflare Worker (Hono) — adds CORS headers, forwards bytes, zero compute
-- `scripts/` - Reference Go implementation (read-only, don't modify)
+- `scripts/` - Go-based check runner (`scripts/check/`) and reference LoC counter (read-only)
 - `static/` - Static assets
 - `tests/` - Unit tests (Vitest) and end-to-end tests (Playwright)
 - `docs/` - Dev docs
@@ -42,14 +42,15 @@ Run the smallest set of checks possible for efficiency while maintaining confide
 
 - Running a single test: `pnpm vitest run -t "<test_name>"`
 - Running all checks: `./scripts/check.sh`
+- Running specific checks: `./scripts/check.sh --check prettier` or `--check gofmt,go-vet`
+- CI mode (no auto-fixing): `./scripts/check.sh --ci`
+- See also: `./scripts/check.sh --help`
 
-Checks (will be updated when the check runner is created):
-- prettier
-- eslint
-- svelte-check
-- vitest
-- pnpm-audit
-- gofmt, go-vet, staticcheck (for Go scripts)
+Available checks (can use `--check` with IDs or nicknames):
+
+- Frontend (SvelteKit): `prettier` → `eslint` → `svelte-check` → `vitest` (chain)
+- Frontend (pnpm): `pnpm-audit`
+- Scripts (Go): `gofmt` → `go-vet` → `staticcheck`, `go-tests` (depends on `go-vet`)
 
 ## TypeScript
 
