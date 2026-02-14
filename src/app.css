@@ -1,0 +1,85 @@
+@import 'tailwindcss';
+
+/*
+ * Chart color palette — 12 visually distinct colors tested for color blindness.
+ * Each color has a main variant (for prod/light) and a tint (for test/lighter layers).
+ * Light and dark mode tokens are defined separately.
+ */
+
+:root {
+	/* chart colors (light mode) */
+	--chart-1: #2563eb;
+	--chart-1-tint: #93bbfd;
+	--chart-2: #16a34a;
+	--chart-2-tint: #86efac;
+	--chart-3: #dc2626;
+	--chart-3-tint: #fca5a5;
+	--chart-4: #9333ea;
+	--chart-4-tint: #d8b4fe;
+	--chart-5: #ea580c;
+	--chart-5-tint: #fdba74;
+	--chart-6: #0891b2;
+	--chart-6-tint: #67e8f9;
+	--chart-7: #ca8a04;
+	--chart-7-tint: #fde047;
+	--chart-8: #e11d48;
+	--chart-8-tint: #fda4af;
+	--chart-9: #4f46e5;
+	--chart-9-tint: #a5b4fc;
+	--chart-10: #059669;
+	--chart-10-tint: #6ee7b7;
+	--chart-11: #7c3aed;
+	--chart-11-tint: #c4b5fd;
+	--chart-12: #0284c7;
+	--chart-12-tint: #7dd3fc;
+	--chart-other: #d1d5db;
+	--chart-other-tint: #e5e7eb;
+
+	/* ui tokens (light mode) */
+	--color-bg: #ffffff;
+	--color-bg-secondary: #f9fafb;
+	--color-text: #111827;
+	--color-text-secondary: #6b7280;
+	--color-border: #e5e7eb;
+	--color-accent: #2563eb;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		/* chart colors (dark mode) — slightly more saturated for dark backgrounds */
+		--chart-1: #3b82f6;
+		--chart-1-tint: #1e40af;
+		--chart-2: #22c55e;
+		--chart-2-tint: #166534;
+		--chart-3: #ef4444;
+		--chart-3-tint: #991b1b;
+		--chart-4: #a855f7;
+		--chart-4-tint: #6b21a8;
+		--chart-5: #f97316;
+		--chart-5-tint: #9a3412;
+		--chart-6: #06b6d4;
+		--chart-6-tint: #155e75;
+		--chart-7: #eab308;
+		--chart-7-tint: #854d0e;
+		--chart-8: #f43f5e;
+		--chart-8-tint: #9f1239;
+		--chart-9: #6366f1;
+		--chart-9-tint: #3730a3;
+		--chart-10: #10b981;
+		--chart-10-tint: #065f46;
+		--chart-11: #8b5cf6;
+		--chart-11-tint: #5b21b6;
+		--chart-12: #0ea5e9;
+		--chart-12-tint: #075985;
+		--chart-other: #4b5563;
+		--chart-other-tint: #374151;
+
+		/* ui tokens (dark mode) */
+		--color-bg: #111827;
+		--color-bg-secondary: #1f2937;
+		--color-text: #f9fafb;
+		--color-text-secondary: #9ca3af;
+		--color-border: #374151;
+		--color-accent: #3b82f6;
+	}
+}

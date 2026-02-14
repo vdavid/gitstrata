@@ -3,7 +3,7 @@
 A free SaaS that visualizes how any public Git repository's codebase grows over time, broken down by language and
 prod/test — with **zero server-side compute**. All git operations and line counting happen in the user's browser.
 
-Working name: **git strata**. Tagline: *See your codebase's heartbeat.*
+Working name: **git strata**. Tagline: _See your codebase's heartbeat._
 
 ## Reference implementation
 
@@ -54,10 +54,10 @@ passes bytes through. Everything else runs client-side.
 
 ## Tech stack
 
-Pick the latest versions of these from NPM, NOT based on your training data! 
+Pick the latest versions of these from NPM, NOT based on your training data!
 
 | Component             | Technology                               |
-|-----------------------|------------------------------------------|
+| --------------------- | ---------------------------------------- |
 | Framework             | SvelteKit + Svelte 5 (static adapter)    |
 | Styling               | Tailwind CSS v4                          |
 | Git in browser        | isomorphic-git                           |
@@ -97,9 +97,9 @@ After the user submits a repo URL:
 
 - The input area stays visible at the top (user can cancel and enter a different repo).
 - Below it, a **progress section** appears:
-    - Progress bar with bytes received (for example: "Downloading... 12.4 MB / ~38 MB")
-    - Elapsed time
-    - "Cancel" button that immediately stops the clone and cleans up
+  - Progress bar with bytes received (for example: "Downloading... 12.4 MB / ~38 MB")
+  - Elapsed time
+  - "Cancel" button that immediately stops the clone and cleans up
 - If the repo was previously analyzed and cached, skip to phase 3 with a "Last analyzed: YYYY-MM-DD" badge and a
   "Refresh" button to re-clone.
 
@@ -107,17 +107,18 @@ After the user submits a repo URL:
 
 ```ts
 await git.clone({
-    fs,
-    http,
-    dir: `/${repoId}`,
-    url: repoUrl,
-    corsProxy: CORS_PROXY_URL,
-    singleBranch: true,
-    ref: defaultBranch, // 'main' or 'master', detect via git.getRemoteInfo2 first
-    onProgress: (event) => { /* update progress bar */
-    },
-    onAuth: () => ({ cancel: true }), // public repos only for now — fail fast on auth
-})
+	fs,
+	http,
+	dir: `/${repoId}`,
+	url: repoUrl,
+	corsProxy: CORS_PROXY_URL,
+	singleBranch: true,
+	ref: defaultBranch, // 'main' or 'master', detect via git.getRemoteInfo2 first
+	onProgress: (event) => {
+		/* update progress bar */
+	},
+	onAuth: () => ({ cancel: true }) // public repos only for now — fail fast on auth
+});
 ```
 
 **Default branch detection:** Before cloning, call `git.getRemoteInfo2({ http, corsProxy, url })` to discover the
@@ -128,9 +129,9 @@ default branch (`HEAD` symref). This avoids hardcoding `main`.
 After the clone is complete (or was cached):
 
 - Progress bar updates to show commit processing:
-    - "Processing commits... 142 / 387"
-    - Estimated time remaining (based on running average of time per commit)
-    - "Cancel" button
+  - "Processing commits... 142 / 387"
+  - Estimated time remaining (based on running average of time per commit)
+  - "Cancel" button
 - A **live preview chart** starts rendering as results come in — each processed day adds a data point. This gives the
   user something to look at while processing continues.
 
@@ -196,76 +197,76 @@ support a new language, just add an entry to the registry.
 
 ```ts
 interface LanguageDefinition {
-    /** Unique identifier, used as map key (e.g. 'python', 'cpp', 'rust') */
-    id: string
-    /** Display name (e.g. 'Python', 'C++', 'Rust') */
-    name: string
-    /** File extensions including the dot (e.g. ['.py', '.pyw']) */
-    extensions: string[]
-    /**
-     * Optional: filename patterns that identify test files for this language.
-     * Glob-style patterns matched against the basename.
-     * Example for Python: ['test_*.py', '*_test.py', 'conftest.py']
-     * Example for Go: ['*_test.go']
-     */
-    testFilePatterns?: string[]
-    /**
-     * Optional: directory names that indicate test code.
-     * Falls back to the global defaults: ['test', 'tests', '__tests__', 'e2e', 'testutil', 'testdata']
-     */
-    testDirPatterns?: string[]
-    /**
-     * Optional: a function that counts inline test lines within a prod file.
-     * Used for languages like Rust where tests live inside prod files (#[cfg(test)] blocks).
-     * Returns the number of lines that should be classified as test code.
-     */
-    countInlineTestLines?: (content: string) => number
-    /** Whether this is a "meta" category (like Docs or Config) rather than a programming language */
-    isMeta?: boolean
+	/** Unique identifier, used as map key (e.g. 'python', 'cpp', 'rust') */
+	id: string;
+	/** Display name (e.g. 'Python', 'C++', 'Rust') */
+	name: string;
+	/** File extensions including the dot (e.g. ['.py', '.pyw']) */
+	extensions: string[];
+	/**
+	 * Optional: filename patterns that identify test files for this language.
+	 * Glob-style patterns matched against the basename.
+	 * Example for Python: ['test_*.py', '*_test.py', 'conftest.py']
+	 * Example for Go: ['*_test.go']
+	 */
+	testFilePatterns?: string[];
+	/**
+	 * Optional: directory names that indicate test code.
+	 * Falls back to the global defaults: ['test', 'tests', '__tests__', 'e2e', 'testutil', 'testdata']
+	 */
+	testDirPatterns?: string[];
+	/**
+	 * Optional: a function that counts inline test lines within a prod file.
+	 * Used for languages like Rust where tests live inside prod files (#[cfg(test)] blocks).
+	 * Returns the number of lines that should be classified as test code.
+	 */
+	countInlineTestLines?: (content: string) => number;
+	/** Whether this is a "meta" category (like Docs or Config) rather than a programming language */
+	isMeta?: boolean;
 }
 ```
 
 **Included languages** (non-exhaustive, expand as needed):
 
-| Language       | Extensions                               | Test file heuristics                            |
-|----------------|------------------------------------------|-------------------------------------------------|
-| Python         | `.py`, `.pyw`                            | `test_*.py`, `*_test.py`, `conftest.py`         |
-| JavaScript     | `.js`, `.jsx`, `.mjs`, `.cjs`            | `*.test.js`, `*.spec.js`                        |
-| TypeScript     | `.ts`, `.tsx`, `.mts`, `.cts`            | `*.test.ts`, `*.spec.ts`, `*.test.tsx`          |
-| Rust           | `.rs`                                    | `#[cfg(test)]` inline detection + `tests/` dir  |
-| Go             | `.go`                                    | `*_test.go`                                     |
-| C              | `.c`, `.h`                               | Generic dir heuristic                           |
-| C++            | `.cpp`, `.cc`, `.cxx`, `.hpp`, `.hxx`    | Generic dir heuristic                           |
-| C#             | `.cs`                                    | `*Tests.cs`, `*Test.cs`                         |
-| Java           | `.java`                                  | `*Test.java`, `src/test/` dir                   |
-| Kotlin         | `.kt`, `.kts`                            | `*Test.kt`                                      |
-| Swift          | `.swift`                                 | `*Tests.swift`                                  |
-| Objective-C    | `.m`, `.mm`                              | Generic dir heuristic                           |
-| Zig            | `.zig`                                   | Generic dir heuristic                           |
-| Ruby           | `.rb`                                    | `*_test.rb`, `*_spec.rb`                        |
-| PHP            | `.php`                                   | `*Test.php`                                     |
-| Scala          | `.scala`                                 | `*Test.scala`, `*Spec.scala`                    |
-| Dart           | `.dart`                                  | `*_test.dart`                                   |
-| Elixir         | `.ex`, `.exs`                            | `*_test.exs`                                    |
-| Haskell        | `.hs`                                    | `*Spec.hs`                                      |
-| Lua            | `.lua`                                   | `*_test.lua`, `*_spec.lua`                      |
-| Perl           | `.pl`, `.pm`                             | `*.t`                                           |
-| R              | `.r`, `.R`                               | `test-*.R`, `test_*.R`                          |
-| Julia          | `.jl`                                    | Generic dir heuristic                           |
-| Clojure        | `.clj`, `.cljs`, `.cljc`                 | `*_test.clj`                                    |
-| Erlang         | `.erl`                                   | `*_SUITE.erl`                                   |
-| OCaml          | `.ml`, `.mli`                            | Generic dir heuristic                           |
-| F#             | `.fs`, `.fsx`                            | Generic dir heuristic                           |
-| Shell          | `.sh`, `.bash`, `.zsh`                   | Generic dir heuristic                           |
-| PowerShell     | `.ps1`, `.psm1`                          | `*.Tests.ps1`                                   |
-| HTML           | `.html`, `.htm`                          | —                                               |
-| CSS            | `.css`, `.scss`, `.sass`, `.less`        | —                                               |
-| SQL            | `.sql`                                   | —                                               |
-| Svelte         | `.svelte`                                | —                                               |
-| Vue            | `.vue`                                   | —                                               |
-| Astro          | `.astro`                                 | —                                               |
-| Docs           | `.md`, `.mdx`, `.rst`, `.txt`, `.adoc`   | — (meta category)                               |
-| Config/Data    | `.json`, `.yaml`, `.yml`, `.toml`, `.xml`, `.ini` | — (meta category)                       |
+| Language    | Extensions                                        | Test file heuristics                           |
+| ----------- | ------------------------------------------------- | ---------------------------------------------- |
+| Python      | `.py`, `.pyw`                                     | `test_*.py`, `*_test.py`, `conftest.py`        |
+| JavaScript  | `.js`, `.jsx`, `.mjs`, `.cjs`                     | `*.test.js`, `*.spec.js`                       |
+| TypeScript  | `.ts`, `.tsx`, `.mts`, `.cts`                     | `*.test.ts`, `*.spec.ts`, `*.test.tsx`         |
+| Rust        | `.rs`                                             | `#[cfg(test)]` inline detection + `tests/` dir |
+| Go          | `.go`                                             | `*_test.go`                                    |
+| C           | `.c`, `.h`                                        | Generic dir heuristic                          |
+| C++         | `.cpp`, `.cc`, `.cxx`, `.hpp`, `.hxx`             | Generic dir heuristic                          |
+| C#          | `.cs`                                             | `*Tests.cs`, `*Test.cs`                        |
+| Java        | `.java`                                           | `*Test.java`, `src/test/` dir                  |
+| Kotlin      | `.kt`, `.kts`                                     | `*Test.kt`                                     |
+| Swift       | `.swift`                                          | `*Tests.swift`                                 |
+| Objective-C | `.m`, `.mm`                                       | Generic dir heuristic                          |
+| Zig         | `.zig`                                            | Generic dir heuristic                          |
+| Ruby        | `.rb`                                             | `*_test.rb`, `*_spec.rb`                       |
+| PHP         | `.php`                                            | `*Test.php`                                    |
+| Scala       | `.scala`                                          | `*Test.scala`, `*Spec.scala`                   |
+| Dart        | `.dart`                                           | `*_test.dart`                                  |
+| Elixir      | `.ex`, `.exs`                                     | `*_test.exs`                                   |
+| Haskell     | `.hs`                                             | `*Spec.hs`                                     |
+| Lua         | `.lua`                                            | `*_test.lua`, `*_spec.lua`                     |
+| Perl        | `.pl`, `.pm`                                      | `*.t`                                          |
+| R           | `.r`, `.R`                                        | `test-*.R`, `test_*.R`                         |
+| Julia       | `.jl`                                             | Generic dir heuristic                          |
+| Clojure     | `.clj`, `.cljs`, `.cljc`                          | `*_test.clj`                                   |
+| Erlang      | `.erl`                                            | `*_SUITE.erl`                                  |
+| OCaml       | `.ml`, `.mli`                                     | Generic dir heuristic                          |
+| F#          | `.fs`, `.fsx`                                     | Generic dir heuristic                          |
+| Shell       | `.sh`, `.bash`, `.zsh`                            | Generic dir heuristic                          |
+| PowerShell  | `.ps1`, `.psm1`                                   | `*.Tests.ps1`                                  |
+| HTML        | `.html`, `.htm`                                   | —                                              |
+| CSS         | `.css`, `.scss`, `.sass`, `.less`                 | —                                              |
+| SQL         | `.sql`                                            | —                                              |
+| Svelte      | `.svelte`                                         | —                                              |
+| Vue         | `.vue`                                            | —                                              |
+| Astro       | `.astro`                                          | —                                              |
+| Docs        | `.md`, `.mdx`, `.rst`, `.txt`, `.adoc`            | — (meta category)                              |
+| Config/Data | `.json`, `.yaml`, `.yml`, `.toml`, `.xml`, `.ini` | — (meta category)                              |
 
 **Ambiguity handling:** `.h` is assigned to C by default. If the repo contains any `.cpp`/`.cc`/`.cxx` files, reassign
 all `.h` files to C++ instead (check once at the start of processing each commit's tree).
@@ -278,39 +279,39 @@ first match in registry order wins (but this is unlikely in practice).
 ```ts
 /** Line counts for a single language in a single day */
 interface LanguageCount {
-    /** Total lines (prod + test) */
-    total: number
-    /** Lines classified as production code (undefined if no prod/test heuristic exists) */
-    prod?: number
-    /** Lines classified as test code (undefined if no prod/test heuristic exists) */
-    test?: number
+	/** Total lines (prod + test) */
+	total: number;
+	/** Lines classified as production code (undefined if no prod/test heuristic exists) */
+	prod?: number;
+	/** Lines classified as test code (undefined if no prod/test heuristic exists) */
+	test?: number;
 }
 
 /** One row per calendar date */
 interface DayStats {
-    date: string                              // 'YYYY-MM-DD'
-    total: number                             // Sum of all languages
-    languages: Record<string, LanguageCount>  // Keyed by language id (e.g. 'python', 'rust')
-    comments: string[]                        // Commit messages for this day
+	date: string; // 'YYYY-MM-DD'
+	total: number; // Sum of all languages
+	languages: Record<string, LanguageCount>; // Keyed by language id (e.g. 'python', 'rust')
+	comments: string[]; // Commit messages for this day
 }
 
 /** Full analysis result, stored in cache */
 interface AnalysisResult {
-    repoUrl: string
-    defaultBranch: string
-    analyzedAt: string     // ISO 8601
-    /** Language ids that appear in this result, sorted by final-day line count descending */
-    detectedLanguages: string[]
-    days: DayStats[]
+	repoUrl: string;
+	defaultBranch: string;
+	analyzedAt: string; // ISO 8601
+	/** Language ids that appear in this result, sorted by final-day line count descending */
+	detectedLanguages: string[];
+	days: DayStats[];
 }
 
 /** Progress updates from the worker */
 type ProgressEvent =
-    | { type: 'clone'; phase: string; loaded: number; total: number }
-    | { type: 'process'; current: number; total: number; date: string }
-    | { type: 'day-result'; day: DayStats }   // for live chart preview
-    | { type: 'done'; result: AnalysisResult }
-    | { type: 'error'; message: string }
+	| { type: 'clone'; phase: string; loaded: number; total: number }
+	| { type: 'process'; current: number; total: number; date: string }
+	| { type: 'day-result'; day: DayStats } // for live chart preview
+	| { type: 'done'; result: AnalysisResult }
+	| { type: 'error'; message: string };
 ```
 
 ## CORS proxy
@@ -343,7 +344,7 @@ Use `git.log()` to get all commits on the default branch. Group by date (YYYY-MM
 day but collect all commit messages.
 
 ```ts
-const commits = await git.log({ fs, dir, ref: defaultBranch })
+const commits = await git.log({ fs, dir, ref: defaultBranch });
 // Group by date, keep first (latest) hash per date
 ```
 
@@ -352,20 +353,20 @@ const commits = await git.log({ fs, dir, ref: defaultBranch })
 For each day (in chronological order — important for live chart preview):
 
 1. `git.readTree({ fs, dir, oid: commitHash })` — get the recursive file tree
-    - Actually: resolve commit → tree, then walk recursively with `git.readTree`
+   - Actually: resolve commit → tree, then walk recursively with `git.readTree`
 2. For each file entry in the tree:
-    - Skip files matching `skipPatterns` (lock files, binary extensions — see `stats.go` for the base list)
-    - `git.readBlob({ fs, dir, oid: blobOid })` — get file content
-    - Skip binary content (check for null bytes in the first 8000 bytes)
-    - Match the file extension against the language registry to determine the language id
-    - Count total lines (count `\n` characters; add one if content doesn't end with `\n`)
-    - Determine prod vs test:
-        1. If the language has `countInlineTestLines`, call it to split inline test lines from prod
-        2. Else if the file matches the language's `testFilePatterns`, classify all lines as test
-        3. Else if any path segment matches `testDirPatterns` (or the global defaults), classify all lines as test
-        4. Otherwise, classify all lines as prod
-    - Accumulate into `DayStats.languages[languageId]`
-    - Files whose extension matches no registry entry go into the `"other"` bucket
+   - Skip files matching `skipPatterns` (lock files, binary extensions — see `stats.go` for the base list)
+   - `git.readBlob({ fs, dir, oid: blobOid })` — get file content
+   - Skip binary content (check for null bytes in the first 8000 bytes)
+   - Match the file extension against the language registry to determine the language id
+   - Count total lines (count `\n` characters; add one if content doesn't end with `\n`)
+   - Determine prod vs test:
+     1. If the language has `countInlineTestLines`, call it to split inline test lines from prod
+     2. Else if the file matches the language's `testFilePatterns`, classify all lines as test
+     3. Else if any path segment matches `testDirPatterns` (or the global defaults), classify all lines as test
+     4. Otherwise, classify all lines as prod
+   - Accumulate into `DayStats.languages[languageId]`
+   - Files whose extension matches no registry entry go into the `"other"` bucket
 3. Send a `day-result` progress event to the main thread so the chart updates live
 
 ### Step 3: Fill date gaps
@@ -381,7 +382,7 @@ Many files don't change between commits. The same blob OID appears across many d
 the worker's memory to avoid redundant reads from IndexedDB. This is the single biggest optimization — it mirrors the
 Go tool's use of `git cat-file --batch` which deduplicates naturally.
 
-Also cache the *line count and category* per `(blobOid, filePath)` tuple, not just the content. That way, if the same
+Also cache the _line count and category_ per `(blobOid, filePath)` tuple, not just the content. That way, if the same
 blob appears in the same path across multiple commits, you skip both the read and the count.
 
 ## Caching strategy
@@ -440,7 +441,7 @@ Both the clone phase and the processing phase must be immediately cancelable:
 ## Error handling
 
 | Error                   | User-facing message                                                                       | Recovery              |
-|-------------------------|-------------------------------------------------------------------------------------------|-----------------------|
+| ----------------------- | ----------------------------------------------------------------------------------------- | --------------------- |
 | Repo not found (404)    | "Couldn't find this repository. Check the URL and make sure it's public."                 | Show input again      |
 | Auth required (401/403) | "This looks like a private repository. Git strata only supports public repos for now."    | Show input            |
 | CORS proxy down         | "Our download proxy is temporarily unavailable. Please try again in a moment."            | Retry button          |
@@ -461,9 +462,9 @@ pnpm build    # outputs to build/
 Configure in `svelte.config.js`:
 
 ```js
-import adapter from '@sveltejs/adapter-static'
+import adapter from '@sveltejs/adapter-static';
 
-export default { kit: { adapter: adapter() } }
+export default { kit: { adapter: adapter() } };
 ```
 
 ### CORS proxy
@@ -477,7 +478,7 @@ cd cors-proxy && pnpm run deploy
 ### Environment variables
 
 | Variable                | Where           | Purpose                              |
-|-------------------------|-----------------|--------------------------------------|
+| ----------------------- | --------------- | ------------------------------------ |
 | `PUBLIC_CORS_PROXY_URL` | Frontend (.env) | URL of the CORS proxy                |
 | `PUBLIC_ANALYTICS_ID`   | Frontend (.env) | Optional analytics (Plausible, etc.) |
 

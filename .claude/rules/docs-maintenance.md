@@ -1,6 +1,6 @@
 ---
 paths:
-  - "**"
+  - '**'
 ---
 
 When modifying code in a directory that contains a `CLAUDE.md` file, check whether your changes affect the documented

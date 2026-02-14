@@ -4,9 +4,10 @@ git strata is a browser-native LoC counter — a free SaaS that visualizes how a
 grows over time, broken down by language and prod/test. All git operations and line counting happen client-side in Web
 Workers. The only server component is a minimal CORS proxy that forwards bytes.
 
-Working name: **git strata**. Tagline: *See your codebase's heartbeat.*
+Working name: **git strata**. Tagline: _See your codebase's heartbeat._
 
 Running:
+
 - Dev server: `pnpm dev`
 - Prod build: `pnpm build`
 
@@ -18,22 +19,22 @@ static adapter. Package manager: pnpm.
 Core structure:
 
 - `src/` - SvelteKit frontend
-    - `routes/` - Single-page app (one route)
-    - `lib/components/` - Svelte components (RepoInput, CloneProgress, ResultsChart, etc.)
-    - `lib/worker/` - Web Worker entry point and Comlink-wrapped API
-    - `lib/git/` - Clone, history, and line counting logic (runs in the worker)
-    - `lib/languages.ts` - Language registry: extensions, test patterns, inline detectors
-    - `lib/cache.ts` - IndexedDB results cache
-    - `lib/url.ts` - Repo URL parsing and normalization
-    - `lib/types.ts` - Shared type definitions
-    - `app.css` - Tailwind v4 import + CSS custom properties
+  - `routes/` - Single-page app (one route)
+  - `lib/components/` - Svelte components (RepoInput, CloneProgress, ResultsChart, etc.)
+  - `lib/worker/` - Web Worker entry point and Comlink-wrapped API
+  - `lib/git/` - Clone, history, and line counting logic (runs in the worker)
+  - `lib/languages.ts` - Language registry: extensions, test patterns, inline detectors
+  - `lib/cache.ts` - IndexedDB results cache
+  - `lib/url.ts` - Repo URL parsing and normalization
+  - `lib/types.ts` - Shared type definitions
+  - `app.css` - Tailwind v4 import + CSS custom properties
 - `cors-proxy/` - Cloudflare Worker (Hono) — adds CORS headers, forwards bytes, zero compute
 - `scripts/` - Go-based check runner (`scripts/check/`) and reference LoC counter (read-only)
 - `static/` - Static assets
 - `tests/` - Unit tests (Vitest) and end-to-end tests (Playwright)
 - `docs/` - Dev docs
-    - `specs/` - Feature plans and specs
-    - `style-guide.md` - Writing and code style rules
+  - `specs/` - Feature plans and specs
+  - `style-guide.md` - Writing and code style rules
 - `spec.md` - Product spec
 
 ## Testing and checking
