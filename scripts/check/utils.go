@@ -7,7 +7,7 @@ import (
 )
 
 // findRootDir finds the project root directory.
-// Looks for package.json + svelte.config.js together.
+// Looks for AGENTS.md (always present) with a scripts/ directory.
 func findRootDir() (string, error) {
 	dir, err := os.Getwd()
 	if err != nil {
@@ -15,17 +15,17 @@ func findRootDir() (string, error) {
 	}
 
 	for {
-		packageJSON := filepath.Join(dir, "package.json")
-		svelteConfig := filepath.Join(dir, "svelte.config.js")
-		_, errPkg := os.Stat(packageJSON)
-		_, errSvelte := os.Stat(svelteConfig)
-		if errPkg == nil && errSvelte == nil {
+		agentsMd := filepath.Join(dir, "AGENTS.md")
+		scriptsDir := filepath.Join(dir, "scripts")
+		_, errAgents := os.Stat(agentsMd)
+		info, errScripts := os.Stat(scriptsDir)
+		if errAgents == nil && errScripts == nil && info.IsDir() {
 			return dir, nil
 		}
 
 		parent := filepath.Dir(dir)
 		if parent == dir {
-			return "", fmt.Errorf("could not find project root (looking for package.json + svelte.config.js)")
+			return "", fmt.Errorf("could not find project root (looking for AGENTS.md + scripts/)")
 		}
 		dir = parent
 	}
