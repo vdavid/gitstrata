@@ -37,5 +37,15 @@
 		"typescript-eslint": "^8.55.0",
 		"vite": "^7.3.1",
 		"vitest": "^4.0.18"
+	},
+	"dependencies": {
+		"@isomorphic-git/lightning-fs": "^4.6.2",
+		"chart.js": "^4.5.1",
+		"chartjs-adapter-date-fns": "^3.0.0",
+		"chartjs-plugin-zoom": "^2.2.0",
+		"comlink": "^4.4.2",
+		"date-fns": "^4.1.0",
+		"idb": "^8.0.3",
+		"isomorphic-git": "^1.37.1"
 	}
 }
