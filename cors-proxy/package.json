@@ -1,0 +1,16 @@
+{
+	"name": "git-strata-cors-proxy",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "wrangler dev",
+		"deploy": "wrangler deploy"
+	},
+	"dependencies": {
+		"hono": "^4.11.9"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "^4.20260214.0",
+		"wrangler": "^4.65.0"
+	}
+}
