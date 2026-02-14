@@ -1,4 +1,4 @@
-import git, { type ReadCommitResult } from 'isomorphic-git';
+import git, { type FsClient, type ReadCommitResult } from 'isomorphic-git';
 
 /** A commit grouped by date, keeping the latest hash and all messages */
 export interface DailyCommit {
@@ -13,7 +13,7 @@ export interface DailyCommit {
  * Keeps the latest commit hash per day but collects all messages.
  */
 export const getCommitsByDate = async (options: {
-	fs: typeof import('@isomorphic-git/lightning-fs').default.prototype;
+	fs: FsClient;
 	dir: string;
 	ref: string;
 }): Promise<DailyCommit[]> => {

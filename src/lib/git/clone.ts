@@ -1,11 +1,11 @@
-import git from 'isomorphic-git';
+import git, { type FsClient } from 'isomorphic-git';
 import http from 'isomorphic-git/http/web';
 import type { ProgressEvent } from '../types';
 
 const defaultCorsProxy = 'https://cors.isomorphic-git.org';
 
 export interface CloneOptions {
-	fs: typeof import('@isomorphic-git/lightning-fs').default.prototype;
+	fs: FsClient;
 	dir: string;
 	url: string;
 	corsProxy?: string;
@@ -18,19 +18,19 @@ export const detectDefaultBranch = async (options: {
 	url: string;
 	corsProxy?: string;
 }): Promise<string> => {
-	const info = await git.getRemoteInfo2({
+	const info = await git.getRemoteInfo({
 		http,
 		corsProxy: options.corsProxy ?? defaultCorsProxy,
 		url: options.url
 	});
-	// HEAD symref is the default branch
+	// HEAD is the default branch name
 	if (info.HEAD) {
 		return info.HEAD;
 	}
 	// Fallback: try common names
-	const refs = info.refs?.heads ?? {};
-	if ('main' in refs) return 'main';
-	if ('master' in refs) return 'master';
+	const heads = info.heads ?? {};
+	if ('main' in heads) return 'main';
+	if ('master' in heads) return 'master';
 	throw new Error('Could not detect default branch');
 };
 
@@ -40,9 +40,10 @@ export const cloneRepo = async (
 ): Promise<void> => {
 	const { fs, dir, url, corsProxy, defaultBranch, onProgress, signal } = options;
 
-	// Ensure directory exists
+	// Ensure directory exists (lightning-fs supports promises.mkdir)
 	try {
-		await fs.promises.mkdir(dir, { recursive: true });
+		const pfs = (fs as unknown as { promises: { mkdir: (path: string, opts?: { recursive?: boolean }) => Promise<void> } }).promises;
+		await pfs.mkdir(dir, { recursive: true });
 	} catch {
 		// Directory may already exist
 	}

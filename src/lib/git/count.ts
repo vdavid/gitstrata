@@ -1,4 +1,4 @@
-import git from 'isomorphic-git';
+import git, { type FsClient } from 'isomorphic-git';
 import type { LanguageDefinition } from '../types';
 import type { DayStats, LanguageCount } from '../types';
 import {
@@ -124,7 +124,7 @@ interface FileEntry {
 
 /** Walk a commit tree and return all blob entries */
 const listFilesAtCommit = async (options: {
-	fs: typeof import('@isomorphic-git/lightning-fs').default.prototype;
+	fs: FsClient;
 	dir: string;
 	commitOid: string;
 }): Promise<FileEntry[]> => {
@@ -156,7 +156,7 @@ const listFilesAtCommit = async (options: {
 };
 
 export interface CountOptions {
-	fs: typeof import('@isomorphic-git/lightning-fs').default.prototype;
+	fs: FsClient;
 	dir: string;
 	commitOid: string;
 	/** Blob result cache (shared across days for dedup) */
