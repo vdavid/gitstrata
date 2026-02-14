@@ -3,7 +3,6 @@ import type { LanguageDefinition } from '../types';
 import type { DayStats, LanguageCount } from '../types';
 import {
 	defaultTestDirPatterns,
-	getLanguageByExtension,
 	isInTestDir,
 	isTestFile,
 	resolveHeaderLanguage
@@ -228,7 +227,7 @@ export const countLinesForCommit = async (
 		const cached = blobCache.get(cacheKey);
 		if (cached) {
 			if (cached.languageId) {
-				if (cached.testLines > 0 || (cached.lines - cached.testLines) > 0) {
+				if (cached.testLines > 0 || cached.lines - cached.testLines > 0) {
 					addToLanguage(cached.languageId, cached.lines - cached.testLines, cached.testLines);
 				}
 			}
@@ -273,7 +272,11 @@ export const countLinesForCommit = async (
 		});
 
 		if (classification.hasSplit) {
-			addToLanguage(langId, classification.lines - classification.testLines, classification.testLines);
+			addToLanguage(
+				langId,
+				classification.lines - classification.testLines,
+				classification.testLines
+			);
 		} else {
 			addToLanguageNoSplit(langId, classification.lines);
 		}
@@ -313,7 +316,11 @@ const classifyFile = (
 	}
 
 	// 4. Default: all prod (if language has any test heuristic, mark as prod)
-	const hasTestHeuristic = !!(lang.testFilePatterns || lang.testDirPatterns || lang.countInlineTestLines);
+	const hasTestHeuristic = !!(
+		lang.testFilePatterns ||
+		lang.testDirPatterns ||
+		lang.countInlineTestLines
+	);
 	if (hasTestHeuristic) {
 		return { lines, testLines: 0, hasSplit: true };
 	}
