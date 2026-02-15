@@ -60,6 +60,12 @@
 	// Focus management: reference to progress area
 	let progressAreaEl: HTMLDivElement | undefined = $state();
 
+	// Tig→git swap animation refs
+	let tigGroupEl: HTMLSpanElement | undefined = $state();
+	let tigTEl: HTMLSpanElement | undefined = $state();
+	let tigIEl: HTMLSpanElement | undefined = $state();
+	let tigGEl: HTMLSpanElement | undefined = $state();
+
 	// Last repo input for retry
 	let lastRepoInput = $state('');
 
@@ -80,6 +86,24 @@
 			hasAutoStarted = true;
 			startAnalysis(initialRepo);
 		}
+	});
+
+	// Measure tig character widths after fonts load, so the swap animation is pixel-perfect
+	$effect(() => {
+		if (!tigGroupEl || !tigTEl || !tigIEl || !tigGEl) return;
+		const group = tigGroupEl;
+		const t = tigTEl;
+		const i = tigIEl;
+		const g = tigGEl;
+		document.fonts.ready.then(() => {
+			const fontSize = parseFloat(getComputedStyle(t).fontSize);
+			const wt = t.getBoundingClientRect().width;
+			const wi = i.getBoundingClientRect().width;
+			const wg = g.getBoundingClientRect().width;
+			group.style.setProperty('--tig-dt', `${(wi + wg) / fontSize}em`);
+			group.style.setProperty('--tig-dg', `${(wt + wi) / fontSize}em`);
+			group.style.setProperty('--tig-di', `${(wg - wt) / fontSize}em`);
+		});
 	});
 
 	const startTimer = (kind: 'clone' | 'process') => {
@@ -334,7 +358,7 @@
 </script>
 
 <svelte:head>
-	<title>git strata -- see your codebase's heartbeat</title>
+	<title>git strata -- stratigraphy for your code</title>
 </svelte:head>
 
 <div class="space-y-8 sm:space-y-10">
@@ -342,19 +366,16 @@
 	<div class="relative py-4 text-center sm:py-6">
 		<div class="strata-hero-lines"></div>
 		<div class="relative">
+			<!-- prettier-ignore -->
 			<h1
 				class="text-3xl font-bold tracking-tight text-[var(--color-text)] sm:text-4xl lg:text-5xl"
 				style="font-family: var(--font-sans); letter-spacing: -0.025em;"
-			>
-				See your codebase's
-				<span class="text-[var(--color-accent)]">heartbeat</span>
-			</h1>
+			>Stra<span class="tig-group" bind:this={tigGroupEl}><span class="tig-char tig-t text-[var(--color-accent)]" bind:this={tigTEl}>t</span><span class="tig-char tig-i text-[var(--color-accent)]" bind:this={tigIEl}>i</span><span class="tig-char tig-g text-[var(--color-accent)]" bind:this={tigGEl}>g</span></span>raphy for your code</h1>
 			<p
 				class="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-[var(--color-text-secondary)] sm:text-base"
 				style="font-family: var(--font-sans);"
 			>
-				Visualize how any public Git repository grows over time, broken down by language. Everything
-				runs in your browser.
+				Visualize how any public git repo grew over time, broken down by language. Runs in your browser.
 			</p>
 		</div>
 	</div>

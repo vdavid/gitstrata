@@ -1,10 +1,8 @@
 # git strata
 
-git strata is a browser-native LoC counter — a free SaaS that visualizes how any public Git repository's codebase
+Git strata is a browser-native LoC counter — a free SaaS that visualizes how any public Git repository's codebase
 grows over time, broken down by language and prod/test. All git operations and line counting happen client-side in Web
 Workers. The only server component is a minimal CORS proxy that forwards bytes.
-
-Working name: **git strata**. Tagline: _See your codebase's heartbeat._
 
 Running:
 

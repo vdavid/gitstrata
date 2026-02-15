@@ -505,6 +505,46 @@ body::before {
 	-webkit-mask-image: radial-gradient(ellipse at 50% 50%, black 0%, transparent 70%);
 }
 
+/* tig→git letter swap animation in hero heading */
+@property --tig-swap {
+	syntax: '<number>';
+	initial-value: 0;
+	inherits: true;
+}
+
+.tig-group {
+	display: inline;
+	animation: tig-swap-anim 2s linear 5s forwards;
+}
+
+@keyframes tig-swap-anim {
+	to {
+		--tig-swap: 1;
+	}
+}
+
+.tig-char {
+	display: inline-block;
+}
+
+.tig-t {
+	transform: translate(
+		calc(var(--tig-dt, 0px) * (1 - cos(calc(var(--tig-swap) * 180deg))) / 2),
+		calc(-0.4em * sin(calc(var(--tig-swap) * 180deg)))
+	);
+}
+
+.tig-g {
+	transform: translate(
+		calc(var(--tig-dg, 0px) * (cos(calc(var(--tig-swap) * 180deg)) - 1) / 2),
+		calc(0.4em * sin(calc(var(--tig-swap) * 180deg)))
+	);
+}
+
+.tig-i {
+	transform: translateX(calc(var(--tig-di, 0px) * (1 - cos(calc(var(--tig-swap) * 180deg))) / 2));
+}
+
 /* Scrollbar styling for tables */
 .strata-scroll::-webkit-scrollbar {
 	height: 6px;
@@ -524,23 +564,26 @@ body::before {
 	background: var(--color-text-tertiary);
 }
 
-/* Pipeline step indicator */
-.pipeline-steps {
-	display: flex;
-	align-items: center;
-	gap: 0;
+/* Phase log — vertical step indicator */
+.phase-log {
 	list-style: none;
 	padding: 0;
 	margin: 0;
 }
 
-.pipeline-step {
-	display: flex;
-	align-items: center;
-	gap: 6px;
+.phase-row {
+	display: grid;
+	grid-template-columns: 16px 1fr;
+	column-gap: 10px;
 }
 
-.pipeline-dot {
+.phase-indicator {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+
+.phase-dot {
 	width: 16px;
 	height: 16px;
 	border-radius: 50%;
@@ -551,54 +594,221 @@ body::before {
 	transition: all var(--duration-fast) var(--ease-out-expo);
 }
 
-.pipeline-step--done .pipeline-dot {
+.phase-dot--done {
 	background-color: var(--color-success);
 	color: #fff;
 }
 
-.pipeline-step--active .pipeline-dot {
+.phase-dot--active {
 	background-color: var(--color-accent);
 	animation: strata-pulse 2s ease-in-out infinite;
 }
 
-.pipeline-step--pending .pipeline-dot {
+.phase-dot--pending {
 	background-color: transparent;
 	border: 1.5px solid var(--color-border);
 }
 
-.pipeline-label {
-	font-family: var(--font-sans);
-	font-size: 0.75rem;
-	font-weight: 500;
-	letter-spacing: 0.01em;
-}
-
-.pipeline-step--done .pipeline-label {
-	color: var(--color-success);
-}
-
-.pipeline-step--active .pipeline-label {
-	color: var(--color-text);
-}
-
-.pipeline-step--pending .pipeline-label {
-	color: var(--color-text-tertiary);
-}
-
-.pipeline-connector {
-	display: flex;
-	align-items: center;
-	padding: 0 8px;
-	list-style: none;
-}
-
-.pipeline-line {
-	width: 24px;
-	height: 1.5px;
+.phase-connector {
+	width: 1.5px;
+	flex: 1;
 	background-color: var(--color-border);
 	transition: background-color var(--duration-fast) var(--ease-out-expo);
 }
 
-.pipeline-line--done {
+.phase-connector--done {
 	background-color: var(--color-success);
+}
+
+.phase-content {
+	padding-bottom: 12px;
+	min-height: 28px;
+}
+
+.phase-content--last {
+	padding-bottom: 0;
+}
+
+.phase-header {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 12px;
+	min-height: 16px;
+}
+
+.phase-label {
+	font-family: var(--font-sans);
+	font-size: 0.75rem;
+	font-weight: 500;
+	letter-spacing: 0.01em;
+	white-space: nowrap;
+}
+
+.phase-label--done {
+	color: var(--color-success);
+}
+
+.phase-label--active {
+	color: var(--color-text);
+}
+
+.phase-label--pending {
+	color: var(--color-text-tertiary);
+}
+
+.phase-detail {
+	font-family: var(--font-mono);
+	font-size: 0.6875rem;
+	font-variant-numeric: tabular-nums;
+	letter-spacing: 0.02em;
+	color: var(--color-text-tertiary);
+	white-space: nowrap;
+}
+
+.phase-eta {
+	display: block;
+	margin-top: 4px;
+	font-family: var(--font-mono);
+	font-size: 0.625rem;
+	font-variant-numeric: tabular-nums;
+	letter-spacing: 0.02em;
+	color: var(--color-text-tertiary);
+}
+
+/* Phase label group — wraps label, elapsed time, and info icon inline */
+.phase-label-group {
+	display: flex;
+	align-items: baseline;
+	gap: 6px;
+	flex-shrink: 1;
+	min-width: 0;
+}
+
+/* Per-phase elapsed time */
+.phase-elapsed {
+	font-family: var(--font-mono);
+	font-size: 0.625rem;
+	font-variant-numeric: tabular-nums;
+	letter-spacing: 0.02em;
+	white-space: nowrap;
+}
+
+.phase-elapsed--active {
+	color: var(--color-accent);
+}
+
+.phase-elapsed--done {
+	color: var(--color-text-tertiary);
+}
+
+/* Info icon button */
+.phase-info-anchor {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+}
+
+.phase-info-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 20px;
+	height: 20px;
+	padding: 0;
+	border: none;
+	background: none;
+	color: var(--color-text-tertiary);
+	cursor: pointer;
+	border-radius: 50%;
+	transition: color var(--duration-fast) var(--ease-out-expo);
+}
+
+.phase-info-btn:hover {
+	color: var(--color-accent);
+}
+
+/* Fade-in animation for info icon when phase becomes active */
+@keyframes phase-info-appear {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+.phase-info-fade-in {
+	animation: phase-info-appear var(--duration-slow) var(--ease-out-expo) both;
+}
+
+/* Info popup */
+.phase-info-popup {
+	position: absolute;
+	top: calc(100% + 6px);
+	left: -4px;
+	z-index: 10;
+	width: 320px;
+	padding: 12px 14px;
+	background-color: var(--color-surface-raised);
+	border: 1px solid var(--color-border);
+	border-radius: 8px;
+	animation: strata-fade-in var(--duration-fast) var(--ease-out-expo) both;
+}
+
+.phase-info-popup p {
+	margin: 0 0 8px;
+	font-family: var(--font-sans);
+	font-size: 0.75rem;
+	line-height: 1.5;
+	color: var(--color-text-secondary);
+}
+
+.phase-info-popup p:last-child {
+	margin-bottom: 0;
+}
+
+.phase-info-popup strong {
+	color: var(--color-text);
+	font-weight: 600;
+}
+
+.phase-info-stat {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	margin-top: 6px;
+	padding: 4px 10px;
+	font-family: var(--font-mono);
+	font-size: 0.6875rem;
+	font-variant-numeric: tabular-nums;
+	letter-spacing: 0.02em;
+	color: var(--color-text-secondary);
+	background-color: var(--color-bg-secondary);
+	border: 1px solid var(--color-border);
+	border-radius: 999px;
+}
+
+.phase-info-stat-value {
+	color: var(--color-accent);
+	font-weight: 500;
+}
+
+/* Footer total time */
+.phase-footer-time {
+	display: inline-flex;
+	align-items: baseline;
+	gap: 4px;
+	font-size: 0.6875rem;
+	letter-spacing: 0.02em;
+	color: var(--color-text-tertiary);
+}
+
+.phase-footer-label {
+	font-family: var(--font-sans);
+}
+
+.phase-footer-value {
+	font-family: var(--font-mono);
+	font-variant-numeric: tabular-nums;
 }

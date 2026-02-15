@@ -3,7 +3,7 @@
 A free SaaS that visualizes how any public Git repository's codebase grows over time, broken down by language and
 prod/test — with **zero server-side compute**. All git operations and line counting happen in the user's browser.
 
-Working name: **git strata**. Tagline: _See your codebase's heartbeat._
+Working name: **git strata**. Tagline: _Stratigraphy for your code._
 
 ## Reference implementation
 
@@ -76,7 +76,7 @@ All deps must have MIT or similarly permissive licenses.
 
 A single-page app. Clean, minimal. Three elements above the fold:
 
-1. **Headline**: "See your codebase's heartbeat" with one-sentence description.
+1. **Headline**: "Stratigraphy for your code" with one-sentence description.
 2. **Repo URL input**: Text field with placeholder `Example: https://github.com/sveltejs/svelte`. Next to it, an
    "Analyze" button. Submitting also works with Enter.
 3. **Quick examples**: Three clickable repo links below the input (pick well-known repos of different sizes: one small,

@@ -5,12 +5,21 @@ import { Buffer } from 'buffer';
 import * as Comlink from 'comlink';
 import git from 'isomorphic-git';
 import LightningFS from '@isomorphic-git/lightning-fs';
+import { configureSync, getConsoleSink, getLogger } from '@logtape/logtape';
 import type { AnalysisResult, DayStats, ErrorKind, ProgressEvent } from '../types';
 import { cloneRepo, detectDefaultBranch, fetchRepo } from '../git/clone';
 import { fillDateGaps, getCommitsByDate } from '../git/history';
 import { countLinesForCommit, countLinesForCommitIncremental } from '../git/count';
 import type { FileState } from '../git/count';
 import { parseRepoUrl, repoToDir } from '../url';
+
+// Configure LogTape for the worker context
+configureSync({
+	sinks: { console: getConsoleSink() },
+	loggers: [{ category: 'git-strata', lowestLevel: 'debug', sinks: ['console'] }]
+});
+
+const logger = getLogger(['git-strata', 'pipeline']);
 
 type ProgressCallback = (event: ProgressEvent) => void;
 
@@ -84,14 +93,21 @@ const analyzerApi = {
 		try {
 			// Step 1: Detect default branch
 			onProgress({ type: 'clone', phase: 'Detecting default branch...', loaded: 0, total: 0 });
+			logger.info('Starting: detect default branch for {url}', { url: parsed.url });
 			const defaultBranch = await detectDefaultBranch({
 				url: parsed.url,
 				corsProxy
 			});
+			logger.info('Detected branch: {branch}', { branch: defaultBranch });
 
 			if (cancelled) throw new Error('Cancelled');
 
-			// Step 2: Clone
+			// Step 2: Clone — emit a transition so the UI advances past "Detect branch"
+			onProgress({ type: 'clone', phase: 'Counting objects', loaded: 0, total: 0 });
+			logger.info('Starting: clone {url} ({branch})', {
+				url: parsed.url,
+				branch: defaultBranch
+			});
 			await cloneRepo({
 				fs,
 				dir,
@@ -100,6 +116,7 @@ const analyzerApi = {
 				defaultBranch,
 				onProgress
 			});
+			logger.info('Clone complete');
 
 			if (cancelled) throw new Error('Cancelled');
 
@@ -120,6 +137,7 @@ const analyzerApi = {
 			const totalDays = allDays.length;
 
 			// Step 5: Process each day
+			logger.info('Starting: analyze ({totalDays} days)', { totalDays });
 			const blobCache = new Map<
 				string,
 				{ lines: number; testLines: number; languageId: string | undefined }
@@ -194,6 +212,8 @@ const analyzerApi = {
 				onProgress({ type: 'day-result', day: dayStats });
 			}
 
+			logger.info('Analysis complete ({count} days)', { count: days.length });
+
 			// Step 6: Determine detected languages sorted by final-day line count
 			const lastDay = days[days.length - 1];
 			const detectedLanguages = Object.entries(lastDay.languages)
@@ -213,6 +233,10 @@ const analyzerApi = {
 			return result;
 		} catch (error) {
 			const classified = classifyError(error);
+			logger.error('Pipeline error: {kind} — {message}', {
+				kind: classified.kind,
+				message: classified.message
+			});
 			onProgress({ type: 'error', message: classified.message, kind: classified.kind });
 			throw error;
 		}
@@ -233,8 +257,14 @@ const analyzerApi = {
 
 		try {
 			// Step 1: Fetch new commits (incremental, not a full clone)
-			onProgress({ type: 'clone', phase: 'Fetching new commits...', loaded: 0, total: 0 });
+			onProgress({ type: 'clone', phase: 'Fetching new commits', loaded: 0, total: 0 });
+			onProgress({ type: 'clone', phase: 'Counting objects', loaded: 0, total: 0 });
+			logger.info('Starting: fetch {url} ({branch})', {
+				url: parsed.url,
+				branch: defaultBranch
+			});
 			await fetchRepo({ fs, dir, url: parsed.url, corsProxy, defaultBranch, onProgress });
+			logger.info('Fetch complete');
 
 			if (cancelled) throw new Error('Cancelled');
 
@@ -272,6 +302,9 @@ const analyzerApi = {
 			}
 
 			// Step 6: Process only new days
+			logger.info('Starting: analyze incremental ({totalDays} new days)', {
+				totalDays: newDayEntries.length
+			});
 			const blobCache = new Map<
 				string,
 				{ lines: number; testLines: number; languageId: string | undefined }
@@ -347,6 +380,8 @@ const analyzerApi = {
 				onProgress({ type: 'day-result', day: dayStats });
 			}
 
+			logger.info('Analysis complete ({count} days)', { count: newDays.length });
+
 			// Step 7: Merge cached days with new days
 			const mergedDays = [...cachedResult.days, ...newDays];
 			const lastDay = mergedDays[mergedDays.length - 1];
@@ -367,6 +402,10 @@ const analyzerApi = {
 			return result;
 		} catch (error) {
 			const classified = classifyError(error);
+			logger.error('Pipeline error: {kind} — {message}', {
+				kind: classified.kind,
+				message: classified.message
+			});
 			onProgress({ type: 'error', message: classified.message, kind: classified.kind });
 			throw error;
 		}

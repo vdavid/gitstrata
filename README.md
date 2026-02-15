@@ -1,6 +1,6 @@
 # git strata
 
-**See your codebase's heartbeat.**
+**Stratigraphy for your code.**
 
 A browser-native lines-of-code counter that visualizes how a public Git repository grows over time,
 broken down by language and prod/test. Zero server-side compute — everything runs in the browser.
