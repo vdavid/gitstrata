@@ -64,22 +64,47 @@ Two typefaces, no others.
 | `--font-sans` | DM Sans | Headlines, body text, buttons, labels                          |
 | `--font-mono` | DM Mono | Data values, inputs, metadata, table cells, badges, timestamps |
 
-### Type scale (observed in components)
+### Type scale
 
-| Role               | Family | Size          | Weight | Letter-spacing | Extra                                |
-| ------------------ | ------ | ------------- | ------ | -------------- | ------------------------------------ |
-| Hero headline      | Sans   | 3xl--5xl      | Bold   | `-0.025em`     | Responsive via `sm:`/`lg:`           |
-| Body / subtitle    | Sans   | sm--base      | 400    | Default        | `leading-relaxed`                    |
-| Card section label | Mono   | 0.625rem      | 400    | `0.08em`       | `text-transform: uppercase`          |
-| Card metric value  | Mono   | 1.125rem      | 500    | `-0.01em`      |                                      |
-| Table header       | Mono   | 0.6875rem     | 400    | `0.06em`       | `text-transform: uppercase`          |
-| Table cell         | Mono   | 0.8125rem     | 400    | Default        | `font-variant-numeric: tabular-nums` |
-| Detail line / meta | Mono   | 0.6875rem     | 400    | `0.02em`       |                                      |
-| Button (primary)   | Sans   | 0.875rem      | 500    | `0.01em`       |                                      |
-| Button (ghost)     | Sans   | 0.8125rem     | 400    | Default        |                                      |
-| Input              | Mono   | sm (0.875rem) | 400    | `0.01em`       |                                      |
-| Badge              | Mono   | 0.75rem       | 400    | `0.02em`       |                                      |
-| Phase label        | Sans   | 0.75rem       | 500    | `0.01em`       |                                      |
+Four functional tiers. No sizes between these steps.
+
+| Tier        | Size     | Tailwind   | Role                                                    |
+| ----------- | -------- | ---------- | ------------------------------------------------------- |
+| **Heading** | 3xl--5xl | responsive | Hero headline                                           |
+| **Value**   | 1.125rem | --         | Card hero numbers, emphasis stats                       |
+| **Body**    | 0.875rem | `text-sm`  | Buttons, table cells, inputs, body text, subtitles      |
+| **Meta**    | 0.75rem  | `text-xs`  | Labels, badges, chips, metadata, timestamps, phase info |
+
+### Type details (per role)
+
+| Role               | Family | Tier  | Weight | Letter-spacing | Extra                                |
+| ------------------ | ------ | ----- | ------ | -------------- | ------------------------------------ |
+| Hero headline      | Sans   | Head  | Bold   | `-0.025em`     | Responsive via `sm:`/`lg:`           |
+| Body / subtitle    | Sans   | Body  | 400    | Default        | `leading-relaxed`                    |
+| Card section label | Mono   | Meta  | 400    | `0.05em`       | `text-transform: uppercase`          |
+| Card metric value  | Mono   | Value | 500    | `-0.01em`      |                                      |
+| Table header       | Mono   | Meta  | 400    | `0.05em`       | `text-transform: uppercase`          |
+| Table cell         | Mono   | Body  | 400    | Default        | `font-variant-numeric: tabular-nums` |
+| Detail line / meta | Mono   | Meta  | 400    | `0.02em`       |                                      |
+| Button (primary)   | Sans   | Body  | 500    | `0.01em`       |                                      |
+| Button (ghost)     | Sans   | Body  | 400    | Default        |                                      |
+| Input              | Mono   | Body  | 400    | `0.01em`       |                                      |
+| Badge              | Mono   | Meta  | 400    | `0.02em`       |                                      |
+| Phase label        | Sans   | Meta  | 500    | `0.01em`       |                                      |
+
+## Spacing
+
+Strict 4px grid. All spacing values are multiples of 4px. No in-between values.
+
+| Stop    | Value | Tailwind | Role                                                    |
+| ------- | ----- | -------- | ------------------------------------------------------- |
+| **xs**  | 4px   | `1`      | Micro: icon gaps, tight label-to-value                  |
+| **sm**  | 8px   | `2`      | Component internal: button gaps, table cell padding     |
+| **md**  | 12px  | `3`      | Standard: card grid gap, control row gaps, form gaps    |
+| **lg**  | 16px  | `4`      | Card padding, section padding, control groups           |
+| **xl**  | 24px  | `6`      | Major separation: dialog padding, footer separator      |
+| **2xl** | 32px  | `8`      | Page sections (`space-y-8`)                             |
+| **3xl** | 40px  | `10`     | Hero spacing, responsive section gaps (`sm:space-y-10`) |
 
 ## Motion
 
@@ -198,7 +223,7 @@ Inline SVGs throughout — no icon library. Consistent style: 16px default, `str
 - **Max width**: `max-w-5xl` (default), `2xl:max-w-7xl` (wide screens)
 - **Page padding**: `px-4 sm:px-6`
 - **Section spacing**: `space-y-8 sm:space-y-10`
-- **Card padding**: `p-4` to `p-5` depending on content density
+- **Card padding**: `p-4` (16px) uniformly; dialog `p-6` (24px)
 - **Summary grid**: `grid-cols-2 sm:grid-cols-3 lg:grid-cols-5` with `gap-3`
 - **Chart height**: Responsive: `h-64 sm:h-80 md:h-96 lg:h-[28rem] xl:h-[32rem]`
 

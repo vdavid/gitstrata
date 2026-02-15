@@ -29,7 +29,7 @@
 
 	<header class="relative px-4 py-4 sm:px-6">
 		<div class="mx-auto flex max-w-5xl items-center justify-between 2xl:max-w-7xl">
-			<a href={resolve('/')} class="group flex items-center gap-2.5 text-[var(--color-text)]">
+			<a href={resolve('/')} class="group flex items-center gap-3 text-[var(--color-text)]">
 				<!-- Strata icon: layered horizontal lines -->
 				<svg
 					width="24"

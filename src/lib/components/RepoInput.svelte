@@ -86,7 +86,7 @@
 				oninput={handleInput}
 				placeholder="Example: https://github.com/sveltejs/svelte"
 				{disabled}
-				class="w-full border bg-[var(--color-surface-raised)] px-4 py-2.5
+				class="w-full border bg-[var(--color-surface-raised)] px-4 py-3
 					text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-tertiary)]
 					{error
 					? 'border-[var(--color-error)]'
@@ -106,7 +106,7 @@
 			{#if error}
 				<p
 					id="repo-input-error"
-					class="mt-1.5 text-xs text-[var(--color-error)]"
+					class="mt-2 text-xs text-[var(--color-error)]"
 					style="font-family: var(--font-sans);"
 					role="alert"
 				>

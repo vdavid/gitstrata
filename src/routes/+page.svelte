@@ -524,7 +524,7 @@
 	<!-- Error -->
 	{#if phase === 'error'}
 		<div
-			class="strata-card strata-fade-in mx-auto max-w-2xl border-[var(--color-error)] p-5"
+			class="strata-card strata-fade-in mx-auto max-w-2xl border-[var(--color-error)] p-4"
 			role="alert"
 		>
 			<div class="flex items-start gap-3">
@@ -537,7 +537,7 @@
 					stroke-width="2"
 					stroke-linecap="round"
 					stroke-linejoin="round"
-					class="mt-0.5 shrink-0"
+					class="mt-1 shrink-0"
 					aria-hidden="true"
 				>
 					<circle cx="12" cy="12" r="10" />
@@ -607,7 +607,7 @@
 		<!-- Size warning -->
 		{#if showSizeWarning && phase === 'cloning'}
 			<div
-				class="strata-card strata-fade-in mx-auto max-w-2xl border-[var(--color-warning)] p-5 mt-4"
+				class="strata-card strata-fade-in mx-auto max-w-2xl border-[var(--color-warning)] p-4 mt-4"
 				role="alert"
 			>
 				<div class="flex items-start gap-3">
@@ -620,7 +620,7 @@
 						stroke-width="2"
 						stroke-linecap="round"
 						stroke-linejoin="round"
-						class="mt-0.5 shrink-0"
+						class="mt-1 shrink-0"
 						aria-hidden="true"
 					>
 						<path
@@ -716,7 +716,7 @@
 				<details class="group">
 					<summary
 						class="cursor-pointer select-none py-2 text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text)] transition-colors"
-						style="font-family: var(--font-mono); font-size: 0.8125rem; letter-spacing: 0.02em; transition-duration: var(--duration-fast);"
+						style="font-family: var(--font-mono); font-size: 0.875rem; letter-spacing: 0.02em; transition-duration: var(--duration-fast);"
 					>
 						Data table ({commitDays.length}
 						{commitDays.length === 1 ? 'commit' : 'commits'})

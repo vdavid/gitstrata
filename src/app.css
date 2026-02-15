@@ -226,7 +226,7 @@ body::before {
 .strata-badge {
 	display: inline-flex;
 	align-items: center;
-	gap: 6px;
+	gap: 8px;
 	padding: 4px 12px;
 	border: 1px solid var(--color-border);
 	border-radius: 999px;
@@ -243,7 +243,7 @@ body::before {
 	align-items: center;
 	justify-content: center;
 	gap: 8px;
-	padding: 10px 24px;
+	padding: 12px 24px;
 	background-color: var(--color-accent);
 	color: #fff;
 	font-family: var(--font-sans);
@@ -275,13 +275,13 @@ body::before {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	gap: 6px;
+	gap: 8px;
 	min-height: 44px;
-	padding: 6px 14px;
+	padding: 8px 16px;
 	color: var(--color-text-secondary);
 	font-family: var(--font-sans);
 	font-weight: 400;
-	font-size: 0.8125rem;
+	font-size: 0.875rem;
 	border-radius: 6px;
 	border: 1px solid var(--color-border);
 	background: transparent;
@@ -306,11 +306,11 @@ body::before {
 	align-items: center;
 	gap: 4px;
 	min-height: 44px;
-	padding: 4px 2px;
+	padding: 4px 4px;
 	color: var(--color-accent);
 	font-family: var(--font-sans);
 	font-weight: 500;
-	font-size: 0.8125rem;
+	font-size: 0.875rem;
 	background: none;
 	border: none;
 	cursor: pointer;
@@ -439,7 +439,7 @@ body::before {
 /* Table styling */
 .strata-table {
 	width: 100%;
-	font-size: 0.8125rem;
+	font-size: 0.875rem;
 	border-collapse: collapse;
 }
 
@@ -451,8 +451,8 @@ body::before {
 	padding: 8px 12px;
 	font-family: var(--font-mono);
 	font-weight: 400;
-	font-size: 0.6875rem;
-	letter-spacing: 0.06em;
+	font-size: 0.75rem;
+	letter-spacing: 0.05em;
 	text-transform: uppercase;
 	color: var(--color-text-tertiary);
 	border-bottom: 1px solid var(--color-border);
@@ -460,7 +460,7 @@ body::before {
 }
 
 .strata-table td {
-	padding: 6px 12px;
+	padding: 8px 12px;
 	font-family: var(--font-mono);
 	font-variant-numeric: tabular-nums;
 	border-bottom: 1px solid var(--color-border);
@@ -574,7 +574,7 @@ body::before {
 .phase-row {
 	display: grid;
 	grid-template-columns: 16px 1fr;
-	column-gap: 10px;
+	column-gap: 12px;
 }
 
 .phase-indicator {
@@ -659,7 +659,7 @@ body::before {
 
 .phase-detail {
 	font-family: var(--font-mono);
-	font-size: 0.6875rem;
+	font-size: 0.75rem;
 	font-variant-numeric: tabular-nums;
 	letter-spacing: 0.02em;
 	color: var(--color-text-tertiary);
@@ -670,7 +670,7 @@ body::before {
 	display: block;
 	margin-top: 4px;
 	font-family: var(--font-mono);
-	font-size: 0.625rem;
+	font-size: 0.75rem;
 	font-variant-numeric: tabular-nums;
 	letter-spacing: 0.02em;
 	color: var(--color-text-tertiary);
@@ -680,7 +680,7 @@ body::before {
 .phase-label-group {
 	display: flex;
 	align-items: baseline;
-	gap: 6px;
+	gap: 8px;
 	flex-shrink: 1;
 	min-width: 0;
 }
@@ -688,7 +688,7 @@ body::before {
 /* Per-phase elapsed time */
 .phase-elapsed {
 	font-family: var(--font-mono);
-	font-size: 0.625rem;
+	font-size: 0.75rem;
 	font-variant-numeric: tabular-nums;
 	letter-spacing: 0.02em;
 	white-space: nowrap;
@@ -745,11 +745,11 @@ body::before {
 /* Info popup */
 .phase-info-popup {
 	position: absolute;
-	top: calc(100% + 6px);
+	top: calc(100% + 8px);
 	left: -4px;
 	z-index: 10;
 	width: 320px;
-	padding: 12px 14px;
+	padding: 12px 16px;
 	background-color: var(--color-surface-raised);
 	border: 1px solid var(--color-border);
 	border-radius: 8px;
@@ -777,10 +777,10 @@ body::before {
 	display: inline-flex;
 	align-items: center;
 	gap: 4px;
-	margin-top: 6px;
-	padding: 4px 10px;
+	margin-top: 8px;
+	padding: 4px 12px;
 	font-family: var(--font-mono);
-	font-size: 0.6875rem;
+	font-size: 0.75rem;
 	font-variant-numeric: tabular-nums;
 	letter-spacing: 0.02em;
 	color: var(--color-text-secondary);
@@ -799,7 +799,7 @@ body::before {
 	display: inline-flex;
 	align-items: baseline;
 	gap: 4px;
-	font-size: 0.6875rem;
+	font-size: 0.75rem;
 	letter-spacing: 0.02em;
 	color: var(--color-text-tertiary);
 }

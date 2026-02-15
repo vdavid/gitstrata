@@ -42,7 +42,7 @@
 <button
 	onclick={() => (open = true)}
 	class="text-[var(--color-text-tertiary)] transition-colors hover:text-[var(--color-text-secondary)]"
-	style="font-family: var(--font-mono); font-size: 0.6875rem; letter-spacing: 0.02em;"
+	style="font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.02em;"
 	aria-label="Show keyboard shortcuts"
 >
 	Shortcuts (?)
@@ -96,7 +96,7 @@
 				</span>
 				<kbd
 					class="shrink-0 rounded border border-[var(--color-border)] bg-[var(--color-bg-secondary)]
-						px-2 py-0.5 text-xs text-[var(--color-text-secondary)]"
+						px-2 py-1 text-xs text-[var(--color-text-secondary)]"
 					style="font-family: var(--font-mono);"
 				>
 					{shortcut.key}

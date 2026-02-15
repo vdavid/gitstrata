@@ -520,7 +520,7 @@ ${statBlock}`;
 
 					{#if progress.show}
 						<div
-							class="strata-progress-track mt-1.5"
+							class="strata-progress-track mt-2"
 							role="progressbar"
 							aria-valuenow={Math.round(progress.percent)}
 							aria-valuemin={0}
@@ -550,6 +550,6 @@ ${statBlock}`;
 			<span class="phase-footer-label">Total time:</span>
 			<span class="phase-footer-value">{formatTime(totalElapsed)}</span>
 		</span>
-		<button onclick={oncancel} class="btn-ghost text-xs">Cancel</button>
+		<button onclick={oncancel} class="btn-ghost">Cancel</button>
 	</div>
 </div>

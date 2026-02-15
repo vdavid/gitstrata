@@ -376,7 +376,7 @@
 						ticks: {
 							color: getCssVar('--color-text-tertiary'),
 							maxTicksLimit: 12,
-							font: { family: getCssVar('--font-mono').split(',')[0].replace(/'/g, ''), size: 10 }
+							font: { family: getCssVar('--font-mono').split(',')[0].replace(/'/g, ''), size: 12 }
 						},
 						border: { color: getCssVar('--color-border') }
 					},
@@ -386,7 +386,7 @@
 						grid: { color: getCssVar('--color-border') + '30' },
 						ticks: {
 							color: getCssVar('--color-text-tertiary'),
-							font: { family: getCssVar('--font-mono').split(',')[0].replace(/'/g, ''), size: 10 },
+							font: { family: getCssVar('--font-mono').split(',')[0].replace(/'/g, ''), size: 12 },
 							callback: (value) => {
 								const v = value as number;
 								if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
@@ -409,16 +409,16 @@
 						boxPadding: 6,
 						titleFont: {
 							family: getCssVar('--font-mono').split(',')[0].replace(/'/g, ''),
-							size: 11
+							size: 12
 						},
 						bodyFont: {
 							family: getCssVar('--font-mono').split(',')[0].replace(/'/g, ''),
-							size: 11
+							size: 12
 						},
 						footerColor: getCssVar('--color-text'),
 						footerFont: {
 							family: getCssVar('--font-mono').split(',')[0].replace(/'/g, ''),
-							size: 11,
+							size: 12,
 							weight: 'bold' as const
 						},
 						cornerRadius: 6,
@@ -437,7 +437,6 @@
 								const formatted = val.toLocaleString('en').replace(/,/g, '\u2009');
 								return `${ctx.dataset.label}: ${formatted} lines (${pct}%)`;
 							},
-							labelTextColor: () => getCssVar('--color-accent'),
 							footer: (items) => {
 								const total = items.reduce((sum, item) => {
 									const raw = item.dataset.data[item.dataIndex];
@@ -457,7 +456,7 @@
 							pointStyle: 'rectRounded',
 							font: {
 								family: getCssVar('--font-mono').split(',')[0].replace(/'/g, ''),
-								size: 11
+								size: 12
 							}
 						}
 					},
@@ -543,12 +542,12 @@
 		<button
 			onclick={() => (patternFills = !patternFills)}
 			aria-pressed={patternFills}
-			class="strata-chip text-xs"
+			class="strata-chip"
 			title="Toggle pattern fills for color blindness accessibility"
 		>
 			Pattern fills
 		</button>
-		<button onclick={resetZoom} class="btn-ghost text-xs"> Reset zoom </button>
+		<button onclick={resetZoom} class="btn-ghost"> Reset zoom </button>
 	</div>
 
 	<!-- Chart canvas -->
@@ -564,7 +563,7 @@
 		<div class="border-t border-[var(--color-border)] px-4 py-2">
 			<p
 				class="text-center text-[var(--color-text-tertiary)]"
-				style="font-family: var(--font-mono); font-size: 0.6875rem; letter-spacing: 0.02em;"
+				style="font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.02em;"
 			>
 				Chart updates as data streams in...
 			</p>

@@ -123,16 +123,35 @@
 
 	const repoAge = $derived.by(() => {
 		if (days.length === 0)
-			return { years: 0, months: 0, startLabel: '', isDead: false, deadSince: '' };
+			return {
+				years: 0,
+				months: 0,
+				remainingDays: 0,
+				totalDays: 0,
+				startLabel: '',
+				isDead: false,
+				deadSince: ''
+			};
 		const firstDate = new Date(days[0].date);
 		const lastDate = new Date(days[days.length - 1].date);
 
 		let years = lastDate.getFullYear() - firstDate.getFullYear();
 		let months = lastDate.getMonth() - firstDate.getMonth();
+		let remainingDays = lastDate.getDate() - firstDate.getDate();
+		if (remainingDays < 0) {
+			months--;
+			// Days in the previous month
+			const prevMonth = new Date(lastDate.getFullYear(), lastDate.getMonth(), 0);
+			remainingDays += prevMonth.getDate();
+		}
 		if (months < 0) {
 			years--;
 			months += 12;
 		}
+
+		const totalDays = Math.round(
+			(lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24)
+		);
 
 		const startLabel = `${monthNames[firstDate.getMonth()]} ${firstDate.getFullYear()}`;
 
@@ -152,7 +171,29 @@
 			? `${monthNames[lastCommitDate.getMonth()]} ${lastCommitDate.getFullYear()}`
 			: '';
 
-		return { years, months, startLabel, isDead, deadSince };
+		return { years, months, remainingDays, totalDays, startLabel, isDead, deadSince };
+	});
+
+	const formattedAge = $derived.by(() => {
+		const { years, months, remainingDays, totalDays } = repoAge;
+		const totalMonths = years * 12 + months;
+
+		// < 3 months: show days
+		if (totalMonths < 3) {
+			return `${totalDays} ${totalDays === 1 ? 'day' : 'days'}`;
+		}
+
+		// 3--11 months: show months + optional days
+		if (totalMonths < 12) {
+			const mo = `${totalMonths} ${totalMonths === 1 ? 'month' : 'months'}`;
+			return remainingDays > 0
+				? `${mo} ${remainingDays} ${remainingDays === 1 ? 'day' : 'days'}`
+				: mo;
+		}
+
+		// 12+ months: show years + optional months
+		const yr = `${years} ${years === 1 ? 'year' : 'years'}`;
+		return months > 0 ? `${yr} ${months} mo.` : yr;
 	});
 
 	// --- Peak day ---
@@ -185,15 +226,15 @@
 	aria-label="Summary statistics"
 >
 	<!-- Total lines -->
-	<div class="strata-card px-4 py-3.5">
+	<div class="strata-card p-4">
 		<p
 			class="text-[var(--color-text-tertiary)]"
-			style="font-family: var(--font-mono); font-size: 0.625rem; letter-spacing: 0.08em; text-transform: uppercase;"
+			style="font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.05em; text-transform: uppercase;"
 		>
 			Total lines
 		</p>
 		<p
-			class="mt-1.5 text-[var(--color-text)]"
+			class="mt-2 text-[var(--color-text)]"
 			style="font-family: var(--font-mono); font-size: 1.125rem; font-weight: 500; letter-spacing: -0.01em;"
 		>
 			{formattedTotal}
@@ -201,15 +242,29 @@
 	</div>
 
 	<!-- Prod / test split -->
-	<div class="strata-card px-4 py-3.5">
+	<div class="strata-card p-4">
 		<p
 			class="text-[var(--color-text-tertiary)]"
-			style="font-family: var(--font-mono); font-size: 0.625rem; letter-spacing: 0.08em; text-transform: uppercase;"
+			style="font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.05em; text-transform: uppercase;"
 		>
 			Prod / test split
 		</p>
-		<div class="mt-1.5 flex items-center gap-2.5">
-			{#if prodTestSplit.prod + prodTestSplit.test > 0}
+		{#if prodTestSplit.prod + prodTestSplit.test > 0}
+			<div class="mt-2 flex items-center justify-between">
+				<div>
+					<p
+						class="text-[var(--color-text)]"
+						style="font-family: var(--font-mono); font-size: 1.125rem; font-weight: 500; letter-spacing: -0.01em;"
+					>
+						{prodTestSplit.prodPct}% prod
+					</p>
+					<p
+						class="mt-1 text-[var(--color-text-secondary)]"
+						style="font-family: var(--font-mono); font-size: 0.75rem;"
+					>
+						{prodTestSplit.testPct}% test
+					</p>
+				</div>
 				<svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true" style="flex-shrink: 0;">
 					<title
 						>Prod: {prodTestSplit.prod.toLocaleString('en-US')} lines, Test: {prodTestSplit.test.toLocaleString(
@@ -228,98 +283,89 @@
 				<span class="sr-only"
 					>Production: {prodTestSplit.prodPct}%, Test: {prodTestSplit.testPct}%</span
 				>
-				<div style="font-family: var(--font-mono); font-size: 0.6875rem; line-height: 1.5;">
-					<p class="text-[var(--color-text)]" style="margin: 0;">
-						{prodTestSplit.prodPct}% prod
-					</p>
-					<p class="text-[var(--color-text-secondary)]" style="margin: 0;">
-						{prodTestSplit.testPct}% test
-					</p>
-				</div>
-			{:else}
-				<p
-					class="text-[var(--color-text)]"
-					style="font-family: var(--font-mono); font-size: 1.125rem; font-weight: 500;"
+			</div>
+		{:else}
+			<p
+				class="mt-2 text-[var(--color-text)]"
+				style="font-family: var(--font-mono); font-size: 1.125rem; font-weight: 500;"
+			>
+				--
+			</p>
+		{/if}
+	</div>
+
+	<!-- Average growth -->
+	<div class="strata-card p-4">
+		<p
+			class="text-[var(--color-text-tertiary)]"
+			style="font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.05em; text-transform: uppercase;"
+		>
+			Average growth
+		</p>
+		<p
+			class="mt-2 text-[var(--color-text)]"
+			style="font-family: var(--font-mono); font-size: 1.125rem; font-weight: 500; letter-spacing: -0.01em;"
+		>
+			Overall: {avgDailyGrowth >= 0 ? '+' : ''}{formatNumber(avgDailyGrowth)}/day
+		</p>
+		<div class="mt-1 flex items-center gap-1">
+			<p
+				class="text-[var(--color-text-secondary)]"
+				style="font-family: var(--font-mono); font-size: 0.75rem;"
+			>
+				Last 90d: {avgGrowthLast90 >= 0 ? '+' : ''}{formatNumber(avgGrowthLast90)}/day
+			</p>
+			{#if growthTrend !== 'neutral'}
+				<svg
+					width="14"
+					height="14"
+					viewBox="0 0 16 16"
+					fill="none"
+					aria-hidden="true"
+					style="flex-shrink: 0;"
 				>
-					--
-				</p>
+					<title>{growthTrend === 'up' ? 'Growth is accelerating' : 'Growth is decelerating'}</title
+					>
+					{#if growthTrend === 'up'}
+						<path
+							d="M8 3 L8 13 M4 7 L8 3 L12 7"
+							stroke="var(--color-success)"
+							stroke-width="1.5"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+						/>
+					{:else}
+						<path
+							d="M8 13 L8 3 M4 9 L8 13 L12 9"
+							stroke="var(--color-error)"
+							stroke-width="1.5"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+						/>
+					{/if}
+				</svg>
 			{/if}
 		</div>
 	</div>
 
-	<!-- Average growth -->
-	<div class="strata-card px-4 py-3.5">
-		<p
-			class="text-[var(--color-text-tertiary)]"
-			style="font-family: var(--font-mono); font-size: 0.625rem; letter-spacing: 0.08em; text-transform: uppercase;"
-		>
-			Average growth
-		</p>
-		<div
-			class="mt-1.5"
-			style="font-family: var(--font-mono); font-size: 0.6875rem; line-height: 1.5;"
-		>
-			<p class="text-[var(--color-text)]" style="margin: 0;">
-				Overall: {avgDailyGrowth >= 0 ? '+' : ''}{formatNumber(avgDailyGrowth)}/day
-			</p>
-			<div class="flex items-center gap-1" style="margin: 0;">
-				<p class="text-[var(--color-text-secondary)]" style="margin: 0;">
-					Last 90d: {avgGrowthLast90 >= 0 ? '+' : ''}{formatNumber(avgGrowthLast90)}/day
-				</p>
-				{#if growthTrend !== 'neutral'}
-					<svg
-						width="14"
-						height="14"
-						viewBox="0 0 16 16"
-						fill="none"
-						aria-hidden="true"
-						style="flex-shrink: 0;"
-					>
-						<title
-							>{growthTrend === 'up' ? 'Growth is accelerating' : 'Growth is decelerating'}</title
-						>
-						{#if growthTrend === 'up'}
-							<path
-								d="M8 3 L8 13 M4 7 L8 3 L12 7"
-								stroke="var(--color-success)"
-								stroke-width="1.5"
-								stroke-linecap="round"
-								stroke-linejoin="round"
-							/>
-						{:else}
-							<path
-								d="M8 13 L8 3 M4 9 L8 13 L12 9"
-								stroke="var(--color-error)"
-								stroke-width="1.5"
-								stroke-linecap="round"
-								stroke-linejoin="round"
-							/>
-						{/if}
-					</svg>
-				{/if}
-			</div>
-		</div>
-	</div>
-
 	<!-- Age -->
-	<div class="strata-card px-4 py-3.5">
+	<div class="strata-card p-4">
 		<p
 			class="text-[var(--color-text-tertiary)]"
-			style="font-family: var(--font-mono); font-size: 0.625rem; letter-spacing: 0.08em; text-transform: uppercase;"
+			style="font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.05em; text-transform: uppercase;"
 		>
 			Age
 		</p>
 		{#if days.length > 0}
 			<p
-				class="mt-1.5 text-[var(--color-text)]"
+				class="mt-2 text-[var(--color-text)]"
 				style="font-family: var(--font-mono); font-size: 1.125rem; font-weight: 500; letter-spacing: -0.01em;"
 			>
-				{#if repoAge.years > 0}{repoAge.years}y
-				{/if}{repoAge.months}mo
+				{formattedAge}
 			</p>
 			<p
-				class="mt-0.5 text-[var(--color-text-secondary)]"
-				style="font-family: var(--font-mono); font-size: 0.6875rem;"
+				class="mt-1 text-[var(--color-text-secondary)]"
+				style="font-family: var(--font-mono); font-size: 0.75rem;"
 			>
 				started {repoAge.startLabel}
 			</p>
@@ -354,7 +400,7 @@
 					</svg>
 					<p
 						class="text-[var(--color-text-tertiary)]"
-						style="font-family: var(--font-mono); font-size: 0.625rem; margin: 0;"
+						style="font-family: var(--font-mono); font-size: 0.75rem; margin: 0;"
 					>
 						Seems dead since {repoAge.deadSince}
 					</p>
@@ -362,7 +408,7 @@
 			{/if}
 		{:else}
 			<p
-				class="mt-1.5 text-[var(--color-text)]"
+				class="mt-2 text-[var(--color-text)]"
 				style="font-family: var(--font-mono); font-size: 1.125rem; font-weight: 500;"
 			>
 				--
@@ -371,15 +417,15 @@
 	</div>
 
 	<!-- Peak day -->
-	<div class="strata-card px-4 py-3.5">
+	<div class="strata-card p-4">
 		<p
 			class="text-[var(--color-text-tertiary)]"
-			style="font-family: var(--font-mono); font-size: 0.625rem; letter-spacing: 0.08em; text-transform: uppercase;"
+			style="font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.05em; text-transform: uppercase;"
 		>
 			Peak day
 		</p>
 		{#if peakDay.growth > 0}
-			<div class="mt-1.5 flex items-center gap-1.5">
+			<div class="mt-2 flex items-center gap-2">
 				<p
 					class="text-[var(--color-text)]"
 					style="font-family: var(--font-mono); font-size: 1.125rem; font-weight: 500; letter-spacing: -0.01em; margin: 0;"
@@ -470,14 +516,14 @@
 				</svg>
 			</div>
 			<p
-				class="mt-0.5 text-[var(--color-text-secondary)]"
-				style="font-family: var(--font-mono); font-size: 0.6875rem;"
+				class="mt-1 text-[var(--color-text-secondary)]"
+				style="font-family: var(--font-mono); font-size: 0.75rem;"
 			>
 				{peakDateFormatted}
 			</p>
 		{:else}
 			<p
-				class="mt-1.5 text-[var(--color-text)]"
+				class="mt-2 text-[var(--color-text)]"
 				style="font-family: var(--font-mono); font-size: 1.125rem; font-weight: 500;"
 			>
 				--
