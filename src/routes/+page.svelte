@@ -6,6 +6,7 @@
 	import { env } from '$env/dynamic/public';
 	import { parseRepoUrl } from '$lib/url';
 	import { getResult, saveResult } from '$lib/cache';
+	import { fetchServerResult, uploadServerResult } from '$lib/server-cache';
 	import { createAnalyzer, type AnalyzerHandle } from '$lib/worker/analyzer.api';
 	import type { AnalysisResult, DayStats, ErrorKind, ProgressEvent } from '$lib/types';
 	import RepoInput from '$lib/components/RepoInput.svelte';
@@ -173,6 +174,7 @@
 				result = event.result;
 				phase = 'done';
 				saveResult(event.result);
+				uploadServerResult(event.result);
 				break;
 			case 'error':
 				stopTimer();
@@ -219,12 +221,22 @@
 			const parsed = parseRepoUrl(repoInput);
 			updateQueryParam(repoInput);
 
-			// Check cache first
+			// Check local cache first
 			const cached = await getResult(parsed.url);
 			if (cached) {
 				cachedResult = cached;
 				result = cached;
 				phase = 'done';
+				return;
+			}
+
+			// Check shared server cache on local miss
+			const serverEntry = await fetchServerResult(parsed.url);
+			if (serverEntry) {
+				cachedResult = serverEntry.result;
+				result = serverEntry.result;
+				phase = 'done';
+				saveResult(serverEntry.result);
 				return;
 			}
 
