@@ -389,7 +389,7 @@
 				plugins: {
 					tooltip: {
 						animation: reducedMotion ? false : { duration: 200 },
-						backgroundColor: getCssVar('--color-surface-raised'),
+						backgroundColor: getCssVar('--color-surface-raised') + 'c6',
 						titleColor: getCssVar('--color-text'),
 						bodyColor: getCssVar('--color-text-secondary'),
 						borderColor: getCssVar('--color-border'),
@@ -417,7 +417,7 @@
 									val >= 1_000_000
 										? `${(val / 1_000_000).toFixed(1)}M`
 										: val >= 1_000
-											? `${(val / 1_000).toFixed(1)}K`
+											? `${(val / 1_000).toFixed(1)}k`
 											: String(val);
 								return `${ctx.dataset.label}: ${formatted} lines`;
 							},
@@ -427,7 +427,7 @@
 									total >= 1_000_000
 										? `${(total / 1_000_000).toFixed(1)}M`
 										: total >= 1_000
-											? `${(total / 1_000).toFixed(1)}K`
+											? `${(total / 1_000).toFixed(1)}k`
 											: String(total);
 								return `Total: ${formatted} lines`;
 							}

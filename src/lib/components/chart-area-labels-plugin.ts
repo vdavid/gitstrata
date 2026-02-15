@@ -252,7 +252,7 @@ const drawLabel = (
 export const areaLabelsPlugin: Plugin<'line', AreaLabelsOptions> = {
 	id: 'areaLabels',
 
-	afterDraw(chart: Chart<'line'>, _args, options) {
+	afterDatasetsDraw(chart: Chart<'line'>, _args, options) {
 		if (options?.enabled === false) return;
 
 		const ctx = chart.ctx;
