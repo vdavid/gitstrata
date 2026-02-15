@@ -150,7 +150,8 @@ jobs:
       - run: pnpm build
         env:
           PUBLIC_CORS_PROXY_URL: https://git-strata-cors-proxy.veszelovszki.workers.dev
-          PUBLIC_SHARED_CACHE_URL: https://git-strata-cors-proxy.veszelovszki.workers.dev
+          PUBLIC_ANALYTICS_URL: https://anal.veszelovszki.com
+          PUBLIC_ANALYTICS_ID: 9c082669-20f5-486f-85b8-13911ded8e14
 
       - run: npx wrangler pages deploy build/ --project-name=git-strata
         env:
