@@ -28,6 +28,15 @@ export interface AnalysisResult {
 	days: DayStats[];
 }
 
+/** Payload stored in the shared server cache (R2) */
+export interface SharedCacheEntry {
+	version: 1;
+	repoUrl: string;
+	headCommit: string;
+	result: AnalysisResult;
+	updatedAt: string; // ISO 8601
+}
+
 /** Categorized error types for user-facing messages */
 export type ErrorKind =
 	| 'not-found'
