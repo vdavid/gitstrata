@@ -131,7 +131,7 @@
 							<button
 								onclick={() => handleDelete(repo.repoUrl)}
 								class="btn-ghost shrink-0 px-2 py-1 text-xs"
-								aria-label="Delete cached data for {shortName(repo.repoUrl)}"
+								aria-label={`Delete cached data for ${shortName(repo.repoUrl)}`}
 							>
 								Delete
 							</button>
