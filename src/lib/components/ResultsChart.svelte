@@ -68,14 +68,11 @@
 	};
 
 	const languageNameMap = $derived.by(() => {
-		const map = new Map<string, string>();
-		for (const lang of getLanguages()) {
-			map.set(lang.id, lang.name);
-		}
-		return map;
+		const entries: [string, string][] = getLanguages().map((lang) => [lang.id, lang.name]);
+		return Object.fromEntries(entries) as Record<string, string>;
 	});
 
-	const langName = (id: string): string => languageNameMap.get(id) ?? id;
+	const langName = (id: string): string => languageNameMap[id] ?? id;
 
 	/** Read a CSS custom property from :root */
 	const getCssVar = (name: string): string => {
@@ -205,10 +202,7 @@
 	};
 
 	/** Get background for a dataset: pattern if enabled, solid color otherwise */
-	const getBackground = (
-		color: string,
-		index: number
-	): string | CanvasPattern => {
+	const getBackground = (color: string, index: number): string | CanvasPattern => {
 		if (!patternFills) return color;
 		const style = patternStyles[index % patternStyles.length];
 		return createPattern(color, style);
@@ -398,14 +392,24 @@
 						borderColor: getCssVar('--color-border'),
 						borderWidth: 1,
 						padding: 12,
-						titleFont: { family: getCssVar('--font-mono').split(',')[0].replace(/'/g, ''), size: 11 },
-						bodyFont: { family: getCssVar('--font-mono').split(',')[0].replace(/'/g, ''), size: 11 },
+						titleFont: {
+							family: getCssVar('--font-mono').split(',')[0].replace(/'/g, ''),
+							size: 11
+						},
+						bodyFont: {
+							family: getCssVar('--font-mono').split(',')[0].replace(/'/g, ''),
+							size: 11
+						},
 						footerColor: getCssVar('--color-text'),
-						footerFont: { family: getCssVar('--font-mono').split(',')[0].replace(/'/g, ''), size: 11, weight: 'bold' as const },
+						footerFont: {
+							family: getCssVar('--font-mono').split(',')[0].replace(/'/g, ''),
+							size: 11,
+							weight: 'bold' as const
+						},
 						cornerRadius: 6,
 						callbacks: {
 							label: (ctx) => {
-								const val = ctx.parsed.y;
+								const val = ctx.parsed.y ?? 0;
 								const formatted =
 									val >= 1_000_000
 										? `${(val / 1_000_000).toFixed(1)}M`
@@ -415,7 +419,7 @@
 								return `${ctx.dataset.label}: ${formatted} lines`;
 							},
 							footer: (items) => {
-								const total = items.reduce((sum, item) => sum + item.parsed.y, 0);
+								const total = items.reduce((sum, item) => sum + (item.parsed.y ?? 0), 0);
 								const formatted =
 									total >= 1_000_000
 										? `${(total / 1_000_000).toFixed(1)}M`
@@ -505,11 +509,7 @@
 		role="group"
 		aria-label="Chart view mode"
 	>
-		{#each [
-			{ mode: 'all' as ViewMode, label: 'All' },
-			{ mode: 'prod-vs-test' as ViewMode, label: 'Prod vs test' },
-			{ mode: 'languages-only' as ViewMode, label: 'Languages only' }
-		] as toggle}
+		{#each [{ mode: 'all' as ViewMode, label: 'All' }, { mode: 'prod-vs-test' as ViewMode, label: 'Prod vs test' }, { mode: 'languages-only' as ViewMode, label: 'Languages only' }] as toggle (toggle.mode)}
 			<button
 				onclick={() => (viewMode = toggle.mode)}
 				aria-pressed={viewMode === toggle.mode}
@@ -527,17 +527,12 @@
 		>
 			Pattern fills
 		</button>
-		<button onclick={resetZoom} class="btn-ghost text-xs">
-			Reset zoom
-		</button>
+		<button onclick={resetZoom} class="btn-ghost text-xs"> Reset zoom </button>
 	</div>
 
 	<!-- Chart canvas -->
 	<div class="relative h-64 w-full p-4 sm:h-80 md:h-96 lg:h-[28rem] xl:h-[32rem]">
-		<canvas
-			bind:this={canvasEl}
-			aria-label={ariaLabel}
-		></canvas>
+		<canvas bind:this={canvasEl} aria-label={ariaLabel}></canvas>
 	</div>
 
 	{#if live}

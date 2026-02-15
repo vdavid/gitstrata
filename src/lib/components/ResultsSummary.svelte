@@ -10,14 +10,11 @@
 	let { days, detectedLanguages }: Props = $props();
 
 	const languageNameMap = $derived.by(() => {
-		const map = new Map<string, string>();
-		for (const lang of getLanguages()) {
-			map.set(lang.id, lang.name);
-		}
-		return map;
+		const entries: [string, string][] = getLanguages().map((lang) => [lang.id, lang.name]);
+		return Object.fromEntries(entries) as Record<string, string>;
 	});
 
-	const langName = (id: string): string => languageNameMap.get(id) ?? id;
+	const langName = (id: string): string => languageNameMap[id] ?? id;
 
 	const formatNumber = (n: number): string => {
 		if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -90,7 +87,7 @@
 	role="region"
 	aria-label="Summary statistics"
 >
-	{#each stats as stat}
+	{#each stats as stat (stat.label)}
 		<div class="strata-card px-4 py-3.5">
 			<p
 				class="text-[var(--color-text-tertiary)]"

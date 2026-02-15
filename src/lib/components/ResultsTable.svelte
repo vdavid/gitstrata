@@ -10,14 +10,11 @@
 	let { days, detectedLanguages }: Props = $props();
 
 	const languageNameMap = $derived.by(() => {
-		const map = new Map<string, string>();
-		for (const lang of getLanguages()) {
-			map.set(lang.id, lang.name);
-		}
-		return map;
+		const entries: [string, string][] = getLanguages().map((lang) => [lang.id, lang.name]);
+		return Object.fromEntries(entries) as Record<string, string>;
 	});
 
-	const langName = (id: string): string => languageNameMap.get(id) ?? id;
+	const langName = (id: string): string => languageNameMap[id] ?? id;
 
 	/** Languages that account for >= 5% of total lines at the latest point */
 	const visibleLanguages = $derived.by(() => {
@@ -144,20 +141,34 @@
 <div class="space-y-3">
 	<div class="flex items-center gap-2">
 		<button onclick={copyCsv} class="btn-ghost">
-			<svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-				stroke="currentColor" stroke-width="1.5"
-				stroke-linecap="round" stroke-linejoin="round"
-				aria-hidden="true">
+			<svg
+				width="14"
+				height="14"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="1.5"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				aria-hidden="true"
+			>
 				<rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
 				<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
 			</svg>
 			{copyLabel}
 		</button>
 		<button onclick={downloadCsv} class="btn-ghost">
-			<svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-				stroke="currentColor" stroke-width="1.5"
-				stroke-linecap="round" stroke-linejoin="round"
-				aria-hidden="true">
+			<svg
+				width="14"
+				height="14"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="1.5"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				aria-hidden="true"
+			>
 				<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
 				<polyline points="7 10 12 15 17 10" />
 				<line x1="12" y1="15" x2="12" y2="3" />
@@ -180,7 +191,7 @@
 								Date{sortIndicator('date')}
 							</button>
 						</th>
-						{#each visibleLanguages as langId}
+						{#each visibleLanguages as langId (langId)}
 							<th class="text-right" scope="col" aria-sort={ariaSort(langId)}>
 								<button
 									class="hover:text-[var(--color-text)] transition-colors"
@@ -214,10 +225,10 @@
 					</tr>
 				</thead>
 				<tbody>
-					{#each sortedDays as day}
+					{#each sortedDays as day (day.date)}
 						<tr>
 							<td class="text-[var(--color-text-secondary)]">{day.date}</td>
-							{#each visibleLanguages as langId}
+							{#each visibleLanguages as langId (langId)}
 								<td class="text-right">
 									{formatNumber(day.languages[langId]?.total ?? 0)}
 								</td>

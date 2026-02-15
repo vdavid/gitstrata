@@ -1,5 +1,6 @@
 <script lang="ts">
 	import '../app.css';
+	import { resolve } from '$app/paths';
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
 	import CacheManager from '$lib/components/CacheManager.svelte';
 
@@ -17,10 +18,7 @@
 
 	<header class="relative px-4 py-4 sm:px-6">
 		<div class="mx-auto flex max-w-5xl items-center justify-between 2xl:max-w-7xl">
-			<a
-				href="/"
-				class="group flex items-center gap-2.5 text-[var(--color-text)]"
-			>
+			<a href={resolve('/')} class="group flex items-center gap-2.5 text-[var(--color-text)]">
 				<!-- Strata icon: layered horizontal lines -->
 				<svg
 					width="24"
@@ -31,9 +29,33 @@
 					class="transition-transform duration-300 group-hover:scale-105"
 				>
 					<rect x="2" y="4" width="20" height="3" rx="1" fill="var(--color-accent)" opacity="0.9" />
-					<rect x="2" y="9" width="20" height="3" rx="1" fill="var(--color-accent-muted)" opacity="0.6" />
-					<rect x="2" y="14" width="20" height="3" rx="1" fill="var(--color-text-tertiary)" opacity="0.4" />
-					<rect x="2" y="19" width="20" height="3" rx="1" fill="var(--color-text-tertiary)" opacity="0.2" />
+					<rect
+						x="2"
+						y="9"
+						width="20"
+						height="3"
+						rx="1"
+						fill="var(--color-accent-muted)"
+						opacity="0.6"
+					/>
+					<rect
+						x="2"
+						y="14"
+						width="20"
+						height="3"
+						rx="1"
+						fill="var(--color-text-tertiary)"
+						opacity="0.4"
+					/>
+					<rect
+						x="2"
+						y="19"
+						width="20"
+						height="3"
+						rx="1"
+						fill="var(--color-text-tertiary)"
+						opacity="0.2"
+					/>
 				</svg>
 				<span
 					class="font-[var(--font-mono)] text-sm font-medium tracking-wide"

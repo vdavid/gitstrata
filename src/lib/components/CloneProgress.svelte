@@ -27,11 +27,7 @@
 	const hasEstimate = $derived(total > 0);
 </script>
 
-<div
-	class="strata-card p-5"
-	role="region"
-	aria-label="Clone progress"
->
+<div class="strata-card p-5" role="region" aria-label="Clone progress">
 	<div class="mb-4 flex items-center justify-between">
 		<div class="flex items-center gap-2.5">
 			<div class="strata-pulse-dot bg-[var(--color-accent)]"></div>
@@ -42,9 +38,7 @@
 				Downloading repository
 			</span>
 		</div>
-		<button onclick={oncancel} class="btn-ghost text-xs">
-			Cancel
-		</button>
+		<button onclick={oncancel} class="btn-ghost text-xs"> Cancel </button>
 	</div>
 
 	<!-- Progress bar -->
@@ -58,7 +52,9 @@
 	>
 		<div
 			class="strata-progress-fill bg-[var(--color-accent)]"
-			style="width: {hasEstimate ? progress : 30}%{hasEstimate ? '' : '; animation: strata-pulse 2s ease-in-out infinite'}"
+			style="width: {hasEstimate ? progress : 30}%{hasEstimate
+				? ''
+				: '; animation: strata-pulse 2s ease-in-out infinite'}"
 		></div>
 	</div>
 
@@ -71,7 +67,7 @@
 	>
 		<span>
 			{formatBytes(loaded)}{#if hasEstimate}
-				{' '}/ ~{formatBytes(total)}
+				/ ~{formatBytes(total)}
 			{/if}
 			{#if phase}
 				<span class="text-[var(--color-text-tertiary)]"> -- {phase}</span>

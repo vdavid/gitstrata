@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { page } from '$app/stores';
 	import { env } from '$env/dynamic/public';
 	import { parseRepoUrl } from '$lib/url';
@@ -122,13 +123,9 @@
 	};
 
 	const updateQueryParam = (repo: string) => {
-		const url = new URL(window.location.href);
-		if (repo) {
-			url.searchParams.set('repo', repo);
-		} else {
-			url.searchParams.delete('repo');
-		}
-		goto(url.toString(), { replaceState: true, keepFocus: true });
+		const qs = repo ? `?repo=${encodeURIComponent(repo)}` : '';
+		// eslint-disable-next-line svelte/no-navigation-without-resolve -- resolve('/') is used, qs is appended
+		goto(resolve('/') + qs, { replaceState: true, keepFocus: true });
 	};
 
 	const handleProgress = (event: ProgressEvent) => {
@@ -173,21 +170,22 @@
 	};
 
 	const updateStreamingLanguages = (day: DayStats) => {
-		const seen = new Set(streamingLanguages);
+		const seen: Record<string, true> = {};
+		for (const langId of streamingLanguages) {
+			seen[langId] = true;
+		}
 		for (const langId of Object.keys(day.languages)) {
-			if (!seen.has(langId)) {
-				seen.add(langId);
-			}
+			seen[langId] = true;
 		}
 		// Sort by line count in latest day (desc)
-		const langTotals = new Map<string, number>();
+		const langTotals: Record<string, number> = {};
 		for (const d of streamingDays) {
 			for (const [id, lc] of Object.entries(d.languages)) {
-				langTotals.set(id, lc.total);
+				langTotals[id] = lc.total;
 			}
 		}
-		streamingLanguages = [...seen].sort(
-			(a, b) => (langTotals.get(b) ?? 0) - (langTotals.get(a) ?? 0)
+		streamingLanguages = Object.keys(seen).sort(
+			(a, b) => (langTotals[b] ?? 0) - (langTotals[a] ?? 0)
 		);
 	};
 
@@ -263,15 +261,11 @@
 
 		try {
 			analyzer = createAnalyzer();
-			await analyzer.analyzeIncremental(
-				repoUrl,
-				corsProxy,
-				previousResult,
-				handleProgress
-			);
+			await analyzer.analyzeIncremental(repoUrl, corsProxy, previousResult, handleProgress);
 		} catch (e) {
 			stopTimer();
-			if (phase !== 'error') {
+			// phase may have been set to 'error' by handleProgress during the await
+			if ((phase as Phase) !== 'error') {
 				phase = 'error';
 				errorMessage = e instanceof Error ? e.message : 'Refresh failed';
 				errorKind = 'unknown';
@@ -326,8 +320,8 @@
 				class="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-[var(--color-text-secondary)] sm:text-base"
 				style="font-family: var(--font-sans);"
 			>
-				Visualize how any public Git repository grows over time,
-				broken down by language. Everything runs in your browser.
+				Visualize how any public Git repository grows over time, broken down by language. Everything
+				runs in your browser.
 			</p>
 		</div>
 	</div>
@@ -349,10 +343,16 @@
 		>
 			<div class="flex items-start gap-3">
 				<svg
-					width="18" height="18" viewBox="0 0 24 24" fill="none"
-					stroke="var(--color-error)" stroke-width="2"
-					stroke-linecap="round" stroke-linejoin="round"
-					class="mt-0.5 shrink-0" aria-hidden="true"
+					width="18"
+					height="18"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="var(--color-error)"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					class="mt-0.5 shrink-0"
+					aria-hidden="true"
 				>
 					<circle cx="12" cy="12" r="10" />
 					<line x1="15" y1="9" x2="9" y2="15" />
@@ -379,10 +379,7 @@
 								Manage cache
 							</button>
 						{/if}
-						<button
-							onclick={() => (phase = 'idle')}
-							class="btn-link text-sm"
-						>
+						<button onclick={() => (phase = 'idle')} class="btn-link text-sm">
 							{retryable ? 'Cancel' : 'Try another repo'}
 						</button>
 					</div>
@@ -422,26 +419,31 @@
 			>
 				<div class="flex items-start gap-3">
 					<svg
-						width="18" height="18" viewBox="0 0 24 24" fill="none"
-						stroke="var(--color-warning)" stroke-width="2"
-						stroke-linecap="round" stroke-linejoin="round"
-						class="mt-0.5 shrink-0" aria-hidden="true"
+						width="18"
+						height="18"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="var(--color-warning)"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						class="mt-0.5 shrink-0"
+						aria-hidden="true"
 					>
-						<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+						<path
+							d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+						/>
 						<line x1="12" y1="9" x2="12" y2="13" />
 						<line x1="12" y1="17" x2="12.01" y2="17" />
 					</svg>
 					<div class="min-w-0 flex-1">
 						<p class="text-sm text-[var(--color-text)]">
-							This repository is large (~{formatBytes(sizeWarningBytes)}). Downloading may take a while and use significant storage.
+							This repository is large (~{formatBytes(sizeWarningBytes)}). Downloading may take a
+							while and use significant storage.
 						</p>
 						<div class="mt-3 flex items-center gap-3">
-							<button onclick={dismissSizeWarning} class="btn-primary text-sm">
-								Continue
-							</button>
-							<button onclick={cancel} class="btn-link text-sm">
-								Cancel
-							</button>
+							<button onclick={dismissSizeWarning} class="btn-primary text-sm"> Continue </button>
+							<button onclick={cancel} class="btn-link text-sm"> Cancel </button>
 						</div>
 					</div>
 				</div>
@@ -470,24 +472,36 @@
 				<div class="flex flex-wrap items-center justify-center gap-3 strata-fade-in">
 					{#if cachedResult}
 						<span class="strata-badge">
-							<svg width="12" height="12" viewBox="0 0 24 24" fill="none"
-								stroke="currentColor" stroke-width="2"
-								stroke-linecap="round" stroke-linejoin="round"
-								aria-hidden="true">
+							<svg
+								width="12"
+								height="12"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								aria-hidden="true"
+							>
 								<circle cx="12" cy="12" r="10" />
 								<polyline points="12 6 12 12 16 14" />
 							</svg>
 							Last analyzed: {cachedResult.analyzedAt.slice(0, 10)}
 						</span>
-						<button onclick={refresh} class="btn-link">
-							Refresh
-						</button>
+						<button onclick={refresh} class="btn-link"> Refresh </button>
 					{/if}
 					<button onclick={copyShareLink} class="btn-ghost">
-						<svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-							stroke="currentColor" stroke-width="2"
-							stroke-linecap="round" stroke-linejoin="round"
-							aria-hidden="true">
+						<svg
+							width="14"
+							height="14"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							aria-hidden="true"
+						>
 							<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
 							<path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
 						</svg>
@@ -500,11 +514,7 @@
 			<ResultsSummary days={displayDays} detectedLanguages={displayLanguages} />
 
 			<!-- Chart -->
-			<ResultsChart
-				days={displayDays}
-				detectedLanguages={displayLanguages}
-				live={isStreaming}
-			/>
+			<ResultsChart days={displayDays} detectedLanguages={displayLanguages} live={isStreaming} />
 
 			<!-- Data table (only when fully done) -->
 			{#if result}

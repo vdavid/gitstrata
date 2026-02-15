@@ -106,13 +106,7 @@
 				</p>
 			{/if}
 		</div>
-		<button
-			onclick={handleSubmit}
-			{disabled}
-			class="btn-primary shrink-0"
-		>
-			Analyze
-		</button>
+		<button onclick={handleSubmit} {disabled} class="btn-primary shrink-0"> Analyze </button>
 	</div>
 
 	<div
@@ -120,13 +114,13 @@
 		style="font-family: var(--font-mono); letter-spacing: 0.02em;"
 	>
 		<span>try:</span>
-		{#each quickExamples as example, i}
+		{#each quickExamples as example, i (example.value)}
 			{#if i > 0}
 				<span class="text-[var(--color-border-strong)]">/</span>
 			{/if}
 			<button
 				onclick={() => handleExample(example.value)}
-				disabled={disabled}
+				{disabled}
 				class="text-[var(--color-text-secondary)] transition-colors
 					hover:text-[var(--color-accent)]
 					disabled:cursor-not-allowed disabled:opacity-50"

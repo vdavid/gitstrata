@@ -43,16 +43,14 @@ const classifyError = (error: unknown): { message: string; kind: ErrorKind } => 
 				kind: 'network-lost'
 			};
 		return {
-			message:
-				'Our download proxy is temporarily unavailable. Please try again in a moment.',
+			message: 'Our download proxy is temporarily unavailable. Please try again in a moment.',
 			kind: 'cors-proxy-down'
 		};
 	}
 
 	if (lower.includes('quota') || lower.includes('storage') || lower.includes('indexeddb'))
 		return {
-			message:
-				"Your browser's storage is full. Clear some cached repos in the footer menu.",
+			message: "Your browser's storage is full. Clear some cached repos in the footer menu.",
 			kind: 'indexeddb-full'
 		};
 
@@ -211,9 +209,7 @@ const analyzerApi = {
 
 			// Step 3: Find last cached date
 			const lastCachedDate =
-				cachedResult.days.length > 0
-					? cachedResult.days[cachedResult.days.length - 1].date
-					: '';
+				cachedResult.days.length > 0 ? cachedResult.days[cachedResult.days.length - 1].date : '';
 
 			// Step 4: Fill date gaps for full history
 			const allDays = fillDateGaps(dailyCommits);
@@ -240,9 +236,7 @@ const analyzerApi = {
 			const newDays: DayStats[] = [];
 			// Use last cached day as prevDay for gap-filling
 			let prevDay: DayStats | undefined =
-				cachedResult.days.length > 0
-					? cachedResult.days[cachedResult.days.length - 1]
-					: undefined;
+				cachedResult.days.length > 0 ? cachedResult.days[cachedResult.days.length - 1] : undefined;
 			const totalDays = newDayEntries.length;
 
 			for (let i = 0; i < newDayEntries.length; i++) {

@@ -31,12 +31,7 @@ export const createAnalyzer = (): AnalyzerHandle => {
 			return api.analyze(repoInput, corsProxy, Comlink.proxy(onProgress));
 		},
 		analyzeIncremental: async (repoInput, corsProxy, cachedResult, onProgress) => {
-			return api.analyzeIncremental(
-				repoInput,
-				corsProxy,
-				cachedResult,
-				Comlink.proxy(onProgress)
-			);
+			return api.analyzeIncremental(repoInput, corsProxy, cachedResult, Comlink.proxy(onProgress));
 		},
 		cancel: () => {
 			api.cancel();

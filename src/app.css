@@ -11,29 +11,29 @@
 
 :root {
 	/* chart colors (light mode) — geological survey palette */
-	--chart-1: #2e6b9e;   /* deep ocean blue */
+	--chart-1: #2e6b9e; /* deep ocean blue */
 	--chart-1-tint: #a3c4dd;
-	--chart-2: #4a8c5c;   /* forest serpentine */
+	--chart-2: #4a8c5c; /* forest serpentine */
 	--chart-2-tint: #a8d4b0;
-	--chart-3: #c2781e;   /* sandstone amber */
+	--chart-3: #c2781e; /* sandstone amber */
 	--chart-3-tint: #e8c491;
-	--chart-4: #8b4e8b;   /* amethyst */
+	--chart-4: #8b4e8b; /* amethyst */
 	--chart-4-tint: #cba5cb;
-	--chart-5: #b85433;   /* red clay */
+	--chart-5: #b85433; /* red clay */
 	--chart-5-tint: #dda88e;
-	--chart-6: #2e8b8b;   /* malachite teal */
+	--chart-6: #2e8b8b; /* malachite teal */
 	--chart-6-tint: #8dcfcf;
-	--chart-7: #9e8b3e;   /* pyrite gold */
+	--chart-7: #9e8b3e; /* pyrite gold */
 	--chart-7-tint: #d4ca8a;
-	--chart-8: #a64560;   /* rhodonite */
+	--chart-8: #a64560; /* rhodonite */
 	--chart-8-tint: #d9a0b0;
-	--chart-9: #4a5e8b;   /* slate blue */
+	--chart-9: #4a5e8b; /* slate blue */
 	--chart-9-tint: #a0aecf;
-	--chart-10: #3e8b6e;  /* jade */
+	--chart-10: #3e8b6e; /* jade */
 	--chart-10-tint: #8bd4b8;
-	--chart-11: #7b5ea6;  /* charoite */
+	--chart-11: #7b5ea6; /* charoite */
 	--chart-11-tint: #baa8d4;
-	--chart-12: #2e7090;  /* azurite */
+	--chart-12: #2e7090; /* azurite */
 	--chart-12-tint: #8dc0d8;
 	--chart-other: #b0a898; /* limestone */
 	--chart-other-tint: #d4cec6;
@@ -337,8 +337,13 @@ body::before {
 
 /* Pulse dot for active states */
 @keyframes strata-pulse {
-	0%, 100% { opacity: 1; }
-	50% { opacity: 0.4; }
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.4;
+	}
 }
 
 .strata-pulse-dot {
@@ -369,11 +374,21 @@ body::before {
 	animation: strata-fade-in var(--duration-slow) var(--ease-out-expo) both;
 }
 
-.strata-stagger > *:nth-child(1) { animation-delay: 0ms; }
-.strata-stagger > *:nth-child(2) { animation-delay: 60ms; }
-.strata-stagger > *:nth-child(3) { animation-delay: 120ms; }
-.strata-stagger > *:nth-child(4) { animation-delay: 180ms; }
-.strata-stagger > *:nth-child(5) { animation-delay: 240ms; }
+.strata-stagger > *:nth-child(1) {
+	animation-delay: 0ms;
+}
+.strata-stagger > *:nth-child(2) {
+	animation-delay: 60ms;
+}
+.strata-stagger > *:nth-child(3) {
+	animation-delay: 120ms;
+}
+.strata-stagger > *:nth-child(4) {
+	animation-delay: 180ms;
+}
+.strata-stagger > *:nth-child(5) {
+	animation-delay: 240ms;
+}
 
 /* Chip toggle (for chart view modes) */
 .strata-chip {
@@ -447,8 +462,12 @@ body::before {
 
 /* Hero decorative strata lines */
 @keyframes strata-lines-shift {
-	0% { background-position: 0 0; }
-	100% { background-position: 0 -8px; }
+	0% {
+		background-position: 0 0;
+	}
+	100% {
+		background-position: 0 -8px;
+	}
 }
 
 .strata-hero-lines {

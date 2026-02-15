@@ -79,10 +79,10 @@ For local frontend development, you don't need to run the CORS proxy. The dev se
 
 ## Environment variables
 
-| Variable                | Where              | Default                                | Purpose                       |
-| ----------------------- | ------------------ | -------------------------------------- | ----------------------------- |
-| `PUBLIC_CORS_PROXY_URL` | Frontend (`.env`)  | `https://cors.isomorphic-git.org`      | URL of your deployed CORS proxy |
-| `PUBLIC_ANALYTICS_ID`   | Frontend (`.env`)  | _(none)_                               | Optional analytics (e.g. Plausible) |
+| Variable                | Where             | Default                           | Purpose                             |
+| ----------------------- | ----------------- | --------------------------------- | ----------------------------------- |
+| `PUBLIC_CORS_PROXY_URL` | Frontend (`.env`) | `https://cors.isomorphic-git.org` | URL of your deployed CORS proxy     |
+| `PUBLIC_ANALYTICS_ID`   | Frontend (`.env`) | _(none)_                          | Optional analytics (e.g. Plausible) |
 
 Create a `.env` file in the repo root for local overrides:
 

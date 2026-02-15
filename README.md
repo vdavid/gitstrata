@@ -47,15 +47,15 @@ for live chart rendering. See [spec.md](spec.md) for the full design.
 
 ## Tech stack
 
-| Component           | Technology                            |
-| ------------------- | ------------------------------------- |
-| Framework           | SvelteKit + Svelte 5 (static adapter) |
-| Styling             | Tailwind CSS v4                       |
-| Git in browser      | isomorphic-git + lightning-fs         |
-| Charting            | Chart.js + chartjs-plugin-zoom        |
-| Web Worker RPC      | Comlink                               |
-| CORS proxy          | Cloudflare Worker + Hono              |
-| Package manager     | pnpm                                  |
+| Component       | Technology                            |
+| --------------- | ------------------------------------- |
+| Framework       | SvelteKit + Svelte 5 (static adapter) |
+| Styling         | Tailwind CSS v4                       |
+| Git in browser  | isomorphic-git + lightning-fs         |
+| Charting        | Chart.js + chartjs-plugin-zoom        |
+| Web Worker RPC  | Comlink                               |
+| CORS proxy      | Cloudflare Worker + Hono              |
+| Package manager | pnpm                                  |
 
 ## Development
 

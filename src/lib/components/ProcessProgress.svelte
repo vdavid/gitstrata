@@ -26,11 +26,7 @@
 	};
 </script>
 
-<div
-	class="strata-card p-5"
-	role="region"
-	aria-label="Processing progress"
->
+<div class="strata-card p-5" role="region" aria-label="Processing progress">
 	<div class="mb-4 flex items-center justify-between">
 		<div class="flex items-center gap-2.5">
 			<div class="strata-pulse-dot bg-[var(--color-success)]"></div>
@@ -41,9 +37,7 @@
 				Processing commits
 			</span>
 		</div>
-		<button onclick={oncancel} class="btn-ghost text-xs">
-			Cancel
-		</button>
+		<button onclick={oncancel} class="btn-ghost text-xs"> Cancel </button>
 	</div>
 
 	<!-- Progress bar -->
@@ -55,10 +49,7 @@
 		aria-valuemax={100}
 		aria-label="Commit processing progress"
 	>
-		<div
-			class="strata-progress-fill bg-[var(--color-success)]"
-			style="width: {progress}%"
-		></div>
+		<div class="strata-progress-fill bg-[var(--color-success)]" style="width: {progress}%"></div>
 	</div>
 
 	<!-- Details row -->

@@ -71,9 +71,14 @@
 			style="font-family: var(--font-mono); font-size: 0.6875rem; letter-spacing: 0.02em; transition-duration: var(--duration-fast);"
 		>
 			<svg
-				width="12" height="12" viewBox="0 0 24 24" fill="none"
-				stroke="currentColor" stroke-width="2"
-				stroke-linecap="round" stroke-linejoin="round"
+				width="12"
+				height="12"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
 				aria-hidden="true"
 				class="transition-transform duration-200"
 				style:transform={expanded ? 'rotate(90deg)' : 'rotate(0deg)'}
