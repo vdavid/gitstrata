@@ -14,40 +14,58 @@
 	>
 		Skip to main content
 	</a>
-	<header
-		class="flex items-center justify-between border-b border-[var(--color-border)] px-4 py-4 sm:px-6"
-	>
-		<a href="/" class="flex items-center gap-2 text-lg font-semibold tracking-tight text-[var(--color-text)]">
-			<svg
-				width="22"
-				height="22"
-				viewBox="0 0 24 24"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="2"
-				stroke-linecap="round"
-				stroke-linejoin="round"
-				aria-hidden="true"
-				class="text-[var(--color-accent)]"
+
+	<header class="relative px-4 py-4 sm:px-6">
+		<div class="mx-auto flex max-w-5xl items-center justify-between 2xl:max-w-7xl">
+			<a
+				href="/"
+				class="group flex items-center gap-2.5 text-[var(--color-text)]"
 			>
-				<polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-			</svg>
-			git strata
-		</a>
-		<ThemeToggle />
+				<!-- Strata icon: layered horizontal lines -->
+				<svg
+					width="24"
+					height="24"
+					viewBox="0 0 24 24"
+					fill="none"
+					aria-hidden="true"
+					class="transition-transform duration-300 group-hover:scale-105"
+				>
+					<rect x="2" y="4" width="20" height="3" rx="1" fill="var(--color-accent)" opacity="0.9" />
+					<rect x="2" y="9" width="20" height="3" rx="1" fill="var(--color-accent-muted)" opacity="0.6" />
+					<rect x="2" y="14" width="20" height="3" rx="1" fill="var(--color-text-tertiary)" opacity="0.4" />
+					<rect x="2" y="19" width="20" height="3" rx="1" fill="var(--color-text-tertiary)" opacity="0.2" />
+				</svg>
+				<span
+					class="font-[var(--font-mono)] text-sm font-medium tracking-wide"
+					style="font-family: var(--font-mono);"
+				>
+					git strata
+				</span>
+			</a>
+			<ThemeToggle />
+		</div>
+		<div class="strata-line mx-auto mt-4 max-w-5xl 2xl:max-w-7xl"></div>
 	</header>
 
-	<main id="main-content" class="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6 sm:py-8 2xl:max-w-7xl">
+	<main
+		id="main-content"
+		class="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10 2xl:max-w-7xl"
+	>
 		{@render children()}
 	</main>
 
-	<footer
-		class="border-t border-[var(--color-border)] px-4 py-6 text-center text-sm
-			text-[var(--color-text-secondary)] sm:px-6"
-	>
-		<CacheManager />
-		<p class="mt-4">
-			All processing happens in your browser. No code leaves your machine.
-		</p>
+	<footer class="px-4 py-8 sm:px-6">
+		<div class="mx-auto max-w-5xl 2xl:max-w-7xl">
+			<div class="strata-line mb-6"></div>
+			<div class="flex flex-col items-center gap-4">
+				<CacheManager />
+				<p
+					class="text-center text-xs tracking-wide text-[var(--color-text-tertiary)]"
+					style="font-family: var(--font-mono);"
+				>
+					All processing happens in your browser. No code leaves your machine.
+				</p>
+			</div>
+		</div>
 	</footer>
 </div>

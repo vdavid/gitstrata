@@ -143,86 +143,97 @@
 
 <div class="space-y-3">
 	<div class="flex items-center gap-2">
-		<button
-			onclick={copyCsv}
-			class="rounded-md border border-[var(--color-border)] px-3 py-1.5 text-sm
-				text-[var(--color-text-secondary)] transition-colors
-				hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text)]"
-		>
+		<button onclick={copyCsv} class="btn-ghost">
+			<svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+				stroke="currentColor" stroke-width="1.5"
+				stroke-linecap="round" stroke-linejoin="round"
+				aria-hidden="true">
+				<rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+				<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+			</svg>
 			{copyLabel}
 		</button>
-		<button
-			onclick={downloadCsv}
-			class="rounded-md border border-[var(--color-border)] px-3 py-1.5 text-sm
-				text-[var(--color-text-secondary)] transition-colors
-				hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text)]"
-		>
+		<button onclick={downloadCsv} class="btn-ghost">
+			<svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+				stroke="currentColor" stroke-width="1.5"
+				stroke-linecap="round" stroke-linejoin="round"
+				aria-hidden="true">
+				<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+				<polyline points="7 10 12 15 17 10" />
+				<line x1="12" y1="15" x2="12" y2="3" />
+			</svg>
 			Download CSV
 		</button>
 	</div>
 
-	<div class="overflow-x-auto rounded-xl border border-[var(--color-border)]">
-		<table class="w-full text-sm" aria-label="Lines of code by date and language">
-			<thead>
-				<tr class="border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
-					<th class="px-3 py-2 text-left font-medium text-[var(--color-text-secondary)]" scope="col" aria-sort={ariaSort('date')}>
-						<button
-							class="hover:text-[var(--color-text)] transition-colors"
-							onclick={() => toggleSort('date')}
-						>
-							Date{sortIndicator('date')}
-						</button>
-					</th>
-					{#each visibleLanguages as langId}
-						<th class="px-3 py-2 text-right font-medium text-[var(--color-text-secondary)]" scope="col" aria-sort={ariaSort(langId)}>
+	<div class="strata-card overflow-hidden">
+		<div class="strata-scroll overflow-x-auto">
+			<table class="strata-table" aria-label="Lines of code by date and language">
+				<thead>
+					<tr>
+						<th class="text-left" scope="col" aria-sort={ariaSort('date')}>
 							<button
 								class="hover:text-[var(--color-text)] transition-colors"
-								onclick={() => toggleSort(langId)}
+								style="transition-duration: var(--duration-fast);"
+								onclick={() => toggleSort('date')}
 							>
-								{langName(langId)}{sortIndicator(langId)}
+								Date{sortIndicator('date')}
 							</button>
 						</th>
-					{/each}
-					{#if hasOther}
-						<th class="px-3 py-2 text-right font-medium text-[var(--color-text-secondary)]" scope="col" aria-sort={ariaSort('other')}>
-							<button
-								class="hover:text-[var(--color-text)] transition-colors"
-								onclick={() => toggleSort('other')}
-							>
-								Other{sortIndicator('other')}
-							</button>
-						</th>
-					{/if}
-					<th class="px-3 py-2 text-right font-medium text-[var(--color-text-secondary)]" scope="col" aria-sort={ariaSort('total')}>
-						<button
-							class="hover:text-[var(--color-text)] transition-colors"
-							onclick={() => toggleSort('total')}
-						>
-							Total{sortIndicator('total')}
-						</button>
-					</th>
-				</tr>
-			</thead>
-			<tbody>
-				{#each sortedDays as day}
-					<tr class="border-b border-[var(--color-border)] last:border-b-0 hover:bg-[var(--color-bg-secondary)] transition-colors">
-						<td class="px-3 py-2 font-mono text-[var(--color-text-secondary)]">{day.date}</td>
 						{#each visibleLanguages as langId}
-							<td class="px-3 py-2 text-right font-mono tabular-nums">
-								{formatNumber(day.languages[langId]?.total ?? 0)}
-							</td>
+							<th class="text-right" scope="col" aria-sort={ariaSort(langId)}>
+								<button
+									class="hover:text-[var(--color-text)] transition-colors"
+									style="transition-duration: var(--duration-fast);"
+									onclick={() => toggleSort(langId)}
+								>
+									{langName(langId)}{sortIndicator(langId)}
+								</button>
+							</th>
 						{/each}
 						{#if hasOther}
-							<td class="px-3 py-2 text-right font-mono tabular-nums text-[var(--color-text-secondary)]">
-								{formatNumber(otherValue(day))}
-							</td>
+							<th class="text-right" scope="col" aria-sort={ariaSort('other')}>
+								<button
+									class="hover:text-[var(--color-text)] transition-colors"
+									style="transition-duration: var(--duration-fast);"
+									onclick={() => toggleSort('other')}
+								>
+									Other{sortIndicator('other')}
+								</button>
+							</th>
 						{/if}
-						<td class="px-3 py-2 text-right font-mono font-medium tabular-nums">
-							{formatNumber(day.total)}
-						</td>
+						<th class="text-right" scope="col" aria-sort={ariaSort('total')}>
+							<button
+								class="hover:text-[var(--color-text)] transition-colors"
+								style="transition-duration: var(--duration-fast);"
+								onclick={() => toggleSort('total')}
+							>
+								Total{sortIndicator('total')}
+							</button>
+						</th>
 					</tr>
-				{/each}
-			</tbody>
-		</table>
+				</thead>
+				<tbody>
+					{#each sortedDays as day}
+						<tr>
+							<td class="text-[var(--color-text-secondary)]">{day.date}</td>
+							{#each visibleLanguages as langId}
+								<td class="text-right">
+									{formatNumber(day.languages[langId]?.total ?? 0)}
+								</td>
+							{/each}
+							{#if hasOther}
+								<td class="text-right text-[var(--color-text-secondary)]">
+									{formatNumber(otherValue(day))}
+								</td>
+							{/if}
+							<td class="text-right font-medium">
+								{formatNumber(day.total)}
+							</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		</div>
 	</div>
 </div>

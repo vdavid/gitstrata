@@ -85,19 +85,32 @@
 	]);
 </script>
 
-<div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5" role="region" aria-label="Summary statistics">
+<div
+	class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 strata-stagger"
+	role="region"
+	aria-label="Summary statistics"
+>
 	{#each stats as stat}
-		<div
-			class="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-4"
-		>
-			<p class="text-xs font-medium tracking-wide text-[var(--color-text-tertiary)] uppercase">
+		<div class="strata-card px-4 py-3.5">
+			<p
+				class="text-[var(--color-text-tertiary)]"
+				style="font-family: var(--font-mono); font-size: 0.625rem; letter-spacing: 0.08em; text-transform: uppercase;"
+			>
 				{stat.label}
 			</p>
-			<p class="mt-1 text-lg font-semibold text-[var(--color-text)]">
+			<p
+				class="mt-1.5 text-[var(--color-text)]"
+				style="font-family: var(--font-mono); font-size: 1.125rem; font-weight: 500; letter-spacing: -0.01em;"
+			>
 				{stat.value}
 			</p>
 			{#if stat.detail}
-				<p class="text-xs text-[var(--color-text-secondary)]">{stat.detail}</p>
+				<p
+					class="mt-0.5 text-[var(--color-text-secondary)]"
+					style="font-family: var(--font-mono); font-size: 0.6875rem;"
+				>
+					{stat.detail}
+				</p>
 			{/if}
 		</div>
 	{/each}

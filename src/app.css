@@ -3,110 +3,131 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /*
- * Chart color palette — 12 visually distinct colors tested for color blindness.
- * Each color has a main variant (for prod) and a tint (for test layers).
- * Light and dark mode tokens are defined separately.
+ * git strata — geological stratigraphy design system
+ *
+ * Chart palette: mineral/geological survey colors.
+ * Each color has a main variant (prod) and a tint (test layers).
  */
 
 :root {
-	/* chart colors (light mode) */
-	--chart-1: #2563eb;
-	--chart-1-tint: #93bbfd;
-	--chart-2: #16a34a;
-	--chart-2-tint: #86efac;
-	--chart-3: #dc2626;
-	--chart-3-tint: #fca5a5;
-	--chart-4: #9333ea;
-	--chart-4-tint: #d8b4fe;
-	--chart-5: #ea580c;
-	--chart-5-tint: #fdba74;
-	--chart-6: #0891b2;
-	--chart-6-tint: #67e8f9;
-	--chart-7: #ca8a04;
-	--chart-7-tint: #fde047;
-	--chart-8: #e11d48;
-	--chart-8-tint: #fda4af;
-	--chart-9: #4f46e5;
-	--chart-9-tint: #a5b4fc;
-	--chart-10: #059669;
-	--chart-10-tint: #6ee7b7;
-	--chart-11: #7c3aed;
-	--chart-11-tint: #c4b5fd;
-	--chart-12: #0284c7;
-	--chart-12-tint: #7dd3fc;
-	--chart-other: #d1d5db;
-	--chart-other-tint: #e5e7eb;
+	/* chart colors (light mode) — geological survey palette */
+	--chart-1: #2e6b9e;   /* deep ocean blue */
+	--chart-1-tint: #a3c4dd;
+	--chart-2: #4a8c5c;   /* forest serpentine */
+	--chart-2-tint: #a8d4b0;
+	--chart-3: #c2781e;   /* sandstone amber */
+	--chart-3-tint: #e8c491;
+	--chart-4: #8b4e8b;   /* amethyst */
+	--chart-4-tint: #cba5cb;
+	--chart-5: #b85433;   /* red clay */
+	--chart-5-tint: #dda88e;
+	--chart-6: #2e8b8b;   /* malachite teal */
+	--chart-6-tint: #8dcfcf;
+	--chart-7: #9e8b3e;   /* pyrite gold */
+	--chart-7-tint: #d4ca8a;
+	--chart-8: #a64560;   /* rhodonite */
+	--chart-8-tint: #d9a0b0;
+	--chart-9: #4a5e8b;   /* slate blue */
+	--chart-9-tint: #a0aecf;
+	--chart-10: #3e8b6e;  /* jade */
+	--chart-10-tint: #8bd4b8;
+	--chart-11: #7b5ea6;  /* charoite */
+	--chart-11-tint: #baa8d4;
+	--chart-12: #2e7090;  /* azurite */
+	--chart-12-tint: #8dc0d8;
+	--chart-other: #b0a898; /* limestone */
+	--chart-other-tint: #d4cec6;
 
-	/* ui tokens (light mode) */
-	--color-bg: #ffffff;
-	--color-bg-secondary: #f9fafb;
-	--color-bg-tertiary: #f3f4f6;
-	--color-text: #111827;
-	--color-text-secondary: #6b7280;
-	--color-text-tertiary: #9ca3af;
-	--color-border: #e5e7eb;
-	--color-border-strong: #d1d5db;
-	--color-accent: #2563eb;
-	--color-accent-hover: #1d4ed8;
-	--color-accent-light: #dbeafe;
-	--color-success: #16a34a;
-	--color-error: #dc2626;
-	--color-error-light: #fef2f2;
-	--color-warning: #ca8a04;
+	/* ui tokens (light mode) — warm stone */
+	--color-bg: #faf8f5;
+	--color-bg-secondary: #f2efe9;
+	--color-bg-tertiary: #e8e4dc;
+	--color-text: #1a1510;
+	--color-text-secondary: #6b6358;
+	--color-text-tertiary: #9c9488;
+	--color-border: #ddd8cf;
+	--color-border-strong: #c4bdb2;
+	--color-accent: #b86e1a;
+	--color-accent-hover: #a05e12;
+	--color-accent-light: #f5e8d4;
+	--color-accent-muted: #dab87e;
+	--color-success: #4a8c5c;
+	--color-error: #b83a2a;
+	--color-error-light: #fdf0ee;
+	--color-warning: #9e8b3e;
+
+	/* surfaces */
+	--color-surface-raised: #ffffff;
+	--color-surface-overlay: rgba(26, 21, 16, 0.03);
+
+	/* type */
+	--font-sans: 'DM Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
+	--font-mono: 'DM Mono', ui-monospace, 'Cascadia Code', monospace;
+
+	/* motion */
+	--ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+	--duration-fast: 150ms;
+	--duration-normal: 250ms;
+	--duration-slow: 500ms;
 }
 
 .dark {
-	/* chart colors (dark mode) — more saturated for dark backgrounds */
-	--chart-1: #3b82f6;
-	--chart-1-tint: #1e40af;
-	--chart-2: #22c55e;
-	--chart-2-tint: #166534;
-	--chart-3: #ef4444;
-	--chart-3-tint: #991b1b;
-	--chart-4: #a855f7;
-	--chart-4-tint: #6b21a8;
-	--chart-5: #f97316;
-	--chart-5-tint: #9a3412;
-	--chart-6: #06b6d4;
-	--chart-6-tint: #155e75;
-	--chart-7: #eab308;
-	--chart-7-tint: #854d0e;
-	--chart-8: #f43f5e;
-	--chart-8-tint: #9f1239;
-	--chart-9: #6366f1;
-	--chart-9-tint: #3730a3;
-	--chart-10: #10b981;
-	--chart-10-tint: #065f46;
-	--chart-11: #8b5cf6;
-	--chart-11-tint: #5b21b6;
-	--chart-12: #0ea5e9;
-	--chart-12-tint: #075985;
-	--chart-other: #4b5563;
-	--chart-other-tint: #374151;
+	/* chart colors (dark mode) — brighter minerals on dark stone */
+	--chart-1: #5a9ece;
+	--chart-1-tint: #1e3a54;
+	--chart-2: #6ab87e;
+	--chart-2-tint: #1e3a28;
+	--chart-3: #daa04e;
+	--chart-3-tint: #4a3218;
+	--chart-4: #b07eb0;
+	--chart-4-tint: #3a1e3a;
+	--chart-5: #da7a5a;
+	--chart-5-tint: #4a2218;
+	--chart-6: #5abebe;
+	--chart-6-tint: #1e3a3a;
+	--chart-7: #c4b05a;
+	--chart-7-tint: #3a3218;
+	--chart-8: #d07088;
+	--chart-8-tint: #3a1e28;
+	--chart-9: #7088c0;
+	--chart-9-tint: #1e2838;
+	--chart-10: #5abe90;
+	--chart-10-tint: #1e3a28;
+	--chart-11: #a088cc;
+	--chart-11-tint: #2e1e42;
+	--chart-12: #5a9ec0;
+	--chart-12-tint: #1e3040;
+	--chart-other: #6b6358;
+	--chart-other-tint: #3a342c;
 
-	/* ui tokens (dark mode) */
-	--color-bg: #0f172a;
-	--color-bg-secondary: #1e293b;
-	--color-bg-tertiary: #334155;
-	--color-text: #f1f5f9;
-	--color-text-secondary: #94a3b8;
-	--color-text-tertiary: #64748b;
-	--color-border: #334155;
-	--color-border-strong: #475569;
-	--color-accent: #3b82f6;
-	--color-accent-hover: #60a5fa;
-	--color-accent-light: #1e3a5f;
-	--color-success: #22c55e;
-	--color-error: #ef4444;
-	--color-error-light: #1c1917;
-	--color-warning: #eab308;
+	/* ui tokens (dark mode) — deep cavern stone */
+	--color-bg: #12100c;
+	--color-bg-secondary: #1e1a14;
+	--color-bg-tertiary: #2c261e;
+	--color-text: #e8e2d8;
+	--color-text-secondary: #9c9488;
+	--color-text-tertiary: #6b6358;
+	--color-border: #2c261e;
+	--color-border-strong: #3e362c;
+	--color-accent: #daa04e;
+	--color-accent-hover: #e8b46a;
+	--color-accent-light: #2c2010;
+	--color-accent-muted: #8b6e3e;
+	--color-success: #6ab87e;
+	--color-error: #da5a4a;
+	--color-error-light: #2a1410;
+	--color-warning: #c4b05a;
+
+	/* surfaces */
+	--color-surface-raised: #1a1610;
+	--color-surface-overlay: rgba(232, 226, 216, 0.02);
 }
 
 /* Smooth transitions for theme switching */
 html {
 	transition:
-		background-color 0.2s ease,
-		color 0.2s ease;
+		background-color var(--duration-normal) var(--ease-out-expo),
+		color var(--duration-normal) var(--ease-out-expo);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -123,7 +144,7 @@ html {
 	}
 }
 
-/* Focus ring utility */
+/* Focus ring */
 :focus-visible {
 	outline: 2px solid var(--color-accent);
 	outline-offset: 2px;
@@ -133,12 +154,334 @@ html {
 body {
 	background-color: var(--color-bg);
 	color: var(--color-text);
-	font-family:
-		'Inter',
-		ui-sans-serif,
-		system-ui,
-		-apple-system,
-		sans-serif;
+	font-family: var(--font-sans);
 	-webkit-font-smoothing: antialiased;
 	-moz-osx-font-smoothing: grayscale;
+}
+
+/* Noise texture overlay — subtle stone grain */
+body::before {
+	content: '';
+	position: fixed;
+	inset: 0;
+	pointer-events: none;
+	z-index: 9999;
+	opacity: 0.025;
+	background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+	background-repeat: repeat;
+	background-size: 256px 256px;
+}
+
+.dark body::before {
+	opacity: 0.04;
+}
+
+/* Strata line — decorative horizontal rule */
+.strata-line {
+	height: 1px;
+	background: linear-gradient(
+		90deg,
+		transparent 0%,
+		var(--color-border) 15%,
+		var(--color-border-strong) 50%,
+		var(--color-border) 85%,
+		transparent 100%
+	);
+}
+
+/* Strata card — the primary surface */
+.strata-card {
+	background-color: var(--color-surface-raised);
+	border: 1px solid var(--color-border);
+	border-radius: 8px;
+	position: relative;
+}
+
+.strata-card::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	border-radius: 8px;
+	pointer-events: none;
+	background: var(--color-surface-overlay);
+}
+
+/* Strata badge — inline label */
+.strata-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 4px 12px;
+	border: 1px solid var(--color-border);
+	border-radius: 999px;
+	font-size: 0.75rem;
+	font-family: var(--font-mono);
+	color: var(--color-text-secondary);
+	background-color: var(--color-bg-secondary);
+	letter-spacing: 0.02em;
+}
+
+/* Button variants */
+.btn-primary {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	padding: 10px 24px;
+	background-color: var(--color-accent);
+	color: #fff;
+	font-family: var(--font-sans);
+	font-weight: 500;
+	font-size: 0.875rem;
+	border-radius: 6px;
+	border: 1px solid transparent;
+	cursor: pointer;
+	transition: all var(--duration-fast) var(--ease-out-expo);
+	letter-spacing: 0.01em;
+}
+
+.btn-primary:hover {
+	background-color: var(--color-accent-hover);
+	transform: translateY(-1px);
+}
+
+.btn-primary:active {
+	transform: translateY(0);
+}
+
+.btn-primary:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+	transform: none;
+}
+
+.btn-ghost {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	padding: 6px 14px;
+	color: var(--color-text-secondary);
+	font-family: var(--font-sans);
+	font-weight: 400;
+	font-size: 0.8125rem;
+	border-radius: 6px;
+	border: 1px solid var(--color-border);
+	background: transparent;
+	cursor: pointer;
+	transition: all var(--duration-fast) var(--ease-out-expo);
+}
+
+.btn-ghost:hover {
+	background-color: var(--color-bg-tertiary);
+	color: var(--color-text);
+	border-color: var(--color-border-strong);
+}
+
+.btn-ghost:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+/* Link style button */
+.btn-link {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 4px 2px;
+	color: var(--color-accent);
+	font-family: var(--font-sans);
+	font-weight: 500;
+	font-size: 0.8125rem;
+	background: none;
+	border: none;
+	cursor: pointer;
+	transition: color var(--duration-fast) var(--ease-out-expo);
+	text-decoration: none;
+	border-bottom: 1px solid transparent;
+}
+
+.btn-link:hover {
+	color: var(--color-accent-hover);
+	border-bottom-color: var(--color-accent-hover);
+}
+
+/* Progress bar styling */
+.strata-progress-track {
+	height: 6px;
+	width: 100%;
+	overflow: hidden;
+	border-radius: 3px;
+	background-color: var(--color-bg-tertiary);
+	border: 1px solid var(--color-border);
+}
+
+.strata-progress-fill {
+	height: 100%;
+	border-radius: 2px;
+	transition: width 300ms var(--ease-out-expo);
+	position: relative;
+}
+
+.strata-progress-fill::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: linear-gradient(
+		90deg,
+		transparent 0%,
+		rgba(255, 255, 255, 0.15) 50%,
+		transparent 100%
+	);
+}
+
+/* Pulse dot for active states */
+@keyframes strata-pulse {
+	0%, 100% { opacity: 1; }
+	50% { opacity: 0.4; }
+}
+
+.strata-pulse-dot {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	animation: strata-pulse 2s ease-in-out infinite;
+}
+
+/* Fade-in animation */
+@keyframes strata-fade-in {
+	from {
+		opacity: 0;
+		transform: translateY(8px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.strata-fade-in {
+	animation: strata-fade-in var(--duration-slow) var(--ease-out-expo) both;
+}
+
+/* Stagger children */
+.strata-stagger > * {
+	animation: strata-fade-in var(--duration-slow) var(--ease-out-expo) both;
+}
+
+.strata-stagger > *:nth-child(1) { animation-delay: 0ms; }
+.strata-stagger > *:nth-child(2) { animation-delay: 60ms; }
+.strata-stagger > *:nth-child(3) { animation-delay: 120ms; }
+.strata-stagger > *:nth-child(4) { animation-delay: 180ms; }
+.strata-stagger > *:nth-child(5) { animation-delay: 240ms; }
+
+/* Chip toggle (for chart view modes) */
+.strata-chip {
+	display: inline-flex;
+	align-items: center;
+	padding: 5px 14px;
+	font-family: var(--font-mono);
+	font-size: 0.75rem;
+	letter-spacing: 0.02em;
+	border-radius: 999px;
+	border: 1px solid var(--color-border);
+	color: var(--color-text-secondary);
+	background: transparent;
+	cursor: pointer;
+	transition: all var(--duration-fast) var(--ease-out-expo);
+}
+
+.strata-chip:hover {
+	border-color: var(--color-border-strong);
+	color: var(--color-text);
+}
+
+.strata-chip[aria-pressed='true'] {
+	background-color: var(--color-accent);
+	border-color: var(--color-accent);
+	color: #fff;
+}
+
+/* Table styling */
+.strata-table {
+	width: 100%;
+	font-size: 0.8125rem;
+	border-collapse: collapse;
+}
+
+.strata-table thead {
+	background-color: var(--color-bg-secondary);
+}
+
+.strata-table th {
+	padding: 8px 12px;
+	font-family: var(--font-mono);
+	font-weight: 400;
+	font-size: 0.6875rem;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--color-text-tertiary);
+	border-bottom: 1px solid var(--color-border);
+	white-space: nowrap;
+}
+
+.strata-table td {
+	padding: 6px 12px;
+	font-family: var(--font-mono);
+	font-variant-numeric: tabular-nums;
+	border-bottom: 1px solid var(--color-border);
+	color: var(--color-text);
+}
+
+.strata-table tbody tr {
+	transition: background-color var(--duration-fast) ease;
+}
+
+.strata-table tbody tr:hover {
+	background-color: var(--color-surface-overlay);
+}
+
+.strata-table tbody tr:last-child td {
+	border-bottom: none;
+}
+
+/* Hero decorative strata lines */
+@keyframes strata-lines-shift {
+	0% { background-position: 0 0; }
+	100% { background-position: 0 -8px; }
+}
+
+.strata-hero-lines {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	opacity: 0.06;
+	background-image: repeating-linear-gradient(
+		0deg,
+		var(--color-text) 0px,
+		var(--color-text) 1px,
+		transparent 1px,
+		transparent 8px
+	);
+	mask-image: radial-gradient(ellipse at 50% 50%, black 0%, transparent 70%);
+	-webkit-mask-image: radial-gradient(ellipse at 50% 50%, black 0%, transparent 70%);
+}
+
+/* Scrollbar styling for tables */
+.strata-scroll::-webkit-scrollbar {
+	height: 6px;
+}
+
+.strata-scroll::-webkit-scrollbar-track {
+	background: var(--color-bg-tertiary);
+	border-radius: 3px;
+}
+
+.strata-scroll::-webkit-scrollbar-thumb {
+	background: var(--color-border-strong);
+	border-radius: 3px;
+}
+
+.strata-scroll::-webkit-scrollbar-thumb:hover {
+	background: var(--color-text-tertiary);
 }

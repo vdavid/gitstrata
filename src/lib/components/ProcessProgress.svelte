@@ -27,29 +27,28 @@
 </script>
 
 <div
-	class="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-5"
+	class="strata-card p-5"
 	role="region"
 	aria-label="Processing progress"
 >
-	<div class="mb-3 flex items-center justify-between">
-		<div class="flex items-center gap-2">
-			<div class="h-2 w-2 animate-pulse rounded-full bg-[var(--color-success)]"></div>
-			<span class="text-sm font-medium text-[var(--color-text)]">
-				Processing commits...
+	<div class="mb-4 flex items-center justify-between">
+		<div class="flex items-center gap-2.5">
+			<div class="strata-pulse-dot bg-[var(--color-success)]"></div>
+			<span
+				class="text-sm text-[var(--color-text)]"
+				style="font-family: var(--font-sans); font-weight: 500;"
+			>
+				Processing commits
 			</span>
 		</div>
-		<button
-			onclick={oncancel}
-			class="rounded-md px-3 py-1 text-sm text-[var(--color-text-secondary)]
-				transition-colors hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text)]"
-		>
+		<button onclick={oncancel} class="btn-ghost text-xs">
 			Cancel
 		</button>
 	</div>
 
 	<!-- Progress bar -->
 	<div
-		class="h-2 w-full overflow-hidden rounded-full bg-[var(--color-bg-tertiary)]"
+		class="strata-progress-track"
 		role="progressbar"
 		aria-valuenow={Math.round(progress)}
 		aria-valuemin={0}
@@ -57,21 +56,22 @@
 		aria-label="Commit processing progress"
 	>
 		<div
-			class="h-full rounded-full bg-[var(--color-success)] transition-all duration-300 ease-out"
+			class="strata-progress-fill bg-[var(--color-success)]"
 			style="width: {progress}%"
 		></div>
 	</div>
 
 	<!-- Details row -->
 	<div
-		class="mt-2 flex items-center justify-between text-xs text-[var(--color-text-secondary)]"
+		class="mt-2.5 flex items-center justify-between text-[var(--color-text-tertiary)]"
+		style="font-family: var(--font-mono); font-size: 0.6875rem; letter-spacing: 0.02em;"
 		aria-live="polite"
 		aria-atomic="true"
 	>
 		<span>
 			{current} / {total} days
 			{#if date}
-				<span class="text-[var(--color-text-tertiary)]">&middot; {date}</span>
+				<span class="text-[var(--color-text-tertiary)]"> -- {date}</span>
 			{/if}
 		</span>
 		<span>

@@ -31,21 +31,22 @@
 
 <button
 	onclick={toggle}
-	class="relative flex h-9 w-9 items-center justify-center rounded-lg
-		text-[var(--color-text-secondary)] transition-colors
-		hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text)]"
+	class="group relative flex h-8 w-8 items-center justify-center rounded-md
+		text-[var(--color-text-tertiary)] transition-all
+		hover:text-[var(--color-accent)]"
+	style="transition-duration: var(--duration-fast); transition-timing-function: var(--ease-out-expo);"
 	aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
 >
 	{#if theme === 'light'}
 		<!-- Sun icon -->
 		<svg
 			xmlns="http://www.w3.org/2000/svg"
-			width="18"
-			height="18"
+			width="16"
+			height="16"
 			viewBox="0 0 24 24"
 			fill="none"
 			stroke="currentColor"
-			stroke-width="2"
+			stroke-width="1.5"
 			stroke-linecap="round"
 			stroke-linejoin="round"
 			aria-hidden="true"
@@ -64,12 +65,12 @@
 		<!-- Moon icon -->
 		<svg
 			xmlns="http://www.w3.org/2000/svg"
-			width="18"
-			height="18"
+			width="16"
+			height="16"
 			viewBox="0 0 24 24"
 			fill="none"
 			stroke="currentColor"
-			stroke-width="2"
+			stroke-width="1.5"
 			stroke-linecap="round"
 			stroke-linejoin="round"
 			aria-hidden="true"

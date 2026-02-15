@@ -270,35 +270,42 @@
 					x: {
 						type: 'time',
 						time: { unit: 'month', tooltipFormat: 'yyyy-MM-dd' },
-						grid: { color: getCssVar('--color-border') + '40' },
+						grid: { color: getCssVar('--color-border') + '30' },
 						ticks: {
-							color: getCssVar('--color-text-secondary'),
-							maxTicksLimit: 12
-						}
+							color: getCssVar('--color-text-tertiary'),
+							maxTicksLimit: 12,
+							font: { family: getCssVar('--font-mono').split(',')[0].replace(/'/g, ''), size: 10 }
+						},
+						border: { color: getCssVar('--color-border') }
 					},
 					y: {
 						stacked: true,
 						beginAtZero: true,
-						grid: { color: getCssVar('--color-border') + '40' },
+						grid: { color: getCssVar('--color-border') + '30' },
 						ticks: {
-							color: getCssVar('--color-text-secondary'),
+							color: getCssVar('--color-text-tertiary'),
+							font: { family: getCssVar('--font-mono').split(',')[0].replace(/'/g, ''), size: 10 },
 							callback: (value) => {
 								const v = value as number;
 								if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
 								if (v >= 1_000) return `${(v / 1_000).toFixed(0)}K`;
 								return String(v);
 							}
-						}
+						},
+						border: { color: getCssVar('--color-border') }
 					}
 				},
 				plugins: {
 					tooltip: {
-						backgroundColor: getCssVar('--color-bg-secondary'),
+						backgroundColor: getCssVar('--color-surface-raised'),
 						titleColor: getCssVar('--color-text'),
 						bodyColor: getCssVar('--color-text-secondary'),
 						borderColor: getCssVar('--color-border'),
 						borderWidth: 1,
 						padding: 12,
+						titleFont: { family: getCssVar('--font-mono').split(',')[0].replace(/'/g, ''), size: 11 },
+						bodyFont: { family: getCssVar('--font-mono').split(',')[0].replace(/'/g, ''), size: 11 },
+						cornerRadius: 6,
 						callbacks: {
 							label: (ctx) => {
 								const val = ctx.parsed.y;
@@ -319,7 +326,10 @@
 							padding: 16,
 							usePointStyle: true,
 							pointStyle: 'rectRounded',
-							font: { size: 12 }
+							font: {
+								family: getCssVar('--font-mono').split(',')[0].replace(/'/g, ''),
+								size: 11
+							}
 						}
 					},
 					zoom: {
@@ -381,9 +391,13 @@
 	});
 </script>
 
-<div class="space-y-3">
+<div class="strata-card overflow-hidden">
 	<!-- View toggles + reset zoom -->
-	<div class="flex flex-wrap items-center gap-2" role="group" aria-label="Chart view mode">
+	<div
+		class="flex flex-wrap items-center gap-2 border-b border-[var(--color-border)] px-4 py-3"
+		role="group"
+		aria-label="Chart view mode"
+	>
 		{#each [
 			{ mode: 'all' as ViewMode, label: 'All' },
 			{ mode: 'prod-vs-test' as ViewMode, label: 'Prod vs test' },
@@ -392,26 +406,19 @@
 			<button
 				onclick={() => (viewMode = toggle.mode)}
 				aria-pressed={viewMode === toggle.mode}
-				class="rounded-md px-3 py-1.5 text-sm font-medium transition-colors
-					{viewMode === toggle.mode
-					? 'bg-[var(--color-accent)] text-white'
-					: 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)] hover:text-[var(--color-text)]'}"
+				class="strata-chip"
 			>
 				{toggle.label}
 			</button>
 		{/each}
 		<div class="flex-1"></div>
-		<button
-			onclick={resetZoom}
-			class="rounded-md px-3 py-1.5 text-sm text-[var(--color-text-secondary)]
-				transition-colors hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text)]"
-		>
+		<button onclick={resetZoom} class="btn-ghost text-xs">
 			Reset zoom
 		</button>
 	</div>
 
 	<!-- Chart canvas -->
-	<div class="relative h-64 w-full sm:h-80 md:h-96 lg:h-[28rem] xl:h-[32rem]">
+	<div class="relative h-64 w-full p-4 sm:h-80 md:h-96 lg:h-[28rem] xl:h-[32rem]">
 		<canvas
 			bind:this={canvasEl}
 			aria-label={ariaLabel}
@@ -419,8 +426,13 @@
 	</div>
 
 	{#if live}
-		<p class="text-center text-xs text-[var(--color-text-tertiary)]">
-			Chart updates as data streams in...
-		</p>
+		<div class="border-t border-[var(--color-border)] px-4 py-2">
+			<p
+				class="text-center text-[var(--color-text-tertiary)]"
+				style="font-family: var(--font-mono); font-size: 0.6875rem; letter-spacing: 0.02em;"
+			>
+				Chart updates as data streams in...
+			</p>
+		</div>
 	{/if}
 </div>

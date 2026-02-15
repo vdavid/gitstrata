@@ -287,21 +287,29 @@
 </script>
 
 <svelte:head>
-	<title>git strata — see your codebase's heartbeat</title>
+	<title>git strata -- see your codebase's heartbeat</title>
 </svelte:head>
 
-<div class="space-y-6 sm:space-y-8">
+<div class="space-y-8 sm:space-y-10">
 	<!-- Hero section -->
-	<div class="text-center">
-		<h1
-			class="text-3xl font-bold tracking-tight text-[var(--color-text)] sm:text-4xl lg:text-5xl"
-		>
-			See your codebase's heartbeat
-		</h1>
-		<p class="mx-auto mt-3 max-w-xl text-base text-[var(--color-text-secondary)] sm:text-lg">
-			Visualize how any public Git repository grows over time, broken down by language.
-			Everything runs in your browser.
-		</p>
+	<div class="relative py-4 text-center sm:py-6">
+		<div class="strata-hero-lines"></div>
+		<div class="relative">
+			<h1
+				class="text-3xl font-bold tracking-tight text-[var(--color-text)] sm:text-4xl lg:text-5xl"
+				style="font-family: var(--font-sans); letter-spacing: -0.025em;"
+			>
+				See your codebase's
+				<span class="text-[var(--color-accent)]">heartbeat</span>
+			</h1>
+			<p
+				class="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-[var(--color-text-secondary)] sm:text-base"
+				style="font-family: var(--font-sans);"
+			>
+				Visualize how any public Git repository grows over time,
+				broken down by language. Everything runs in your browser.
+			</p>
+		</div>
 	</div>
 
 	<!-- Input -->
@@ -316,27 +324,36 @@
 	<!-- Error -->
 	{#if phase === 'error'}
 		<div
-			class="mx-auto max-w-2xl rounded-xl border border-[var(--color-error)]
-				bg-[var(--color-error-light)] p-4"
+			class="strata-card strata-fade-in mx-auto max-w-2xl border-[var(--color-error)] p-5"
 			role="alert"
 		>
-			<p class="text-sm text-[var(--color-error)]">{errorMessage}</p>
-			<div class="mt-2 flex items-center gap-3">
-				{#if retryable}
-					<button
-						onclick={retry}
-						class="rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-sm font-medium
-							text-white transition-colors hover:bg-[var(--color-accent-hover)]"
-					>
-						Retry
-					</button>
-				{/if}
-				<button
-					onclick={() => (phase = 'idle')}
-					class="text-sm text-[var(--color-accent)] hover:underline"
+			<div class="flex items-start gap-3">
+				<svg
+					width="18" height="18" viewBox="0 0 24 24" fill="none"
+					stroke="var(--color-error)" stroke-width="2"
+					stroke-linecap="round" stroke-linejoin="round"
+					class="mt-0.5 shrink-0" aria-hidden="true"
 				>
-					{retryable ? 'Cancel' : 'Try another repo'}
-				</button>
+					<circle cx="12" cy="12" r="10" />
+					<line x1="15" y1="9" x2="9" y2="15" />
+					<line x1="9" y1="9" x2="15" y2="15" />
+				</svg>
+				<div class="min-w-0 flex-1">
+					<p class="text-sm text-[var(--color-error)]">{errorMessage}</p>
+					<div class="mt-3 flex items-center gap-3">
+						{#if retryable}
+							<button onclick={retry} class="btn-primary text-sm">
+								Retry
+							</button>
+						{/if}
+						<button
+							onclick={() => (phase = 'idle')}
+							class="btn-link text-sm"
+						>
+							{retryable ? 'Cancel' : 'Try another repo'}
+						</button>
+					</div>
+				</div>
 			</div>
 		</div>
 	{/if}
@@ -353,7 +370,7 @@
 	>
 		<!-- Clone progress -->
 		{#if phase === 'cloning'}
-			<div class="mx-auto max-w-2xl">
+			<div class="mx-auto max-w-2xl strata-fade-in">
 				<CloneProgress
 					phase={clonePhase}
 					loaded={cloneLoaded}
@@ -366,7 +383,7 @@
 
 		<!-- Process progress -->
 		{#if phase === 'processing'}
-			<div class="mx-auto max-w-2xl">
+			<div class="mx-auto max-w-2xl strata-fade-in">
 				<ProcessProgress
 					current={processCurrent}
 					total={processTotal}
@@ -380,32 +397,33 @@
 
 	<!-- Results -->
 	{#if displayDays.length > 0}
-		<div class="space-y-6">
+		<div class="space-y-8">
 			<!-- Cached badge + refresh + share -->
 			{#if result}
-				<div class="flex flex-wrap items-center justify-center gap-3">
+				<div class="flex flex-wrap items-center justify-center gap-3 strata-fade-in">
 					{#if cachedResult}
-						<span
-							class="inline-flex items-center gap-1.5 rounded-full
-								bg-[var(--color-bg-secondary)] border border-[var(--color-border)]
-								px-3 py-1 text-xs text-[var(--color-text-secondary)]"
-						>
-							Last analyzed: {cachedResult.analyzedAt.slice(0, 10)}
+						<span class="strata-badge">
+							<svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+								stroke="currentColor" stroke-width="2"
+								stroke-linecap="round" stroke-linejoin="round"
+								aria-hidden="true">
+								<circle cx="12" cy="12" r="10" />
+								<polyline points="12 6 12 12 16 14" />
+							</svg>
+							{cachedResult.analyzedAt.slice(0, 10)}
 						</span>
-						<button
-							onclick={refresh}
-							class="rounded-md px-3 py-1 text-sm text-[var(--color-accent)]
-								transition-colors hover:underline"
-						>
+						<button onclick={refresh} class="btn-link">
 							Refresh
 						</button>
 					{/if}
-					<button
-						onclick={copyShareLink}
-						class="rounded-md border border-[var(--color-border)] px-3 py-1.5 text-sm
-							text-[var(--color-text-secondary)] transition-colors
-							hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text)]"
-					>
+					<button onclick={copyShareLink} class="btn-ghost">
+						<svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+							stroke="currentColor" stroke-width="2"
+							stroke-linecap="round" stroke-linejoin="round"
+							aria-hidden="true">
+							<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+							<path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+						</svg>
 						{shareCopied ? 'Copied!' : 'Copy link'}
 					</button>
 				</div>
@@ -425,13 +443,21 @@
 			{#if result}
 				<details class="group">
 					<summary
-						class="cursor-pointer rounded-lg px-1 py-2 text-sm font-medium
-							text-[var(--color-text-secondary)] transition-colors
-							hover:text-[var(--color-text)]"
+						class="flex cursor-pointer items-center gap-2 py-2 text-sm text-[var(--color-text-secondary)] transition-colors hover:text-[var(--color-text)]"
+						style="font-family: var(--font-mono); font-size: 0.8125rem; letter-spacing: 0.02em;"
 					>
+						<svg
+							width="14" height="14" viewBox="0 0 24 24" fill="none"
+							stroke="currentColor" stroke-width="2"
+							stroke-linecap="round" stroke-linejoin="round"
+							aria-hidden="true"
+							class="transition-transform duration-200 group-open:rotate-90"
+						>
+							<polyline points="9 18 15 12 9 6" />
+						</svg>
 						View data table
 					</summary>
-					<div class="mt-3">
+					<div class="mt-4">
 						<ResultsTable days={result.days} detectedLanguages={result.detectedLanguages} />
 					</div>
 				</details>
