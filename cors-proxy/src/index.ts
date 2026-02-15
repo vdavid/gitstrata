@@ -127,12 +127,12 @@ app.all('*', async (c) => {
 			}
 		}
 
-		// Cache /info/refs GET responses with 5-minute TTL
+		// Cache /info/refs GET responses with 12-hour TTL
 		if (isInfoRefsGet && response.ok) {
 			const cache = caches.default;
 			const cacheKey = new Request(targetUrl);
 			const cacheHeaders = new Headers(responseHeaders);
-			cacheHeaders.set('Cache-Control', 'public, max-age=300');
+			cacheHeaders.set('Cache-Control', 'public, max-age=43200');
 			const cacheResponse = new Response(response.clone().body, {
 				status: response.status,
 				headers: cacheHeaders
