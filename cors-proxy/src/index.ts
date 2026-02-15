@@ -1,10 +1,14 @@
 import { Hono } from 'hono';
 
-const app = new Hono();
+type Bindings = {
+	RESULTS?: R2Bucket;
+};
+
+const app = new Hono<{ Bindings: Bindings }>();
 
 const corsHeaders = {
 	'Access-Control-Allow-Origin': '*',
-	'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+	'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
 	'Access-Control-Allow-Headers': 'Content-Type, Git-Protocol, Authorization',
 	'Access-Control-Expose-Headers': 'Content-Type, Content-Length'
 };
@@ -28,6 +32,119 @@ function isRateLimited(ip: string): boolean {
 function isAllowedGitPath(url: string): boolean {
 	return url.includes('/info/refs') || url.includes('/git-upload-pack');
 }
+
+const writeRateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const maxWritesPerMinute = 10;
+
+function isWriteRateLimited(ip: string): boolean {
+	const now = Date.now();
+	const entry = writeRateLimitMap.get(ip);
+
+	if (!entry || now >= entry.resetAt) {
+		writeRateLimitMap.set(ip, { count: 1, resetAt: now + 60_000 });
+		return false;
+	}
+
+	entry.count++;
+	return entry.count > maxWritesPerMinute;
+}
+
+async function sha256Hex(input: string): Promise<string> {
+	const encoded = new TextEncoder().encode(input);
+	const hashBuffer = await crypto.subtle.digest('SHA-256', encoded);
+	return [...new Uint8Array(hashBuffer)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+const maxBodySize = 10 * 1024 * 1024; // 10 MB
+
+function isValidCacheEntry(
+	data: unknown
+): data is { version: 1; repoUrl: string; headCommit: string; result: { days: unknown[] }; updatedAt: string } {
+	if (typeof data !== 'object' || data === null) return false;
+	const obj = data as Record<string, unknown>;
+	if (obj.version !== 1) return false;
+	if (typeof obj.repoUrl !== 'string') return false;
+	if (typeof obj.headCommit !== 'string') return false;
+	if (typeof obj.updatedAt !== 'string') return false;
+	if (typeof obj.result !== 'object' || obj.result === null) return false;
+	const result = obj.result as Record<string, unknown>;
+	if (!Array.isArray(result.days)) return false;
+	return true;
+}
+
+// --- Cache routes (only active when R2 binding RESULTS is present) ---
+
+app.get('/cache/v1/:repoHash', async (c) => {
+	const bucket = c.env.RESULTS;
+	if (!bucket) {
+		return c.text('Not found', 404, corsHeaders);
+	}
+
+	const ip = c.req.header('cf-connecting-ip') ?? c.req.header('x-forwarded-for') ?? 'unknown';
+	if (isRateLimited(ip)) {
+		return c.text('Rate limit exceeded. Max 100 requests per minute.', 429, corsHeaders);
+	}
+
+	const repoHash = c.req.param('repoHash');
+	const object = await bucket.get(`results/v1/${repoHash}.json.gz`);
+
+	if (!object) {
+		return c.text('Not found', 404, corsHeaders);
+	}
+
+	const headers = new Headers(corsHeaders);
+	headers.set('Content-Type', 'application/json');
+	headers.set('Content-Encoding', 'gzip');
+	headers.set('Cache-Control', 'public, max-age=300');
+
+	return new Response(object.body, { status: 200, headers });
+});
+
+app.put('/cache/v1/:repoHash', async (c) => {
+	const bucket = c.env.RESULTS;
+	if (!bucket) {
+		return c.text('Not found', 404, corsHeaders);
+	}
+
+	const ip = c.req.header('cf-connecting-ip') ?? c.req.header('x-forwarded-for') ?? 'unknown';
+
+	if (isRateLimited(ip)) {
+		return c.text('Rate limit exceeded. Max 100 requests per minute.', 429, corsHeaders);
+	}
+	if (isWriteRateLimited(ip)) {
+		return c.text('Write rate limit exceeded. Max 10 writes per minute.', 429, corsHeaders);
+	}
+
+	const body = await c.req.arrayBuffer();
+	if (body.byteLength > maxBodySize) {
+		return c.text('Request body too large. Max 10 MB.', 413, corsHeaders);
+	}
+
+	// Decompress gzip to validate JSON
+	const decompressed = new Response(new Blob([body]).stream().pipeThrough(new DecompressionStream('gzip')));
+	let parsed: unknown;
+	try {
+		parsed = await decompressed.json();
+	} catch {
+		return c.text('Invalid gzip or JSON payload.', 400, corsHeaders);
+	}
+
+	if (!isValidCacheEntry(parsed)) {
+		return c.text('Invalid cache entry shape.', 400, corsHeaders);
+	}
+
+	const repoHash = c.req.param('repoHash');
+	const expectedHash = await sha256Hex(parsed.repoUrl);
+	if (expectedHash !== repoHash) {
+		return c.text('repoUrl hash does not match path.', 400, corsHeaders);
+	}
+
+	await bucket.put(`results/v1/${repoHash}.json.gz`, body, {
+		httpMetadata: { contentType: 'application/json', contentEncoding: 'gzip' }
+	});
+
+	return c.text('Stored', 200, corsHeaders);
+});
 
 app.options('*', (c) => {
 	return c.body(null, 204, corsHeaders);
