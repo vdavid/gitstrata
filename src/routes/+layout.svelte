@@ -1,12 +1,21 @@
 <script lang="ts">
 	import '../app.css';
 	import { resolve } from '$app/paths';
+	import { env } from '$env/dynamic/public';
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
 	import CacheManager from '$lib/components/CacheManager.svelte';
 	import KeyboardHelp from '$lib/components/KeyboardHelp.svelte';
 
 	let { children } = $props();
+
+	const analyticsId = env.PUBLIC_ANALYTICS_ID;
 </script>
+
+<svelte:head>
+	{#if analyticsId}
+		<script defer data-domain={analyticsId} src="https://plausible.io/js/script.js"></script>
+	{/if}
+</svelte:head>
 
 <div class="flex min-h-screen flex-col bg-[var(--color-bg)] text-[var(--color-text)]">
 	<a
