@@ -51,14 +51,13 @@ The shared cache lets users benefit from each other's analyses. It's optional bu
    pnpm exec wrangler r2 bucket create git-strata-results
    ```
 
-3. **Re-deploy the CORS proxy** so it picks up the R2 binding:
+3. **Uncomment the R2 binding** in `cors-proxy/wrangler.toml` (remove the `#` from the three `[[r2_buckets]]` lines).
+
+4. **Re-deploy the CORS proxy** so it picks up the R2 binding:
 
    ```bash
    pnpm run deploy
    ```
-
-The R2 binding is already configured in `cors-proxy/wrangler.toml`. To disable it, comment out the `[[r2_buckets]]`
-section.
 
 ## Step 4: Create the Cloudflare Pages project (frontend)
 

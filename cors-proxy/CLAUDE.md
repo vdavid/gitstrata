@@ -25,4 +25,4 @@ responses; otherwise just a pass-through proxy.
   - `PUT /cache/v1/:repoHash` — accepts gzip-compressed `SharedCacheEntry` JSON. Validates shape,
     10 MB size limit, repo URL hash match, and write rate limit (10/min per IP).
   - R2 object key: `results/v1/{sha256(repoUrl)}.json.gz`.
-  - The R2 binding is enabled in `wrangler.toml`.
+  - The R2 binding is commented out in `wrangler.toml` by default — uncomment to enable.

@@ -2,6 +2,7 @@ name = "git-strata-cors-proxy"
 main = "src/index.ts"
 compatibility_date = "2025-01-01"
 
-[[r2_buckets]]
-binding = "RESULTS"
-bucket_name = "git-strata-results"
+# Uncomment after enabling R2 and creating the bucket (see docs/deploying.md step 3)
+# [[r2_buckets]]
+# binding = "RESULTS"
+# bucket_name = "git-strata-results"
