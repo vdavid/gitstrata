@@ -60,6 +60,36 @@ app.all('*', async (c) => {
 		);
 	}
 
+	// Cache GET /info/refs requests using Cloudflare Cache API
+	const isInfoRefsGet = c.req.method === 'GET' && targetUrl.includes('/info/refs');
+
+	if (isInfoRefsGet) {
+		const cache = caches.default;
+		const cacheKey = new Request(targetUrl);
+		const cachedResponse = await cache.match(cacheKey);
+
+		if (cachedResponse) {
+			const responseHeaders = new Headers(corsHeaders);
+			for (const [key, value] of cachedResponse.headers.entries()) {
+				const lower = key.toLowerCase();
+				if (
+					lower === 'content-type' ||
+					lower === 'content-length' ||
+					lower === 'content-encoding' ||
+					lower === 'cache-control'
+				) {
+					responseHeaders.set(key, value);
+				}
+			}
+			responseHeaders.set('X-Cache', 'HIT');
+
+			return new Response(cachedResponse.body, {
+				status: cachedResponse.status,
+				headers: responseHeaders
+			});
+		}
+	}
+
 	const headers = new Headers();
 	for (const [key, value] of c.req.raw.headers.entries()) {
 		// Forward relevant headers, skip hop-by-hop and host headers
@@ -96,6 +126,21 @@ app.all('*', async (c) => {
 				responseHeaders.set(key, value);
 			}
 		}
+
+		// Cache /info/refs GET responses with 5-minute TTL
+		if (isInfoRefsGet && response.ok) {
+			const cache = caches.default;
+			const cacheKey = new Request(targetUrl);
+			const cacheHeaders = new Headers(responseHeaders);
+			cacheHeaders.set('Cache-Control', 'public, max-age=300');
+			const cacheResponse = new Response(response.clone().body, {
+				status: response.status,
+				headers: cacheHeaders
+			});
+			c.executionCtx.waitUntil(cache.put(cacheKey, cacheResponse));
+		}
+
+		responseHeaders.set('X-Cache', isInfoRefsGet ? 'MISS' : 'NONE');
 
 		return new Response(response.body, {
 			status: response.status,
