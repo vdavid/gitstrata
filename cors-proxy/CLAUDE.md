@@ -13,11 +13,15 @@ responses; otherwise just a pass-through proxy.
 - Only allows git protocol paths (`/info/refs`, `/git-upload-pack`) — rejects everything else with 403.
 - Rate limiting: 100 req/min per IP using in-memory counters (resets each minute). Since Workers are ephemeral, this is
   best-effort. For stricter limits, use Cloudflare's built-in rate limiting product.
-- The target URL is extracted from the request path: `https://proxy-host/https://github.com/foo/bar.git/info/refs`.
-- **Caching**: GET `/info/refs` responses are cached via the Cloudflare Cache API with a 12-hour TTL
-  (`Cache-Control: public, max-age=43200`). The cache key is the full target git host URL. POST `/git-upload-pack`
-  requests are never cached. The `X-Cache` response header indicates `HIT`, `MISS`, or `NONE` (for uncacheable
-  requests). Cache is per-datacenter, not global.
+- The target URL is extracted from the request path. isomorphic-git strips the protocol (`https://`) when
+  using `corsProxy`, so the proxy re-adds `https://` when the path doesn't start with `http`.
+  Example: `https://proxy-host/github.com/foo/bar.git/info/refs` → upstream `https://github.com/foo/bar.git/info/refs`.
+- **Caching**: GET `/info/refs` v1 responses (no `Git-Protocol` header) are cached via the Cloudflare Cache API
+  with a 12-hour TTL (`Cache-Control: public, max-age=43200`). v2 responses are never cached — isomorphic-git
+  uses v2 for branch detection then v1 for clone, and caching v2 would poison v1 lookups. `/info/refs` responses
+  to the browser include `Cache-Control: no-store` so the browser doesn't cache them either (same v1/v2 concern).
+  POST `/git-upload-pack` requests are never cached. The `X-Cache` response header indicates `HIT`, `MISS`, or
+  `NONE` (for uncacheable requests). Cache is per-datacenter, not global.
 - For local frontend development, use `https://cors.isomorphic-git.org` instead — no need to run this worker locally.
 - **Shared results cache (optional)**: When an R2 bucket binding (`RESULTS`) is present, two cache routes
   activate. Without the binding, they return 404 and the proxy behaves as before.

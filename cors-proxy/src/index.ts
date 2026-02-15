@@ -163,16 +163,15 @@ app.all('*', async (c) => {
 		return c.text('Rate limit exceeded. Max 100 requests per minute.', 429, corsHeaders);
 	}
 
-	// The target URL is everything after the proxy host's `/`
-	const targetUrl =
+	// The target URL is everything after the proxy host's `/`.
+	// isomorphic-git strips the protocol (e.g. "https://") when using corsProxy,
+	// so we re-add it when the path doesn't already include one.
+	const rawPath =
 		c.req.path.slice(1) + (c.req.url.includes('?') ? '?' + c.req.url.split('?')[1] : '');
+	const targetUrl = rawPath.startsWith('http') ? rawPath : `https://${rawPath}`;
 
-	if (!targetUrl || !targetUrl.startsWith('http')) {
-		return c.text(
-			'Missing or invalid target URL. Pass the full URL as the path.',
-			400,
-			corsHeaders
-		);
+	if (!rawPath) {
+		return c.text('Missing target URL. Pass the full URL as the path.', 400, corsHeaders);
 	}
 
 	if (!isAllowedGitPath(targetUrl)) {
@@ -183,10 +182,14 @@ app.all('*', async (c) => {
 		);
 	}
 
-	// Cache GET /info/refs requests using Cloudflare Cache API
+	// Cache GET /info/refs requests using Cloudflare Cache API.
+	// Only cache v1 responses (no Git-Protocol header). isomorphic-git uses v2 for
+	// branch detection then v1 for clone — caching v2 would poison v1 lookups.
 	const isInfoRefsGet = c.req.method === 'GET' && targetUrl.includes('/info/refs');
+	const gitProtocol = c.req.header('git-protocol');
+	const shouldCache = isInfoRefsGet && !gitProtocol;
 
-	if (isInfoRefsGet) {
+	if (shouldCache) {
 		const cache = caches.default;
 		const cacheKey = new Request(targetUrl);
 		const cachedResponse = await cache.match(cacheKey);
@@ -198,12 +201,14 @@ app.all('*', async (c) => {
 				if (
 					lower === 'content-type' ||
 					lower === 'content-length' ||
-					lower === 'content-encoding' ||
-					lower === 'cache-control'
+					lower === 'content-encoding'
 				) {
 					responseHeaders.set(key, value);
 				}
 			}
+			// Prevent browser from caching /info/refs (the proxy has its own cache).
+			// Without this, the browser reuses a protocol-v2 response for a v1 request.
+			responseHeaders.set('Cache-Control', 'no-store');
 			responseHeaders.set('X-Cache', 'HIT');
 
 			return new Response(cachedResponse.body, {
@@ -239,19 +244,25 @@ app.all('*', async (c) => {
 		const responseHeaders = new Headers(corsHeaders);
 		for (const [key, value] of response.headers.entries()) {
 			const lower = key.toLowerCase();
-			// Pass through content headers
+			// Pass through content headers (but not cache-control — see below)
 			if (
 				lower === 'content-type' ||
 				lower === 'content-length' ||
-				lower === 'content-encoding' ||
-				lower === 'cache-control'
+				lower === 'content-encoding'
 			) {
+				responseHeaders.set(key, value);
+			} else if (lower === 'cache-control' && !isInfoRefsGet) {
 				responseHeaders.set(key, value);
 			}
 		}
+		// For /info/refs: prevent browser caching — the proxy has its own internal cache,
+		// and browser caching causes v2 responses to be reused for v1 requests.
+		if (isInfoRefsGet) {
+			responseHeaders.set('Cache-Control', 'no-store');
+		}
 
-		// Cache /info/refs GET responses with 12-hour TTL
-		if (isInfoRefsGet && response.ok) {
+		// Cache /info/refs GET responses with 12-hour TTL (v1 only)
+		if (shouldCache && response.ok) {
 			const cache = caches.default;
 			const cacheKey = new Request(targetUrl);
 			const cacheHeaders = new Headers(responseHeaders);
@@ -263,7 +274,7 @@ app.all('*', async (c) => {
 			c.executionCtx.waitUntil(cache.put(cacheKey, cacheResponse));
 		}
 
-		responseHeaders.set('X-Cache', isInfoRefsGet ? 'MISS' : 'NONE');
+		responseHeaders.set('X-Cache', shouldCache ? 'MISS' : 'NONE');
 
 		return new Response(response.body, {
 			status: response.status,

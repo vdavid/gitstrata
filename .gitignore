@@ -10,3 +10,4 @@ scripts/loc-counter/
 coverage/
 *.log
 .DS_Store
+cors-proxy/.wrangler/
