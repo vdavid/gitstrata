@@ -9,6 +9,29 @@ import {
 	resolveHeaderLanguage
 } from '../languages';
 
+/** Create a concurrency limiter that runs at most `limit` async tasks at once */
+const createLimiter = (limit: number) => {
+	const queue: (() => void)[] = [];
+	let active = 0;
+
+	return <T>(fn: () => Promise<T>): Promise<T> => {
+		return new Promise<T>((resolve, reject) => {
+			const run = () => {
+				active++;
+				fn()
+					.then(resolve, reject)
+					.finally(() => {
+						active--;
+						const next = queue.shift();
+						if (next) next();
+					});
+			};
+			if (active < limit) run();
+			else queue.push(run);
+		});
+	};
+};
+
 /** Skip patterns for filenames/extensions that should not be counted (ported from Go) */
 const skipPatterns: readonly string[] = [
 	// Lock/generated files
@@ -302,125 +325,55 @@ export const countLinesForCommit = async (
 	}
 	const extensionMap = resolveHeaderLanguage(allExtensions ?? localExtensions);
 
+	// Process all files in parallel with concurrency limit
+	const limit = createLimiter(8);
+	const fileResults = await Promise.all(
+		files.map((file) => {
+			if (signal?.aborted) throw new Error('Cancelled');
+			return limit(() =>
+				processFile(file.path, file.oid, fs, dir, blobCache, contentCache, extensionMap, gitCache)
+			);
+		})
+	);
+
+	// Aggregate results sequentially
 	const languages: Record<string, LanguageCount> = {};
 	let total = 0;
 
-	const addToLanguage = (langId: string, prod: number, test: number) => {
-		const existing = languages[langId];
-		const lineTotal = prod + test;
-		if (existing) {
-			existing.total += lineTotal;
-			if (existing.prod !== undefined) existing.prod += prod;
-			if (existing.test !== undefined) existing.test += test;
-		} else {
-			languages[langId] = { total: lineTotal, prod, test };
-		}
-		total += lineTotal;
-	};
-
-	const addToLanguageNoSplit = (langId: string, lines: number) => {
-		const existing = languages[langId];
-		if (existing) {
-			existing.total += lines;
-		} else {
-			languages[langId] = { total: lines };
-		}
-		total += lines;
-	};
-
-	for (const file of files) {
-		if (signal?.aborted) throw new Error('Cancelled');
-		if (shouldSkip(file.path)) continue;
-
-		const ext = getExtension(file.path).toLowerCase();
-		const lang = extensionMap.get(ext);
-
-		// Check blob result cache first
-		const cacheKey = makeBlobCacheKey(file.oid, file.path);
-		const cached = blobCache.get(cacheKey);
-		if (cached) {
-			if (cached.languageId) {
-				if (cached.testLines > 0 || cached.lines - cached.testLines > 0) {
-					addToLanguage(cached.languageId, cached.lines - cached.testLines, cached.testLines);
-				}
-			}
-			if (fileStateMap) {
-				fileStateMap.set(file.path, {
-					oid: file.oid,
-					languageId: cached.languageId,
-					lines: cached.lines,
-					testLines: cached.testLines
-				});
-			}
-			continue;
-		}
-
-		// Read blob content (use content cache for OID dedup)
-		let content = contentCache.get(file.oid);
-		if (content === undefined) {
-			try {
-				const { blob } = await git.readBlob({ fs, dir, oid: file.oid, cache: gitCache });
-				if (isBinary(blob)) {
-					// Cache as empty/skipped
-					blobCache.set(cacheKey, { lines: 0, testLines: 0, languageId: undefined });
-					if (fileStateMap) {
-						fileStateMap.set(file.path, {
-							oid: file.oid,
-							languageId: undefined,
-							lines: 0,
-							testLines: 0
-						});
-					}
-					continue;
-				}
-				content = new TextDecoder().decode(blob);
-				contentCache.set(file.oid, content);
-			} catch {
-				continue;
-			}
-		}
-
-		const lines = countLines(content);
-		const basename = getBasename(file.path);
-
-		if (!lang) {
-			// Unknown extension: count as "other" (prod, no test heuristic)
-			blobCache.set(cacheKey, { lines, testLines: 0, languageId: 'other' });
-			addToLanguage('other', lines, 0);
-			if (fileStateMap) {
-				fileStateMap.set(file.path, { oid: file.oid, languageId: 'other', lines, testLines: 0 });
-			}
-			continue;
-		}
-
-		const langId = lang.id;
-
-		// Classify prod vs test
-		const classification = classifyFile(file.path, basename, content, lines, lang);
-
-		blobCache.set(cacheKey, {
-			lines: classification.lines,
-			testLines: classification.testLines,
-			languageId: langId
-		});
+	for (let i = 0; i < files.length; i++) {
+		const file = files[i];
+		const state = fileResults[i];
 
 		if (fileStateMap) {
-			fileStateMap.set(file.path, {
-				oid: file.oid,
-				languageId: langId,
-				lines: classification.lines,
-				testLines: classification.testLines
-			});
+			fileStateMap.set(file.path, state);
 		}
 
-		if (classification.hasSplit) {
-			addToLanguage(
-				langId,
-				classification.lines - classification.testLines,
-				classification.testLines
-			);
+		if (!state.languageId || state.lines === 0) continue;
+
+		const langId = state.languageId;
+		const hasSplit = langsWithTestHeuristics.has(langId);
+
+		if (hasSplit) {
+			const prod = state.lines - state.testLines;
+			const test = state.testLines;
+			const lineTotal = prod + test;
+			const existing = languages[langId];
+			if (existing) {
+				existing.total += lineTotal;
+				if (existing.prod !== undefined) existing.prod += prod;
+				if (existing.test !== undefined) existing.test += test;
+			} else {
+				languages[langId] = { total: lineTotal, prod, test };
+			}
+			total += lineTotal;
 		} else {
-			addToLanguageNoSplit(langId, classification.lines);
+			const existing = languages[langId];
+			if (existing) {
+				existing.total += state.lines;
+			} else {
+				languages[langId] = { total: state.lines };
+			}
+			total += state.lines;
 		}
 	}
 
@@ -592,20 +545,20 @@ export const countLinesForCommitIncremental = async (
 	// Re-resolve header language mapping with updated extensions
 	const extensionMap = resolveHeaderLanguage(allExtensions);
 
-	// Process added and modified files
-	for (const file of [...added, ...modified]) {
-		if (signal?.aborted) throw new Error('Cancelled');
-		const state = await processFile(
-			file.path,
-			file.oid,
-			fs,
-			dir,
-			blobCache,
-			contentCache,
-			extensionMap,
-			gitCache
-		);
-		fileStateMap.set(file.path, state);
+	// Process added and modified files in parallel with concurrency limit
+	const changedFiles = [...added, ...modified];
+	const limit = createLimiter(8);
+	const fileResults = await Promise.all(
+		changedFiles.map((file) => {
+			if (signal?.aborted) throw new Error('Cancelled');
+			return limit(() =>
+				processFile(file.path, file.oid, fs, dir, blobCache, contentCache, extensionMap, gitCache)
+			);
+		})
+	);
+
+	for (let i = 0; i < changedFiles.length; i++) {
+		fileStateMap.set(changedFiles[i].path, fileResults[i]);
 	}
 
 	return computeDayStatsFromFileState(fileStateMap, date, messages);

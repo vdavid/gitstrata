@@ -17,10 +17,13 @@ run client-side in a Web Worker.
 - `git/history.ts` — Commit log grouped by date, consecutive date generation, gap filling
 - `git/count.ts` — Line counting per commit tree, prod/test classification, blob dedup caching.
   Files with unrecognized extensions are counted under the `'other'` language bucket as prod code.
-  Supports diff-based incremental processing via `countLinesForCommitIncremental`, which uses
-  custom tree traversal with `git.readTree` + an in-memory `treeCache` (`Map<treeOid, TreeEntry[]>`)
-  to diff trees between consecutive commits. A shared `FileState` map tracks per-file OID, language,
-  and line counts across commits.
+  Blob reads are parallelized with a concurrency limit of 8 using an inline `createLimiter` utility
+  (no external dependency). Both `countLinesForCommit` (full tree walk) and
+  `countLinesForCommitIncremental` (diff-based) process files in parallel via `processFile`, then
+  aggregate results sequentially. Supports diff-based incremental processing via
+  `countLinesForCommitIncremental`, which uses custom tree traversal with `git.readTree` + an
+  in-memory `treeCache` (`Map<treeOid, TreeEntry[]>`) to diff trees between consecutive commits.
+  A shared `FileState` map tracks per-file OID, language, and line counts across commits.
 - `worker/analyzer.worker.ts` — Web Worker entry point (Comlink), orchestrates full pipeline and
   incremental refresh (`analyzeIncremental` fetches only new commits, processes new days, merges)
 - `worker/analyzer.api.ts` — Comlink wrapper for main thread consumption
@@ -35,7 +38,8 @@ run client-side in a Web Worker.
   `blobCache`/`contentCache` operate at higher levels (parsed tree entries, line counts). All layers
   are complementary.
 - Blob dedup: `contentCache` (OID -> content) avoids redundant reads; `blobCache` (OID+path -> result)
-  avoids redundant classification
+  avoids redundant classification. These Maps are safe for concurrent async access because JavaScript
+  is single-threaded (Map operations are atomic between await points).
 - Diff-based processing: After the first commit (full tree walk via `listFilesAtCommitCached`),
   subsequent commits use custom `diffTrees` recursive traversal with `git.readTree` to diff against
   the previous commit. An in-memory `treeCache` (`Map<treeOid, TreeEntry[]>`) shared across all
