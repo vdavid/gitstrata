@@ -375,7 +375,8 @@
 				class="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-[var(--color-text-secondary)] sm:text-base"
 				style="font-family: var(--font-sans);"
 			>
-				Visualize how any public git repo grew over time, broken down by language. Runs in your browser.
+				Visualize how any public git repo grew over time, broken down by language. Runs in your
+				browser.
 			</p>
 		</div>
 	</div>

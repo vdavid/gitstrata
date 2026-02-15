@@ -9,11 +9,12 @@
 	let { children } = $props();
 
 	const analyticsId = env.PUBLIC_ANALYTICS_ID;
+	const analyticsUrl = env.PUBLIC_ANALYTICS_URL;
 </script>
 
 <svelte:head>
-	{#if analyticsId}
-		<script defer data-domain={analyticsId} src="https://plausible.io/js/script.js"></script>
+	{#if analyticsId && analyticsUrl}
+		<script defer data-website-id={analyticsId} src="{analyticsUrl}/script.js"></script>
 	{/if}
 </svelte:head>
 

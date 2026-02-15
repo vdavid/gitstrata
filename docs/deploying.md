@@ -128,13 +128,20 @@ Once these are set, every push to `main` that passes CI will auto-deploy both th
 | ------------------------- | ----------------- | --------------------------------- | --------------------------------------------------------------- |
 | `PUBLIC_CORS_PROXY_URL`   | Frontend (`.env`) | `https://cors.isomorphic-git.org` | URL of your deployed CORS proxy                                 |
 | `PUBLIC_SHARED_CACHE_URL` | Frontend (`.env`) | _(none)_                          | URL of shared cache API (same as CORS proxy when R2 is enabled) |
-| `PUBLIC_ANALYTICS_ID`     | Frontend (`.env`) | _(none)_                          | Optional analytics (for example, Plausible)                     |
+| `PUBLIC_ANALYTICS_URL`    | Frontend (`.env`) | _(none)_                          | Umami server URL (for example, `https://umami.yourdomain.com`)  |
+| `PUBLIC_ANALYTICS_ID`     | Frontend (`.env`) | _(none)_                          | Umami website ID (UUID from your Umami dashboard)               |
+
+Both `PUBLIC_ANALYTICS_URL` and `PUBLIC_ANALYTICS_ID` must be set to enable analytics. When either is missing, no
+tracking script is loaded.
 
 These are set at build time in CI (see the `deploy-frontend` job in `ci.yml`). For local development, create a `.env`
 file in the repo root:
 
 ```bash
 PUBLIC_CORS_PROXY_URL=https://your-proxy.workers.dev
+PUBLIC_SHARED_CACHE_URL=https://your-proxy.workers.dev
+# PUBLIC_ANALYTICS_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+# PUBLIC_ANALYTICS_URL=https://umami.yourdomain.com
 ```
 
 ## Local development
