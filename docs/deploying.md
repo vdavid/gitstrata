@@ -1,81 +1,127 @@
 # Deploying git strata
 
-## Frontend
+This guide covers deploying git strata from scratch on Cloudflare, with CI auto-deploying on every push to main.
 
-The frontend is a static SvelteKit site. Build it and deploy the output to any static hosting provider.
+## Prerequisites
 
-### Build
+1. A [Cloudflare account](https://dash.cloudflare.com/sign-up).
+2. A GitHub repo with this codebase pushed (for example, `vdavid/gitstrata`).
+3. Wrangler (the Cloudflare CLI) — included as a dev dependency in `cors-proxy/`. Run commands from that directory with
+   `pnpm exec wrangler`, or install globally with `pnpm add -g wrangler`.
+
+## Step 1: Authenticate wrangler
 
 ```bash
-pnpm install
-pnpm build
+cd cors-proxy
+pnpm exec wrangler login
 ```
 
-This outputs a static site to `build/`.
+This opens a browser window. Authorize wrangler to access your Cloudflare account.
 
-### Deploy to Cloudflare Pages
+## Step 2: Deploy the CORS proxy (Cloudflare Worker)
 
-1. Push the repo to GitHub (or GitLab).
-2. In the Cloudflare dashboard, go to **Workers & Pages > Create > Pages > Connect to Git**.
-3. Select the repository and configure:
-   - **Build command:** `pnpm build`
-   - **Build output directory:** `build`
-   - **Root directory:** `/` (the repo root, not `cors-proxy/`)
-4. Add environment variables if needed (see below).
-5. Deploy.
+```bash
+cd cors-proxy
+pnpm install
+pnpm run deploy
+```
 
-Cloudflare Pages will rebuild and deploy on every push to the default branch.
+Note the deployed URL (something like `https://git-strata-cors-proxy.<your-subdomain>.workers.dev`). You'll need this
+for the frontend config.
 
-### Alternatives
+### What the proxy does
 
-The `build/` directory is plain HTML/CSS/JS with no server requirements. It works on:
+- Forwards requests to git hosts (`/info/refs` and `/git-upload-pack` paths only)
+- Adds CORS headers so the browser can talk to git servers
+- Rate limits to 100 requests per minute per IP
+- When R2 is enabled: serves and accepts shared analysis results (see step 3)
 
-- **Vercel** — set framework to "SvelteKit" or "Other", output directory `build`
-- **Netlify** — build command `pnpm build`, publish directory `build`
-- **Any static host** — just serve the `build/` folder
+## Step 3: Enable the shared results cache (R2)
 
-## CORS proxy
+The shared cache lets users benefit from each other's analyses. It's optional but recommended.
 
-The CORS proxy is a Cloudflare Worker that forwards git protocol requests with CORS headers.
-It lives in the `cors-proxy/` directory.
+1. **Enable R2 in your Cloudflare account**: Go to the
+   [Cloudflare dashboard](https://dash.cloudflare.com/) > **R2 Object Storage** and follow the prompts to activate R2
+   (it's free-tier friendly).
 
-### Deploy to Cloudflare Workers
-
-1. Install wrangler if you haven't:
-
-   ```bash
-   pnpm add -g wrangler
-   ```
-
-2. Authenticate with Cloudflare:
-
-   ```bash
-   wrangler login
-   ```
-
-3. Deploy:
+2. **Create the bucket**:
 
    ```bash
    cd cors-proxy
-   pnpm install
+   pnpm exec wrangler r2 bucket create git-strata-results
+   ```
+
+3. **Re-deploy the CORS proxy** so it picks up the R2 binding:
+
+   ```bash
    pnpm run deploy
    ```
 
-4. Note the deployed URL (something like `https://git-strata-cors-proxy.<your-subdomain>.workers.dev`).
+The R2 binding is already configured in `cors-proxy/wrangler.toml`. To disable it, comment out the `[[r2_buckets]]`
+section.
 
-5. Update the frontend to use your proxy URL (see environment variables below).
+## Step 4: Create the Cloudflare Pages project (frontend)
 
-### What it does
+```bash
+cd cors-proxy
+pnpm exec wrangler pages project create git-strata
+```
 
-- Forwards requests to git hosts (`/info/refs` and `/git-upload-pack` paths only)
-- Adds `Access-Control-Allow-Origin: *` and other CORS headers
-- Rate limits to 100 requests per minute per IP
-- Rejects non-git URLs for security
+This creates a Pages project named `git-strata`. The actual deployments happen from CI (step 6), not from this command.
 
-### Local development
+## Step 5: Set up the custom domain
 
-For local frontend development, you don't need to run the CORS proxy. The dev server defaults to
-`https://cors.isomorphic-git.org`, a free public proxy.
+1. In the [Cloudflare dashboard](https://dash.cloudflare.com/), go to **Workers & Pages > git-strata > Custom
+   domains**.
+2. Add your domain (for example, `gitstrata.yourdomain.com`).
+3. Cloudflare will auto-create the DNS record if your domain's DNS is managed by Cloudflare.
+
+## Step 6: Set up CI (GitHub Actions)
+
+The CI workflow at `.github/workflows/ci.yml` runs all checks on PRs and auto-deploys on push to main. It needs two
+GitHub secrets.
+
+### Create a Cloudflare API token
+
+1. Go to [Cloudflare dashboard > My Profile > API Tokens](https://dash.cloudflare.com/profile/api-tokens).
+2. Click **Create Token**.
+3. Use the **Custom token** template with these permissions:
+   - Account > Workers Scripts: Edit
+   - Account > Cloudflare Pages: Edit
+   - Account > R2 Storage: Edit (if using shared cache)
+4. Copy the token.
+
+### Find your account ID
+
+Your account ID is on the right sidebar of any zone's overview page in the Cloudflare dashboard. Or run:
+
+```bash
+cd cors-proxy
+pnpm exec wrangler whoami
+```
+
+### Add GitHub secrets
+
+In your GitHub repo, go to **Settings > Secrets and variables > Actions** and add:
+
+| Secret                   | Value                          |
+| ------------------------ | ------------------------------ |
+| `CLOUDFLARE_API_TOKEN`   | The API token from above       |
+| `CLOUDFLARE_ACCOUNT_ID`  | Your Cloudflare account ID     |
+
+Once these are set, every push to `main` that passes CI will auto-deploy both the frontend and the CORS proxy.
+
+### CI jobs overview
+
+| Job               | Trigger                           | What it does                                    |
+| ----------------- | --------------------------------- | ----------------------------------------------- |
+| Detect changes    | Always                            | Skips irrelevant jobs based on changed files     |
+| Frontend          | Frontend files changed            | prettier, eslint, knip, svelte-check, vitest     |
+| CORS proxy        | cors-proxy/ files changed         | Runs proxy tests                                 |
+| Scripts (Go)      | scripts/ files changed            | gofmt, go-vet, staticcheck, go-tests             |
+| CI OK             | Always                            | Gate job for branch protection                   |
+| Deploy frontend   | Push to main, after CI OK         | Builds and deploys to Cloudflare Pages           |
+| Deploy CORS proxy | Push to main, after CI OK         | Deploys worker to Cloudflare                     |
 
 ## Environment variables
 
@@ -83,12 +129,30 @@ For local frontend development, you don't need to run the CORS proxy. The dev se
 | ------------------------- | ----------------- | --------------------------------- | --------------------------------------------------------------- |
 | `PUBLIC_CORS_PROXY_URL`   | Frontend (`.env`) | `https://cors.isomorphic-git.org` | URL of your deployed CORS proxy                                 |
 | `PUBLIC_SHARED_CACHE_URL` | Frontend (`.env`) | _(none)_                          | URL of shared cache API (same as CORS proxy when R2 is enabled) |
-| `PUBLIC_ANALYTICS_ID`     | Frontend (`.env`) | _(none)_                          | Optional analytics (e.g. Plausible)                             |
+| `PUBLIC_ANALYTICS_ID`     | Frontend (`.env`) | _(none)_                          | Optional analytics (for example, Plausible)                     |
 
-Create a `.env` file in the repo root for local overrides:
+These are set at build time in CI (see the `deploy-frontend` job in `ci.yml`). For local development, create a `.env`
+file in the repo root:
 
 ```bash
 PUBLIC_CORS_PROXY_URL=https://your-proxy.workers.dev
 ```
 
-For production, set these as environment variables in your hosting provider's dashboard.
+## Local development
+
+For local frontend development, you don't need to deploy anything. The dev server defaults to
+`https://cors.isomorphic-git.org`, a free public CORS proxy.
+
+```bash
+pnpm install
+pnpm dev
+```
+
+## Building locally
+
+```bash
+pnpm build
+```
+
+Outputs a static site to `build/`. This directory is plain HTML/CSS/JS and works on any static host (Vercel, Netlify,
+or just a file server).
