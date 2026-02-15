@@ -1,7 +1,15 @@
 import type { LanguageDefinition } from './types';
 
 /** Directory names that indicate test code (global defaults) */
-export const defaultTestDirPatterns = ['test', 'tests', '__tests__', 'e2e', 'testutil', 'testdata'];
+export const defaultTestDirPatterns = [
+	'test',
+	'tests',
+	'__tests__',
+	'spec',
+	'e2e',
+	'testutil',
+	'testdata'
+];
 
 /**
  * Count lines inside Rust #[cfg(test)] blocks using brace-depth tracking.
@@ -16,6 +24,38 @@ export const countRustInlineTestLines = (content: string): number => {
 		const trimmed = line.trim();
 
 		if (!inTestBlock && trimmed.includes('#[cfg(test)]')) {
+			inTestBlock = true;
+			testLines++;
+			depth += countChar(line, '{') - countChar(line, '}');
+			continue;
+		}
+
+		if (inTestBlock) {
+			testLines++;
+			depth += countChar(line, '{') - countChar(line, '}');
+			if (depth <= 0) {
+				inTestBlock = false;
+				depth = 0;
+			}
+		}
+	}
+
+	return testLines;
+};
+
+/**
+ * Count lines inside Zig `test "..." { ... }` blocks using brace-depth tracking.
+ * Similar approach to countRustInlineTestLines.
+ */
+export const countZigInlineTestLines = (content: string): number => {
+	let testLines = 0;
+	let depth = 0;
+	let inTestBlock = false;
+
+	for (const line of content.split('\n')) {
+		const trimmed = line.trim();
+
+		if (!inTestBlock && (trimmed.startsWith('test "') || trimmed.startsWith('test {'))) {
 			inTestBlock = true;
 			testLines++;
 			depth += countChar(line, '{') - countChar(line, '}');
@@ -83,7 +123,7 @@ const languages: readonly LanguageDefinition[] = [
 	{
 		id: 'cpp',
 		name: 'C++',
-		extensions: ['.cpp', '.cc', '.cxx', '.hpp', '.hxx']
+		extensions: ['.cpp', '.cc', '.cxx', '.hpp', '.hxx', '.hh']
 	},
 	{
 		id: 'csharp',
@@ -95,30 +135,31 @@ const languages: readonly LanguageDefinition[] = [
 		id: 'java',
 		name: 'Java',
 		extensions: ['.java'],
-		testFilePatterns: ['*Test.java'],
-		testDirPatterns: ['test', 'tests', '__tests__', 'e2e', 'testutil', 'testdata', 'src/test']
+		testFilePatterns: ['*Test.java', '*Tests.java', '*IT.java']
 	},
 	{
 		id: 'kotlin',
 		name: 'Kotlin',
 		extensions: ['.kt', '.kts'],
-		testFilePatterns: ['*Test.kt']
+		testFilePatterns: ['*Test.kt', '*Tests.kt']
 	},
 	{
 		id: 'swift',
 		name: 'Swift',
 		extensions: ['.swift'],
-		testFilePatterns: ['*Tests.swift']
+		testFilePatterns: ['*Tests.swift', '*Test.swift']
 	},
 	{
 		id: 'objc',
 		name: 'Objective-C',
-		extensions: ['.m', '.mm']
+		extensions: ['.m', '.mm'],
+		testFilePatterns: ['*Tests.m']
 	},
 	{
 		id: 'zig',
 		name: 'Zig',
-		extensions: ['.zig']
+		extensions: ['.zig'],
+		countInlineTestLines: countZigInlineTestLines
 	},
 	{
 		id: 'ruby',
@@ -165,8 +206,9 @@ const languages: readonly LanguageDefinition[] = [
 	{
 		id: 'perl',
 		name: 'Perl',
-		extensions: ['.pl', '.pm'],
-		testFilePatterns: ['*.t']
+		extensions: ['.pl', '.pm', '.t'],
+		testFilePatterns: ['*.t'],
+		testDirPatterns: ['test', 'tests', '__tests__', 'spec', 'e2e', 'testutil', 'testdata', 't']
 	},
 	{
 		id: 'r',
@@ -183,13 +225,13 @@ const languages: readonly LanguageDefinition[] = [
 		id: 'clojure',
 		name: 'Clojure',
 		extensions: ['.clj', '.cljs', '.cljc'],
-		testFilePatterns: ['*_test.clj']
+		testFilePatterns: ['*_test.clj', '*_test.cljs', '*_test.cljc']
 	},
 	{
 		id: 'erlang',
 		name: 'Erlang',
-		extensions: ['.erl'],
-		testFilePatterns: ['*_SUITE.erl']
+		extensions: ['.erl', '.hrl'],
+		testFilePatterns: ['*_SUITE.erl', '*_test.erl', '*_tests.erl']
 	},
 	{
 		id: 'ocaml',
@@ -199,12 +241,14 @@ const languages: readonly LanguageDefinition[] = [
 	{
 		id: 'fsharp',
 		name: 'F#',
-		extensions: ['.fs', '.fsx']
+		extensions: ['.fs', '.fsx'],
+		testFilePatterns: ['*Tests.fs', '*Test.fs']
 	},
 	{
 		id: 'shell',
 		name: 'Shell',
-		extensions: ['.sh', '.bash', '.zsh']
+		extensions: ['.sh', '.bash', '.zsh'],
+		noTestSplit: true
 	},
 	{
 		id: 'powershell',
@@ -215,43 +259,51 @@ const languages: readonly LanguageDefinition[] = [
 	{
 		id: 'html',
 		name: 'HTML',
-		extensions: ['.html', '.htm']
+		extensions: ['.html', '.htm'],
+		noTestSplit: true
 	},
 	{
 		id: 'css',
 		name: 'CSS',
-		extensions: ['.css', '.scss', '.sass', '.less']
+		extensions: ['.css', '.scss', '.sass', '.less'],
+		noTestSplit: true
 	},
 	{
 		id: 'sql',
 		name: 'SQL',
-		extensions: ['.sql']
+		extensions: ['.sql'],
+		noTestSplit: true
 	},
 	{
 		id: 'svelte',
 		name: 'Svelte',
-		extensions: ['.svelte']
+		extensions: ['.svelte'],
+		noTestSplit: true
 	},
 	{
 		id: 'vue',
 		name: 'Vue',
-		extensions: ['.vue']
+		extensions: ['.vue'],
+		noTestSplit: true
 	},
 	{
 		id: 'astro',
 		name: 'Astro',
-		extensions: ['.astro']
+		extensions: ['.astro'],
+		noTestSplit: true
 	},
 	{
 		id: 'docs',
 		name: 'Docs',
 		extensions: ['.md', '.mdx', '.rst', '.txt', '.adoc'],
+		noTestSplit: true,
 		isMeta: true
 	},
 	{
 		id: 'config',
 		name: 'Config/Data',
 		extensions: ['.json', '.yaml', '.yml', '.toml', '.xml', '.ini'],
+		noTestSplit: true,
 		isMeta: true
 	}
 ];

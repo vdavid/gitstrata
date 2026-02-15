@@ -8,7 +8,9 @@ run client-side in a Web Worker.
 - `types.ts` — Shared interfaces: LanguageDefinition, LanguageCount, DayStats, AnalysisResult
   (includes `headCommit` for freshness checking), SharedCacheEntry, ProgressEvent
 - `languages.ts` — Language registry (~35 languages), extension mapping, test file/dir pattern matching,
-  Rust inline test detection. `.h` defaults to C but reassigns to C++ when `.cpp`/`.cc`/`.cxx` files exist.
+  Rust and Zig inline test detection. `.h` defaults to C but reassigns to C++ when `.cpp`/`.cc`/`.cxx`
+  files exist. Languages can set `noTestSplit: true` to skip prod/test breakdown (used for HTML, CSS,
+  SQL, Shell, Svelte, Vue, Astro, Docs, Config).
 - `url.ts` — Repo URL parsing and normalization (GitHub/GitLab/Bitbucket, owner/repo shorthand)
 - `cache.ts` — IndexedDB results cache using `idb`, with size tracking, LRU eviction (500 MB limit),
   and `formatBytes` helper
@@ -21,7 +23,7 @@ run client-side in a Web Worker.
   for repos >1 GB
 - `git/history.ts` — Commit log grouped by date, consecutive date generation, gap filling
 - `git/count.ts` — Line counting per commit tree, prod/test classification, blob dedup caching.
-  Files with unrecognized extensions are counted under the `'other'` language bucket as prod code.
+  Files with unrecognized extensions are counted under the `'other'` bucket (with test-dir detection).
   Blob reads are parallelized with a concurrency limit of 8 using an inline `createLimiter` utility
   (no external dependency). Both `countLinesForCommit` (full tree walk) and
   `countLinesForCommitIncremental` (diff-based) process files in parallel via `processFile`, then
@@ -53,5 +55,7 @@ run client-side in a Web Worker.
   (path -> FileState) tracks current state and is updated incrementally.
   `computeDayStatsFromFileState` aggregates the map into DayStats.
 - Date gaps are filled by carrying forward the previous day's stats with `comments: ["-"]`
-- Languages without test heuristics have no prod/test split (LanguageCount.prod/test stay undefined)
+- `noTestSplit` languages have no prod/test split (LanguageCount.prod/test stay undefined). All other
+  languages get test directory detection via `defaultTestDirPatterns`, even without explicit heuristics.
+- `classifyFile` order: noTestSplit → test dir → test file pattern → inline detection → default prod
 - Incremental refresh: `analyzeIncremental` uses `git.fetch` + processes only days after last cached date

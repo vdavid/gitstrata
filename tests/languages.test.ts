@@ -1,11 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import {
 	getLanguageByExtension,
+	getLanguages,
 	resolveHeaderLanguage,
 	matchPattern,
 	isTestFile,
 	isInTestDir,
-	countRustInlineTestLines
+	countRustInlineTestLines,
+	countZigInlineTestLines
 } from '../src/lib/languages';
 
 describe('getLanguageByExtension', () => {
@@ -51,6 +53,18 @@ describe('getLanguageByExtension', () => {
 
 	it('maps .h to C by default', () => {
 		expect(getLanguageByExtension('.h')?.id).toBe('c');
+	});
+
+	it('maps .hh to C++', () => {
+		expect(getLanguageByExtension('.hh')?.id).toBe('cpp');
+	});
+
+	it('maps .hrl to Erlang', () => {
+		expect(getLanguageByExtension('.hrl')?.id).toBe('erlang');
+	});
+
+	it('maps .t to Perl', () => {
+		expect(getLanguageByExtension('.t')?.id).toBe('perl');
 	});
 });
 
@@ -122,6 +136,43 @@ describe('isTestFile', () => {
 		expect(isTestFile('main.go', ['*_test.go'])).toBe(false);
 		expect(isTestFile('app.ts', ['*.test.ts', '*.spec.ts'])).toBe(false);
 	});
+
+	it('detects Clojure test files across dialects', () => {
+		expect(isTestFile('core_test.clj', ['*_test.clj', '*_test.cljs', '*_test.cljc'])).toBe(true);
+		expect(isTestFile('core_test.cljs', ['*_test.clj', '*_test.cljs', '*_test.cljc'])).toBe(true);
+		expect(isTestFile('core_test.cljc', ['*_test.clj', '*_test.cljs', '*_test.cljc'])).toBe(true);
+	});
+
+	it('detects Erlang EUnit test files', () => {
+		expect(isTestFile('my_test.erl', ['*_SUITE.erl', '*_test.erl', '*_tests.erl'])).toBe(true);
+		expect(isTestFile('my_tests.erl', ['*_SUITE.erl', '*_test.erl', '*_tests.erl'])).toBe(true);
+		expect(isTestFile('my_SUITE.erl', ['*_SUITE.erl', '*_test.erl', '*_tests.erl'])).toBe(true);
+	});
+
+	it('detects Java test patterns including integration tests', () => {
+		expect(isTestFile('FooTest.java', ['*Test.java', '*Tests.java', '*IT.java'])).toBe(true);
+		expect(isTestFile('FooTests.java', ['*Test.java', '*Tests.java', '*IT.java'])).toBe(true);
+		expect(isTestFile('FooIT.java', ['*Test.java', '*Tests.java', '*IT.java'])).toBe(true);
+	});
+
+	it('detects Kotlin test patterns', () => {
+		expect(isTestFile('FooTest.kt', ['*Test.kt', '*Tests.kt'])).toBe(true);
+		expect(isTestFile('FooTests.kt', ['*Test.kt', '*Tests.kt'])).toBe(true);
+	});
+
+	it('detects Swift singular and plural test patterns', () => {
+		expect(isTestFile('FooTests.swift', ['*Tests.swift', '*Test.swift'])).toBe(true);
+		expect(isTestFile('FooTest.swift', ['*Tests.swift', '*Test.swift'])).toBe(true);
+	});
+
+	it('detects F# test patterns', () => {
+		expect(isTestFile('FooTests.fs', ['*Tests.fs', '*Test.fs'])).toBe(true);
+		expect(isTestFile('FooTest.fs', ['*Tests.fs', '*Test.fs'])).toBe(true);
+	});
+
+	it('detects Objective-C test patterns', () => {
+		expect(isTestFile('FooTests.m', ['*Tests.m'])).toBe(true);
+	});
 });
 
 describe('isInTestDir', () => {
@@ -139,6 +190,10 @@ describe('isInTestDir', () => {
 	it('uses custom dir patterns when provided', () => {
 		expect(isInTestDir('spec/foo.rb', ['spec'])).toBe(true);
 		expect(isInTestDir('tests/foo.rb', ['spec'])).toBe(false);
+	});
+
+	it('detects files in spec directory (default pattern)', () => {
+		expect(isInTestDir('spec/models/user_spec.rb')).toBe(true);
 	});
 });
 
@@ -179,5 +234,107 @@ describe('countRustInlineTestLines', () => {
 			'}'
 		].join('\n');
 		expect(countRustInlineTestLines(content)).toBe(8);
+	});
+});
+
+describe('countZigInlineTestLines', () => {
+	it('counts lines in a test block', () => {
+		const content = [
+			'const std = @import("std");',
+			'',
+			'pub fn add(a: i32, b: i32) i32 {',
+			'    return a + b;',
+			'}',
+			'',
+			'test "basic add" {',
+			'    try std.testing.expect(add(3, 2) == 5);',
+			'}'
+		].join('\n');
+		expect(countZigInlineTestLines(content)).toBe(3);
+	});
+
+	it('returns 0 when no test blocks exist', () => {
+		const content = [
+			'const std = @import("std");',
+			'pub fn add(a: i32, b: i32) i32 {',
+			'    return a + b;',
+			'}'
+		].join('\n');
+		expect(countZigInlineTestLines(content)).toBe(0);
+	});
+
+	it('handles multiple test blocks', () => {
+		const content = [
+			'pub fn add(a: i32, b: i32) i32 {',
+			'    return a + b;',
+			'}',
+			'',
+			'test "add positive" {',
+			'    try std.testing.expect(add(3, 2) == 5);',
+			'}',
+			'',
+			'test "add negative" {',
+			'    try std.testing.expect(add(-1, -2) == -3);',
+			'}'
+		].join('\n');
+		expect(countZigInlineTestLines(content)).toBe(6);
+	});
+
+	it('handles test block with no description', () => {
+		const content = [
+			'pub fn foo() void {}',
+			'',
+			'test {',
+			'    try std.testing.expect(true);',
+			'}'
+		].join('\n');
+		expect(countZigInlineTestLines(content)).toBe(3);
+	});
+});
+
+describe('noTestSplit languages', () => {
+	const noTestSplitIds = [
+		'html',
+		'css',
+		'sql',
+		'shell',
+		'svelte',
+		'vue',
+		'astro',
+		'docs',
+		'config'
+	];
+
+	it('marks expected languages as noTestSplit', () => {
+		const languages = getLanguages();
+		for (const id of noTestSplitIds) {
+			const lang = languages.find((l) => l.id === id);
+			expect(lang?.noTestSplit, `${id} should have noTestSplit`).toBe(true);
+		}
+	});
+
+	it('does not mark programming languages as noTestSplit', () => {
+		const languages = getLanguages();
+		const programmingIds = ['python', 'javascript', 'typescript', 'rust', 'go', 'java', 'c', 'cpp'];
+		for (const id of programmingIds) {
+			const lang = languages.find((l) => l.id === id);
+			expect(lang?.noTestSplit, `${id} should not have noTestSplit`).toBeFalsy();
+		}
+	});
+});
+
+describe('language definition fixes', () => {
+	it('Perl recognizes .t extension', () => {
+		expect(getLanguageByExtension('.t')?.id).toBe('perl');
+	});
+
+	it('Perl has t in testDirPatterns', () => {
+		const perl = getLanguages().find((l) => l.id === 'perl');
+		expect(perl?.testDirPatterns).toContain('t');
+	});
+
+	it('Java does not have custom testDirPatterns', () => {
+		const java = getLanguages().find((l) => l.id === 'java');
+		expect(java?.testDirPatterns).toBeUndefined();
 	});
 });

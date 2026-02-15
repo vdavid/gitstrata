@@ -58,5 +58,7 @@ export interface LanguageDefinition {
 	testFilePatterns?: string[];
 	testDirPatterns?: string[];
 	countInlineTestLines?: (content: string) => number;
+	/** If true, all lines are counted as total only — no prod/test breakdown */
+	noTestSplit?: boolean;
 	isMeta?: boolean;
 }

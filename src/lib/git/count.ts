@@ -210,11 +210,15 @@ interface CountOptions {
 }
 
 const buildLangsWithTestHeuristics = (): Set<string> => {
+	const noSplitIds = new Set(
+		getLanguages()
+			.filter((l) => l.noTestSplit)
+			.map((l) => l.id)
+	);
 	const result = new Set<string>();
-	// 'other' always uses prod/test split
 	result.add('other');
 	for (const lang of getLanguages()) {
-		if (lang.testFilePatterns || lang.testDirPatterns || lang.countInlineTestLines) {
+		if (!noSplitIds.has(lang.id)) {
 			result.add(lang.id);
 		}
 	}
@@ -402,8 +406,9 @@ const processFile = async (
 	const basename = getBasename(filePath);
 
 	if (!lang) {
-		blobCache.set(cacheKey, { lines, testLines: 0, languageId: 'other' });
-		return { oid, languageId: 'other', lines, testLines: 0 };
+		const testLines = isInTestDir(filePath) ? lines : 0;
+		blobCache.set(cacheKey, { lines, testLines, languageId: 'other' });
+		return { oid, languageId: 'other', lines, testLines };
 	}
 
 	const langId = lang.id;
@@ -553,10 +558,15 @@ const classifyFile = (
 	lines: number,
 	lang: LanguageDefinition
 ): Classification => {
-	// 1. Inline test detection (e.g., Rust #[cfg(test)])
-	if (lang.countInlineTestLines) {
-		const testLines = lang.countInlineTestLines(content);
-		return { lines, testLines, hasSplit: true };
+	// 0. No prod/test split for this language
+	if (lang.noTestSplit) {
+		return { lines, testLines: 0, hasSplit: false };
+	}
+
+	// 1. Test directory matching (checked first so test-dir files aren't misclassified by inline detection)
+	const dirPatterns = lang.testDirPatterns ?? defaultTestDirPatterns;
+	if (isInTestDir(filePath, dirPatterns)) {
+		return { lines, testLines: lines, hasSplit: true };
 	}
 
 	// 2. Test file pattern matching
@@ -564,22 +574,12 @@ const classifyFile = (
 		return { lines, testLines: lines, hasSplit: true };
 	}
 
-	// 3. Test directory matching
-	const dirPatterns = lang.testDirPatterns ?? defaultTestDirPatterns;
-	if (isInTestDir(filePath, dirPatterns)) {
-		return { lines, testLines: lines, hasSplit: true };
+	// 3. Inline test detection (e.g., Rust #[cfg(test)], Zig test blocks)
+	if (lang.countInlineTestLines) {
+		const testLines = lang.countInlineTestLines(content);
+		return { lines, testLines, hasSplit: true };
 	}
 
-	// 4. Default: all prod (if language has any test heuristic, mark as prod)
-	const hasTestHeuristic = !!(
-		lang.testFilePatterns ||
-		lang.testDirPatterns ||
-		lang.countInlineTestLines
-	);
-	if (hasTestHeuristic) {
-		return { lines, testLines: 0, hasSplit: true };
-	}
-
-	// No test heuristic at all: no prod/test split
-	return { lines, testLines: 0, hasSplit: false };
+	// 4. Default: all prod
+	return { lines, testLines: 0, hasSplit: true };
 };
