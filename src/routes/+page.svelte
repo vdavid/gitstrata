@@ -654,7 +654,7 @@
 	<div
 		bind:this={progressAreaEl}
 		tabindex={-1}
-		class="outline-none"
+		class="focus-visible:outline-none focus-visible:shadow-none"
 		role="status"
 		aria-live="polite"
 		aria-atomic="false"
