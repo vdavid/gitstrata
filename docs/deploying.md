@@ -135,26 +135,37 @@ Once these are set, every push to `main` that passes CI will auto-deploy both th
 
 ## Environment variables
 
-| Variable                   | Where             | Default                           | Purpose                                                         |
-| -------------------------- | ----------------- | --------------------------------- | --------------------------------------------------------------- |
-| `PUBLIC_CORS_PROXY_URL`    | Frontend (`.env`) | `https://cors.isomorphic-git.org` | URL of your deployed CORS proxy                                 |
-| `PUBLIC_SHARED_CACHE_URL`  | Frontend (`.env`) | _(none)_                          | URL of shared cache API (same as CORS proxy when R2 is enabled) |
-| `PUBLIC_CACHE_WRITE_TOKEN` | Frontend (`.env`) | _(none)_                          | Bearer token for cache writes (must match worker secret)        |
-| `PUBLIC_ANALYTICS_URL`     | Frontend (`.env`) | _(none)_                          | Umami server URL (for example, `https://umami.yourdomain.com`)  |
-| `PUBLIC_ANALYTICS_ID`      | Frontend (`.env`) | _(none)_                          | Umami website ID (UUID from your Umami dashboard)               |
+| Variable                   | Where                        | Default                           | Purpose                                                         |
+| -------------------------- | ---------------------------- | --------------------------------- | --------------------------------------------------------------- |
+| `PUBLIC_CORS_PROXY_URL`    | Frontend (`.env`)            | `https://cors.isomorphic-git.org` | URL of your deployed CORS proxy                                 |
+| `PUBLIC_SHARED_CACHE_URL`  | Frontend (`.env`)            | _(none)_                          | URL of shared cache API (same as CORS proxy when R2 is enabled) |
+| `PUBLIC_CACHE_WRITE_TOKEN` | Frontend (`.env` / `ci.yml`) | _(none)_                          | Bearer token for cache writes (must match worker secret below)  |
+| `CACHE_WRITE_TOKEN`        | Worker secret / `.dev.vars`  | _(none)_                          | Server-side token that cache PUT requests are checked against   |
+| `PUBLIC_ANALYTICS_URL`     | Frontend (`.env`)            | _(none)_                          | Umami server URL (for example, `https://umami.yourdomain.com`)  |
+| `PUBLIC_ANALYTICS_ID`      | Frontend (`.env`)            | _(none)_                          | Umami website ID (UUID from your Umami dashboard)               |
+
+`PUBLIC_CACHE_WRITE_TOKEN` and `CACHE_WRITE_TOKEN` must have the same value. The frontend token is hard-coded in
+`ci.yml` for production builds. The worker token is set via `wrangler secret put` (production) or
+`cors-proxy/.dev.vars` (local dev).
 
 Both `PUBLIC_ANALYTICS_URL` and `PUBLIC_ANALYTICS_ID` must be set to enable analytics. When either is missing, no
 tracking script is loaded.
 
-These are set at build time in CI (see the `deploy-frontend` job in `ci.yml`). For local development, create a `.env`
-file in the repo root:
+Frontend variables are set at build time in CI (see the `deploy-frontend` job in `ci.yml`). For local development,
+create a `.env` file in the repo root:
 
 ```bash
 PUBLIC_CORS_PROXY_URL=https://your-proxy.workers.dev
-PUBLIC_SHARED_CACHE_URL=https://your-proxy.workers.dev
+# PUBLIC_SHARED_CACHE_URL=https://your-proxy.workers.dev
 PUBLIC_CACHE_WRITE_TOKEN=your-token-here
 # PUBLIC_ANALYTICS_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 # PUBLIC_ANALYTICS_URL=https://umami.yourdomain.com
+```
+
+For local proxy dev, create `cors-proxy/.dev.vars`:
+
+```bash
+CACHE_WRITE_TOKEN=your-token-here
 ```
 
 ## Local development

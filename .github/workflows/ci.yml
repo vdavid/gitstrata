@@ -150,6 +150,7 @@ jobs:
       - run: pnpm build
         env:
           PUBLIC_CORS_PROXY_URL: https://git-strata-cors-proxy.veszelovszki.workers.dev
+          PUBLIC_CACHE_WRITE_TOKEN: 1938d93de2ba8ed03f53069e4216a9ddd90af40b692a4d016b46ec28ecf3f19e
           PUBLIC_ANALYTICS_URL: https://anal.veszelovszki.com
           PUBLIC_ANALYTICS_ID: 9c082669-20f5-486f-85b8-13911ded8e14
 

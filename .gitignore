@@ -11,3 +11,4 @@ coverage/
 *.log
 .DS_Store
 cors-proxy/.wrangler/
+cors-proxy/.dev.vars
