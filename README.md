@@ -1,5 +1,9 @@
 # git strata
 
+[![CI](https://github.com/vdavid/gitstrata/actions/workflows/ci.yml/badge.svg)](https://github.com/vdavid/gitstrata/actions/workflows/ci.yml)
+[![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](LICENSE-MIT)
+[![Live site](https://img.shields.io/badge/try%20it-gitstrata.com-b86e1a)](https://gitstrata.com)
+
 **Stratigraphy for your code.**
 
 A browser-native lines-of-code counter that visualizes how a public Git repository grows over time,
