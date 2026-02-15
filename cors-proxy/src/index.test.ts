@@ -18,7 +18,14 @@ function makeEntry(repoUrl = 'https://github.com/owner/repo') {
 		version: 1,
 		repoUrl,
 		headCommit: 'abc123',
-		result: { repoUrl, defaultBranch: 'main', analyzedAt: '2025-01-01T00:00:00Z', headCommit: 'abc123', detectedLanguages: [], days: [] },
+		result: {
+			repoUrl,
+			defaultBranch: 'main',
+			analyzedAt: '2025-01-01T00:00:00Z',
+			headCommit: 'abc123',
+			detectedLanguages: [],
+			days: []
+		},
 		updatedAt: '2025-01-01T00:00:00Z'
 	};
 }
@@ -28,7 +35,14 @@ function mockR2Bucket(store: Map<string, ArrayBuffer> = new Map()) {
 		get: vi.fn(async (key: string) => {
 			const data = store.get(key);
 			if (!data) return null;
-			return { body: new ReadableStream({ start(controller) { controller.enqueue(new Uint8Array(data)); controller.close(); } }) };
+			return {
+				body: new ReadableStream({
+					start(controller) {
+						controller.enqueue(new Uint8Array(data));
+						controller.close();
+					}
+				})
+			};
 		}),
 		put: vi.fn(async (key: string, value: ArrayBuffer) => {
 			store.set(key, value);
@@ -78,16 +92,24 @@ describe('PUT /cache/v1/:repoHash', () => {
 	it('rejects body larger than 10 MB', async () => {
 		const bucket = mockR2Bucket();
 		const bigBody = new Uint8Array(10 * 1024 * 1024 + 1);
-		const res = await app.request('/cache/v1/somehash', { method: 'PUT', body: bigBody }, { RESULTS: bucket });
+		const res = await app.request(
+			'/cache/v1/somehash',
+			{ method: 'PUT', body: bigBody },
+			{ RESULTS: bucket }
+		);
 		expect(res.status).toBe(413);
 	});
 
 	it('rejects invalid gzip payload', async () => {
 		const bucket = mockR2Bucket();
-		const res = await app.request('/cache/v1/somehash', {
-			method: 'PUT',
-			body: new Uint8Array([1, 2, 3])
-		}, { RESULTS: bucket });
+		const res = await app.request(
+			'/cache/v1/somehash',
+			{
+				method: 'PUT',
+				body: new Uint8Array([1, 2, 3])
+			},
+			{ RESULTS: bucket }
+		);
 		expect(res.status).toBe(400);
 		expect(await res.text()).toContain('Invalid gzip or JSON');
 	});
@@ -95,10 +117,14 @@ describe('PUT /cache/v1/:repoHash', () => {
 	it('rejects invalid JSON shape', async () => {
 		const bucket = mockR2Bucket();
 		const compressed = await gzip(JSON.stringify({ wrong: 'shape' }));
-		const res = await app.request('/cache/v1/somehash', {
-			method: 'PUT',
-			body: compressed
-		}, { RESULTS: bucket });
+		const res = await app.request(
+			'/cache/v1/somehash',
+			{
+				method: 'PUT',
+				body: compressed
+			},
+			{ RESULTS: bucket }
+		);
 		expect(res.status).toBe(400);
 		expect(await res.text()).toContain('Invalid cache entry shape');
 	});
@@ -107,10 +133,14 @@ describe('PUT /cache/v1/:repoHash', () => {
 		const bucket = mockR2Bucket();
 		const entry = makeEntry();
 		const compressed = await gzip(JSON.stringify(entry));
-		const res = await app.request('/cache/v1/wronghash', {
-			method: 'PUT',
-			body: compressed
-		}, { RESULTS: bucket });
+		const res = await app.request(
+			'/cache/v1/wronghash',
+			{
+				method: 'PUT',
+				body: compressed
+			},
+			{ RESULTS: bucket }
+		);
 		expect(res.status).toBe(400);
 		expect(await res.text()).toContain('hash does not match');
 	});
@@ -122,17 +152,23 @@ describe('PUT /cache/v1/:repoHash', () => {
 		const hash = await sha256Hex(entry.repoUrl);
 		const compressed = await gzip(JSON.stringify(entry));
 
-		const res = await app.request(`/cache/v1/${hash}`, {
-			method: 'PUT',
-			body: compressed
-		}, { RESULTS: bucket });
+		const res = await app.request(
+			`/cache/v1/${hash}`,
+			{
+				method: 'PUT',
+				body: compressed
+			},
+			{ RESULTS: bucket }
+		);
 
 		expect(res.status).toBe(200);
 		expect(await res.text()).toBe('Stored');
 		expect(bucket.put).toHaveBeenCalledWith(
 			`results/v1/${hash}.json.gz`,
 			expect.any(ArrayBuffer),
-			expect.objectContaining({ httpMetadata: { contentType: 'application/json', contentEncoding: 'gzip' } })
+			expect.objectContaining({
+				httpMetadata: { contentType: 'application/json', contentEncoding: 'gzip' }
+			})
 		);
 	});
 
@@ -145,11 +181,15 @@ describe('PUT /cache/v1/:repoHash', () => {
 		// Send 11 requests with the same IP to exceed 10/min write limit
 		const results = [];
 		for (let i = 0; i < 11; i++) {
-			const res = await app.request(`/cache/v1/${hash}`, {
-				method: 'PUT',
-				body: compressed,
-				headers: { 'x-forwarded-for': '10.0.0.99' }
-			}, { RESULTS: bucket });
+			const res = await app.request(
+				`/cache/v1/${hash}`,
+				{
+					method: 'PUT',
+					body: compressed,
+					headers: { 'x-forwarded-for': '10.0.0.99' }
+				},
+				{ RESULTS: bucket }
+			);
 			results.push(res.status);
 		}
 

@@ -59,7 +59,13 @@ const maxBodySize = 10 * 1024 * 1024; // 10 MB
 
 function isValidCacheEntry(
 	data: unknown
-): data is { version: 1; repoUrl: string; headCommit: string; result: { days: unknown[] }; updatedAt: string } {
+): data is {
+	version: 1;
+	repoUrl: string;
+	headCommit: string;
+	result: { days: unknown[] };
+	updatedAt: string;
+} {
 	if (typeof data !== 'object' || data === null) return false;
 	const obj = data as Record<string, unknown>;
 	if (obj.version !== 1) return false;
@@ -121,7 +127,9 @@ app.put('/cache/v1/:repoHash', async (c) => {
 	}
 
 	// Decompress gzip to validate JSON
-	const decompressed = new Response(new Blob([body]).stream().pipeThrough(new DecompressionStream('gzip')));
+	const decompressed = new Response(
+		new Blob([body]).stream().pipeThrough(new DecompressionStream('gzip'))
+	);
 	let parsed: unknown;
 	try {
 		parsed = await decompressed.json();
