@@ -46,6 +46,10 @@
 	// Timer interval
 	let timerInterval = $state<ReturnType<typeof setInterval> | undefined>();
 
+	// Streaming day-result buffer — flushed to streamingDays every 2s to avoid chart thrashing
+	let dayBuffer: DayStats[] = [];
+	let dayFlushTimeout: ReturnType<typeof setTimeout> | undefined;
+
 	// Worker handle
 	let analyzer = $state<AnalyzerHandle | undefined>();
 
@@ -61,9 +65,6 @@
 	// Size warning
 	let sizeWarningBytes = $state(0);
 	let showSizeWarning = $state(false);
-
-	// Chart data table toggle
-	let showDataTable = $state(false);
 
 	// Read ?repo= from URL on initial load
 	const initialRepo = $derived.by(() => {
@@ -104,6 +105,14 @@
 		}
 	};
 
+	const flushDayBuffer = () => {
+		if (dayBuffer.length === 0) return;
+		streamingDays = [...streamingDays, ...dayBuffer];
+		updateStreamingLanguages(dayBuffer[dayBuffer.length - 1]);
+		dayBuffer = [];
+		dayFlushTimeout = undefined;
+	};
+
 	const resetState = () => {
 		phase = 'idle';
 		errorMessage = '';
@@ -118,6 +127,9 @@
 		processElapsed = 0;
 		streamingDays = [];
 		streamingLanguages = [];
+		dayBuffer = [];
+		if (dayFlushTimeout) clearTimeout(dayFlushTimeout);
+		dayFlushTimeout = undefined;
 		result = undefined;
 		cachedResult = undefined;
 		sizeWarningBytes = 0;
@@ -150,17 +162,23 @@
 				processDate = event.date;
 				break;
 			case 'day-result':
-				streamingDays = [...streamingDays, event.day];
-				updateStreamingLanguages(event.day);
+				dayBuffer.push(event.day);
+				if (!dayFlushTimeout) {
+					dayFlushTimeout = setTimeout(flushDayBuffer, 2000);
+				}
 				break;
 			case 'done':
 				stopTimer();
+				if (dayFlushTimeout) clearTimeout(dayFlushTimeout);
+				flushDayBuffer();
 				result = event.result;
 				phase = 'done';
 				saveResult(event.result);
 				break;
 			case 'error':
 				stopTimer();
+				if (dayFlushTimeout) clearTimeout(dayFlushTimeout);
+				dayBuffer = [];
 				phase = 'error';
 				errorMessage = event.message;
 				errorKind = event.kind;
@@ -290,6 +308,11 @@
 	const displayDays = $derived(result?.days ?? streamingDays);
 	const displayLanguages = $derived(result?.detectedLanguages ?? streamingLanguages);
 	const isStreaming = $derived(phase === 'processing' && !result);
+
+	/** Only days with actual commits (excludes gap-filled carry-forward days) */
+	const commitDays = $derived(
+		displayDays.filter((d) => d.comments.length === 0 || d.comments[0] !== '-')
+	);
 
 	const formatBytes = (bytes: number): string => {
 		if (bytes < 1024) return `${bytes} B`;
@@ -531,26 +554,22 @@
 			<ResultsSummary days={displayDays} detectedLanguages={displayLanguages} />
 
 			<!-- Chart -->
-			<ResultsChart
-				days={displayDays}
-				detectedLanguages={displayLanguages}
-				live={isStreaming}
-				ondatatoggle={(show) => (showDataTable = show)}
-			/>
+			<ResultsChart days={displayDays} detectedLanguages={displayLanguages} live={isStreaming} />
 
-			<!-- Data table (when toggled or when fully done) -->
-			{#if showDataTable || result}
-				<div>
-					<h2
-						class="py-2 text-sm text-[var(--color-text-secondary)]"
-						style="font-family: var(--font-mono); font-size: 0.8125rem; letter-spacing: 0.02em;"
+			<!-- Data table (collapsible, collapsed by default) -->
+			{#if result}
+				<details class="group">
+					<summary
+						class="cursor-pointer select-none py-2 text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text)] transition-colors"
+						style="font-family: var(--font-mono); font-size: 0.8125rem; letter-spacing: 0.02em; transition-duration: var(--duration-fast);"
 					>
-						Data table
-					</h2>
+						Data table ({commitDays.length}
+						{commitDays.length === 1 ? 'commit' : 'commits'})
+					</summary>
 					<div class="mt-4">
-						<ResultsTable days={displayDays} detectedLanguages={displayLanguages} />
+						<ResultsTable days={commitDays} detectedLanguages={displayLanguages} />
 					</div>
-				</div>
+				</details>
 			{/if}
 		</div>
 	{/if}
