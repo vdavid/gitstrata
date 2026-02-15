@@ -1,3 +1,7 @@
+import { Buffer } from 'buffer';
+// isomorphic-git expects Buffer to be globally available in the browser
+(globalThis as unknown as Record<string, unknown>).Buffer = Buffer;
+
 import * as Comlink from 'comlink';
 import LightningFS from '@isomorphic-git/lightning-fs';
 import type { AnalysisResult, DayStats, ErrorKind, ProgressEvent } from '../types';
