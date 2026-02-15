@@ -3,6 +3,7 @@ import { Buffer } from 'buffer';
 (globalThis as unknown as Record<string, unknown>).Buffer = Buffer;
 
 import * as Comlink from 'comlink';
+import git from 'isomorphic-git';
 import LightningFS from '@isomorphic-git/lightning-fs';
 import type { AnalysisResult, DayStats, ErrorKind, ProgressEvent } from '../types';
 import { cloneRepo, detectDefaultBranch, fetchRepo } from '../git/clone';
@@ -104,6 +105,9 @@ const analyzerApi = {
 
 			if (cancelled) throw new Error('Cancelled');
 
+			// Resolve HEAD OID for freshness checking
+			const headCommit = await git.resolveRef({ fs, dir, ref: defaultBranch });
+
 			// Step 3: Get commit history grouped by date
 			onProgress({ type: 'process', current: 0, total: 0, date: 'Loading history...' });
 			const gitCache = {};
@@ -201,6 +205,7 @@ const analyzerApi = {
 			const result: AnalysisResult = {
 				repoUrl: parsed.url,
 				defaultBranch,
+				headCommit,
 				analyzedAt: new Date().toISOString(),
 				detectedLanguages,
 				days
@@ -235,6 +240,9 @@ const analyzerApi = {
 
 			if (cancelled) throw new Error('Cancelled');
 
+			// Resolve HEAD OID for freshness checking
+			const headCommit = await git.resolveRef({ fs, dir, ref: defaultBranch });
+
 			// Step 2: Get full commit history
 			onProgress({ type: 'process', current: 0, total: 0, date: 'Loading history...' });
 			const gitCache = {};
@@ -258,6 +266,7 @@ const analyzerApi = {
 				// No new commits — return cached result with updated timestamp
 				const result: AnalysisResult = {
 					...cachedResult,
+					headCommit,
 					analyzedAt: new Date().toISOString()
 				};
 				onProgress({ type: 'done', result });
@@ -350,6 +359,7 @@ const analyzerApi = {
 			const result: AnalysisResult = {
 				repoUrl: parsed.url,
 				defaultBranch,
+				headCommit,
 				analyzedAt: new Date().toISOString(),
 				detectedLanguages,
 				days: mergedDays

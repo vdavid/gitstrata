@@ -20,6 +20,8 @@ export interface DayStats {
 export interface AnalysisResult {
 	repoUrl: string;
 	defaultBranch: string;
+	/** OID of HEAD at analysis time — used for freshness checking */
+	headCommit: string;
 	analyzedAt: string; // ISO 8601
 	/** Language ids that appear in this result, sorted by final-day line count descending */
 	detectedLanguages: string[];
