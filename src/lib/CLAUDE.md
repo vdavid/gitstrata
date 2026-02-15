@@ -5,12 +5,17 @@ run client-side in a Web Worker.
 
 ## Module overview
 
-- `types.ts` — Shared interfaces: LanguageDefinition, LanguageCount, DayStats, AnalysisResult, ProgressEvent
+- `types.ts` — Shared interfaces: LanguageDefinition, LanguageCount, DayStats, AnalysisResult
+  (includes `headCommit` for freshness checking), SharedCacheEntry, ProgressEvent
 - `languages.ts` — Language registry (~35 languages), extension mapping, test file/dir pattern matching,
   Rust inline test detection. `.h` defaults to C but reassigns to C++ when `.cpp`/`.cc`/`.cxx` files exist.
 - `url.ts` — Repo URL parsing and normalization (GitHub/GitLab/Bitbucket, owner/repo shorthand)
 - `cache.ts` — IndexedDB results cache using `idb`, with size tracking, LRU eviction (500 MB limit),
   and `formatBytes` helper
+- `server-cache.ts` — Shared server cache client. Opt-in via `PUBLIC_SHARED_CACHE_URL` env var;
+  all functions no-op when unset. Exports `fetchServerResult(repoUrl)` and
+  `uploadServerResult(result)`. Errors are caught internally and never propagate. Uses SHA-256
+  for repo URL hashing and CompressionStream for gzip upload.
 - `git/clone.ts` — Clone/fetch using isomorphic-git + lightning-fs, default branch detection via
   `listServerRefs` (protocol v2), abortable HTTP wrapper for signal support, size-warning emission
   for repos >1 GB
