@@ -497,8 +497,7 @@ For local dev, `PUBLIC_CORS_PROXY_URL` defaults to `https://cors.isomorphic-git.
 │   └── lib/
 │       ├── components/
 │       │   ├── RepoInput.svelte        # URL input + validate + submit
-│       │   ├── CloneProgress.svelte    # Phase 1 progress UI
-│       │   ├── ProcessProgress.svelte  # Phase 2 progress UI
+│       │   ├── PipelineProgress.svelte  # Unified 3-step pipeline progress UI
 │       │   ├── ResultsChart.svelte     # Chart.js stacked area chart
 │       │   ├── ResultsSummary.svelte   # Stats cards
 │       │   ├── ResultsTable.svelte     # Sortable data table + CSV export
@@ -574,8 +573,7 @@ For local dev, `PUBLIC_CORS_PROXY_URL` defaults to `https://cors.isomorphic-git.
 ### Milestone 3: Frontend UI
 
 - [ ] Build `RepoInput.svelte` with validation, Enter-to-submit, example repo links
-- [ ] Build `CloneProgress.svelte` with progress bar, bytes counter, elapsed time, cancel button
-- [ ] Build `ProcessProgress.svelte` with commit counter, time estimate, cancel button
+- [ ] Build `PipelineProgress.svelte` with 3-step pipeline indicator, progress bar, detail line, cancel button
 - [ ] Build `ResultsChart.svelte`: Chart.js stacked area chart with dynamic language layers, legend, tooltips, zoom/pan
 - [ ] Implement display-time filtering: ≥5% languages shown individually, rest grouped as "Other"
 - [ ] Implement prod/test merge: if test <10% of a language, don't show a separate test layer

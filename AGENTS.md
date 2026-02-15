@@ -20,7 +20,7 @@ Core structure:
 
 - `src/` - SvelteKit frontend
   - `routes/` - Single-page app (one route)
-  - `lib/components/` - Svelte components (RepoInput, CloneProgress, ResultsChart, etc.)
+  - `lib/components/` - Svelte components (RepoInput, PipelineProgress, ResultsChart, etc.)
   - `lib/worker/` - Web Worker entry point and Comlink-wrapped API
   - `lib/git/` - Clone, history, and line counting logic (runs in the worker)
   - `lib/languages.ts` - Language registry: extensions, test patterns, inline detectors

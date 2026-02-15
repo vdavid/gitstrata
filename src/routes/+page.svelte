@@ -9,8 +9,7 @@
 	import { createAnalyzer, type AnalyzerHandle } from '$lib/worker/analyzer.api';
 	import type { AnalysisResult, DayStats, ErrorKind, ProgressEvent } from '$lib/types';
 	import RepoInput from '$lib/components/RepoInput.svelte';
-	import CloneProgress from '$lib/components/CloneProgress.svelte';
-	import ProcessProgress from '$lib/components/ProcessProgress.svelte';
+	import PipelineProgress from '$lib/components/PipelineProgress.svelte';
 	import ResultsChart from '$lib/components/ResultsChart.svelte';
 	import ResultsSummary from '$lib/components/ResultsSummary.svelte';
 	import ResultsTable from '$lib/components/ResultsTable.svelte';
@@ -426,14 +425,19 @@
 		aria-live="polite"
 		aria-atomic="false"
 	>
-		<!-- Clone progress -->
-		{#if phase === 'cloning'}
+		<!-- Pipeline progress -->
+		{#if phase === 'cloning' || phase === 'processing'}
 			<div class="mx-auto max-w-2xl strata-fade-in">
-				<CloneProgress
-					phase={clonePhase}
-					loaded={cloneLoaded}
-					total={cloneTotal}
-					elapsedMs={cloneElapsed}
+				<PipelineProgress
+					{phase}
+					{clonePhase}
+					{cloneLoaded}
+					{cloneTotal}
+					cloneElapsedMs={cloneElapsed}
+					{processCurrent}
+					{processTotal}
+					{processDate}
+					processElapsedMs={processElapsed}
 					oncancel={cancel}
 				/>
 			</div>
@@ -475,19 +479,6 @@
 						</div>
 					</div>
 				</div>
-			</div>
-		{/if}
-
-		<!-- Process progress -->
-		{#if phase === 'processing'}
-			<div class="mx-auto max-w-2xl strata-fade-in">
-				<ProcessProgress
-					current={processCurrent}
-					total={processTotal}
-					date={processDate}
-					elapsedMs={processElapsed}
-					oncancel={cancel}
-				/>
 			</div>
 		{/if}
 	</div>

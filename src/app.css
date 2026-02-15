@@ -523,3 +523,82 @@ body::before {
 .strata-scroll::-webkit-scrollbar-thumb:hover {
 	background: var(--color-text-tertiary);
 }
+
+/* Pipeline step indicator */
+.pipeline-steps {
+	display: flex;
+	align-items: center;
+	gap: 0;
+	list-style: none;
+	padding: 0;
+	margin: 0;
+}
+
+.pipeline-step {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.pipeline-dot {
+	width: 16px;
+	height: 16px;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	transition: all var(--duration-fast) var(--ease-out-expo);
+}
+
+.pipeline-step--done .pipeline-dot {
+	background-color: var(--color-success);
+	color: #fff;
+}
+
+.pipeline-step--active .pipeline-dot {
+	background-color: var(--color-accent);
+	animation: strata-pulse 2s ease-in-out infinite;
+}
+
+.pipeline-step--pending .pipeline-dot {
+	background-color: transparent;
+	border: 1.5px solid var(--color-border);
+}
+
+.pipeline-label {
+	font-family: var(--font-sans);
+	font-size: 0.75rem;
+	font-weight: 500;
+	letter-spacing: 0.01em;
+}
+
+.pipeline-step--done .pipeline-label {
+	color: var(--color-success);
+}
+
+.pipeline-step--active .pipeline-label {
+	color: var(--color-text);
+}
+
+.pipeline-step--pending .pipeline-label {
+	color: var(--color-text-tertiary);
+}
+
+.pipeline-connector {
+	display: flex;
+	align-items: center;
+	padding: 0 8px;
+	list-style: none;
+}
+
+.pipeline-line {
+	width: 24px;
+	height: 1.5px;
+	background-color: var(--color-border);
+	transition: background-color var(--duration-fast) var(--ease-out-expo);
+}
+
+.pipeline-line--done {
+	background-color: var(--color-success);
+}
