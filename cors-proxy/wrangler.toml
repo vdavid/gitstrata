@@ -1,3 +1,8 @@
 name = "git-strata-cors-proxy"
 main = "src/index.ts"
 compatibility_date = "2025-01-01"
+
+# Uncomment to enable the shared results cache
+# [[r2_buckets]]
+# binding = "RESULTS"
+# bucket_name = "git-strata-results"
