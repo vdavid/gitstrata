@@ -520,7 +520,10 @@
 								<circle cx="12" cy="12" r="10" />
 								<polyline points="12 6 12 12 16 14" />
 							</svg>
-							{fromServerCache ? 'Shared result' : 'Last analyzed'}: {cachedResult.analyzedAt.slice(0, 10)}
+							{fromServerCache ? 'Shared result' : 'Last analyzed'}: {cachedResult.analyzedAt.slice(
+								0,
+								10
+							)}
 						</span>
 						<button
 							onclick={refresh}
