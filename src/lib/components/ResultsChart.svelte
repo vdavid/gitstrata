@@ -3,6 +3,7 @@
 	import { getLanguages } from '$lib/languages';
 	import type { DayStats } from '$lib/types';
 	import type { Chart as ChartType, ChartConfiguration, ChartDataset } from 'chart.js';
+	import { areaLabelsPlugin } from './chart-area-labels-plugin';
 
 	interface Props {
 		days: DayStats[];
@@ -60,7 +61,8 @@
 			TimeScale,
 			Tooltip,
 			Legend,
-			zoomModule.default
+			zoomModule.default,
+			areaLabelsPlugin
 		);
 
 		ChartConstructor = Chart;
@@ -451,7 +453,8 @@
 							pinch: { enabled: true },
 							mode: 'x'
 						}
-					}
+					},
+					areaLabels: { enabled: true }
 				}
 			}
 		};
