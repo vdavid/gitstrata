@@ -42,6 +42,7 @@
 	let streamingLanguages = $state<string[]>([]);
 	let result = $state<AnalysisResult | undefined>();
 	let cachedResult = $state<AnalysisResult | undefined>();
+	let fromServerCache = $state(false);
 
 	// Timer interval
 	let timerInterval = $state<ReturnType<typeof setInterval> | undefined>();
@@ -132,6 +133,7 @@
 		dayFlushTimeout = undefined;
 		result = undefined;
 		cachedResult = undefined;
+		fromServerCache = false;
 		sizeWarningBytes = 0;
 		showSizeWarning = false;
 		stopTimer();
@@ -235,6 +237,7 @@
 			if (serverEntry) {
 				cachedResult = serverEntry.result;
 				result = serverEntry.result;
+				fromServerCache = true;
 				phase = 'done';
 				saveResult(serverEntry.result);
 				return;
@@ -517,7 +520,7 @@
 								<circle cx="12" cy="12" r="10" />
 								<polyline points="12 6 12 12 16 14" />
 							</svg>
-							Last analyzed: {cachedResult.analyzedAt.slice(0, 10)}
+							{fromServerCache ? 'Shared result' : 'Last analyzed'}: {cachedResult.analyzedAt.slice(0, 10)}
 						</span>
 						<button
 							onclick={refresh}
