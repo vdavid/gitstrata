@@ -24,7 +24,7 @@ pnpm install
 pnpm dev
 ```
 
-Open [localhost:5173](http://localhost:5173) and paste a repo URL.
+Open [localhost:5233](http://localhost:5233) and paste a repo URL.
 
 ## Architecture
 
