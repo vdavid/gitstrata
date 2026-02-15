@@ -8,7 +8,6 @@
 		{ key: 'Tab', description: 'Navigate between elements' },
 		{ key: 'Enter / Space', description: 'Activate buttons and controls' },
 		{ key: 'Arrow keys', description: 'Navigate within control groups' },
-		{ key: 'T', description: 'Toggle data table view (on chart)' },
 		{ key: '?', description: 'Show this help dialog' }
 	];
 
