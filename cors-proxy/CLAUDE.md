@@ -10,7 +10,10 @@ responses; otherwise just a pass-through proxy.
 
 ## Key decisions
 
-- Only allows git protocol paths (`/info/refs`, `/git-upload-pack`) — rejects everything else with 403.
+- **Host allowlist**: Only proxies to `github.com`, `gitlab.com`, and `bitbucket.org`. Rejects all other hosts.
+- Only allows git protocol paths (`/info/refs`, `/git-upload-pack`) — validated against `pathname`, not the full URL.
+- **Header allowlist**: Only forwards `content-type`, `content-length`, `accept`, `accept-encoding`, and `git-protocol`
+  to upstream. All other incoming headers (including `Authorization`, `Cookie`) are stripped.
 - Rate limiting: 100 req/min per IP using in-memory counters (resets each minute). Since Workers are ephemeral, this is
   best-effort. For stricter limits, use Cloudflare's built-in rate limiting product.
 - The target URL is extracted from the request path. isomorphic-git strips the protocol (`https://`) when

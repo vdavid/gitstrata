@@ -29,8 +29,16 @@ function isRateLimited(ip: string): boolean {
 	return entry.count > maxRequestsPerMinute;
 }
 
-function isAllowedGitPath(url: string): boolean {
-	return url.includes('/info/refs') || url.includes('/git-upload-pack');
+const allowedHosts = new Set(['github.com', 'gitlab.com', 'bitbucket.org']);
+
+function isAllowedTarget(url: string): boolean {
+	try {
+		const parsed = new URL(url);
+		if (!allowedHosts.has(parsed.hostname)) return false;
+		return parsed.pathname.endsWith('/info/refs') || parsed.pathname.endsWith('/git-upload-pack');
+	} catch {
+		return false;
+	}
 }
 
 const writeRateLimitMap = new Map<string, { count: number; resetAt: number }>();
@@ -174,9 +182,9 @@ app.all('*', async (c) => {
 		return c.text('Missing target URL. Pass the full URL as the path.', 400, corsHeaders);
 	}
 
-	if (!isAllowedGitPath(targetUrl)) {
+	if (!isAllowedTarget(targetUrl)) {
 		return c.text(
-			'Forbidden. Only git protocol paths (/info/refs, /git-upload-pack) are allowed.',
+			'Forbidden. Only git protocol paths on allowed hosts are permitted.',
 			403,
 			corsHeaders
 		);
@@ -218,18 +226,18 @@ app.all('*', async (c) => {
 		}
 	}
 
+	const allowedRequestHeaders = new Set([
+		'content-type',
+		'content-length',
+		'accept',
+		'accept-encoding',
+		'git-protocol'
+	]);
 	const headers = new Headers();
 	for (const [key, value] of c.req.raw.headers.entries()) {
-		// Forward relevant headers, skip hop-by-hop and host headers
-		const lower = key.toLowerCase();
-		if (
-			lower === 'host' ||
-			lower === 'cf-connecting-ip' ||
-			lower === 'cf-ray' ||
-			lower.startsWith('cf-')
-		)
-			continue;
-		headers.set(key, value);
+		if (allowedRequestHeaders.has(key.toLowerCase())) {
+			headers.set(key, value);
+		}
 	}
 
 	try {
