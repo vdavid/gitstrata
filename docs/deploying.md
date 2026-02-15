@@ -104,24 +104,24 @@ pnpm exec wrangler whoami
 
 In your GitHub repo, go to **Settings > Secrets and variables > Actions** and add:
 
-| Secret                   | Value                          |
-| ------------------------ | ------------------------------ |
-| `CLOUDFLARE_API_TOKEN`   | The API token from above       |
-| `CLOUDFLARE_ACCOUNT_ID`  | Your Cloudflare account ID     |
+| Secret                  | Value                      |
+| ----------------------- | -------------------------- |
+| `CLOUDFLARE_API_TOKEN`  | The API token from above   |
+| `CLOUDFLARE_ACCOUNT_ID` | Your Cloudflare account ID |
 
 Once these are set, every push to `main` that passes CI will auto-deploy both the frontend and the CORS proxy.
 
 ### CI jobs overview
 
-| Job               | Trigger                           | What it does                                    |
-| ----------------- | --------------------------------- | ----------------------------------------------- |
-| Detect changes    | Always                            | Skips irrelevant jobs based on changed files     |
-| Frontend          | Frontend files changed            | prettier, eslint, knip, svelte-check, vitest     |
-| CORS proxy        | cors-proxy/ files changed         | Runs proxy tests                                 |
-| Scripts (Go)      | scripts/ files changed            | gofmt, go-vet, staticcheck, go-tests             |
-| CI OK             | Always                            | Gate job for branch protection                   |
-| Deploy frontend   | Push to main, after CI OK         | Builds and deploys to Cloudflare Pages           |
-| Deploy CORS proxy | Push to main, after CI OK         | Deploys worker to Cloudflare                     |
+| Job               | Trigger                   | What it does                                 |
+| ----------------- | ------------------------- | -------------------------------------------- |
+| Detect changes    | Always                    | Skips irrelevant jobs based on changed files |
+| Frontend          | Frontend files changed    | prettier, eslint, knip, svelte-check, vitest |
+| CORS proxy        | cors-proxy/ files changed | Runs proxy tests                             |
+| Scripts (Go)      | scripts/ files changed    | gofmt, go-vet, staticcheck, go-tests         |
+| CI OK             | Always                    | Gate job for branch protection               |
+| Deploy frontend   | Push to main, after CI OK | Builds and deploys to Cloudflare Pages       |
+| Deploy CORS proxy | Push to main, after CI OK | Deploys worker to Cloudflare                 |
 
 ## Environment variables
 

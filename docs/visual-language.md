@@ -11,7 +11,7 @@ All colors live as CSS custom properties on `:root` (light) and `.dark` (dark). 
 ### UI tokens
 
 | Token                     | Light                 | Dark                     | Role                                   |
-|---------------------------|-----------------------|--------------------------|----------------------------------------|
+| ------------------------- | --------------------- | ------------------------ | -------------------------------------- |
 | `--color-bg`              | `#faf8f5`             | `#12100c`                | Page background                        |
 | `--color-bg-secondary`    | `#f2efe9`             | `#1e1a14`                | Table headers, secondary areas         |
 | `--color-bg-tertiary`     | `#e8e4dc`             | `#2c261e`                | Progress track, inset surfaces         |
@@ -37,7 +37,7 @@ All colors live as CSS custom properties on `:root` (light) and `.dark` (dark). 
 (test layers or dark-mode fill).
 
 | Index | Name              | Light main | Dark main |
-|-------|-------------------|------------|-----------|
+| ----- | ----------------- | ---------- | --------- |
 | 1     | Deep ocean blue   | `#2e6b9e`  | `#5a9ece` |
 | 2     | Forest serpentine | `#4a8c5c`  | `#6ab87e` |
 | 3     | Sandstone amber   | `#c2781e`  | `#daa04e` |
@@ -60,31 +60,31 @@ with < 5% share at the latest data point are bucketed into "other."
 Two typefaces, no others.
 
 | Token         | Family  | Usage                                                          |
-|---------------|---------|----------------------------------------------------------------|
+| ------------- | ------- | -------------------------------------------------------------- |
 | `--font-sans` | DM Sans | Headlines, body text, buttons, labels                          |
 | `--font-mono` | DM Mono | Data values, inputs, metadata, table cells, badges, timestamps |
 
 ### Type scale (observed in components)
 
-| Role                | Family | Size          | Weight | Letter-spacing | Extra                                |
-|---------------------|--------|---------------|--------|----------------|--------------------------------------|
-| Hero headline       | Sans   | 3xl--5xl      | Bold   | `-0.025em`     | Responsive via `sm:`/`lg:`           |
-| Body / subtitle     | Sans   | sm--base      | 400    | Default        | `leading-relaxed`                    |
-| Card section label  | Mono   | 0.625rem      | 400    | `0.08em`       | `text-transform: uppercase`          |
-| Card metric value   | Mono   | 1.125rem      | 500    | `-0.01em`      |                                      |
-| Table header        | Mono   | 0.6875rem     | 400    | `0.06em`       | `text-transform: uppercase`          |
-| Table cell          | Mono   | 0.8125rem     | 400    | Default        | `font-variant-numeric: tabular-nums` |
-| Detail line / meta  | Mono   | 0.6875rem     | 400    | `0.02em`       |                                      |
-| Button (primary)    | Sans   | 0.875rem      | 500    | `0.01em`       |                                      |
-| Button (ghost)      | Sans   | 0.8125rem     | 400    | Default        |                                      |
-| Input               | Mono   | sm (0.875rem) | 400    | `0.01em`       |                                      |
-| Badge               | Mono   | 0.75rem       | 400    | `0.02em`       |                                      |
-| Pipeline step label | Sans   | 0.75rem       | 500    | `0.01em`       |                                      |
+| Role               | Family | Size          | Weight | Letter-spacing | Extra                                |
+| ------------------ | ------ | ------------- | ------ | -------------- | ------------------------------------ |
+| Hero headline      | Sans   | 3xl--5xl      | Bold   | `-0.025em`     | Responsive via `sm:`/`lg:`           |
+| Body / subtitle    | Sans   | sm--base      | 400    | Default        | `leading-relaxed`                    |
+| Card section label | Mono   | 0.625rem      | 400    | `0.08em`       | `text-transform: uppercase`          |
+| Card metric value  | Mono   | 1.125rem      | 500    | `-0.01em`      |                                      |
+| Table header       | Mono   | 0.6875rem     | 400    | `0.06em`       | `text-transform: uppercase`          |
+| Table cell         | Mono   | 0.8125rem     | 400    | Default        | `font-variant-numeric: tabular-nums` |
+| Detail line / meta | Mono   | 0.6875rem     | 400    | `0.02em`       |                                      |
+| Button (primary)   | Sans   | 0.875rem      | 500    | `0.01em`       |                                      |
+| Button (ghost)     | Sans   | 0.8125rem     | 400    | Default        |                                      |
+| Input              | Mono   | sm (0.875rem) | 400    | `0.01em`       |                                      |
+| Badge              | Mono   | 0.75rem       | 400    | `0.02em`       |                                      |
+| Phase label        | Sans   | 0.75rem       | 500    | `0.01em`       |                                      |
 
 ## Motion
 
 | Token               | Value                           | Usage                       |
-|---------------------|---------------------------------|-----------------------------|
+| ------------------- | ------------------------------- | --------------------------- |
 | `--ease-out-expo`   | `cubic-bezier(0.16, 1, 0.3, 1)` | All transitions             |
 | `--duration-fast`   | `150ms`                         | Hover, focus, color changes |
 | `--duration-normal` | `250ms`                         | Theme switch                |
@@ -104,7 +104,7 @@ All animations respect `prefers-reduced-motion: reduce` (set to 0.01ms duration)
 **Strategy: borders only.** No drop shadows. Depth is communicated through border + subtle background shifts.
 
 | Surface        | Class / token            | Background                   | Border                           |
-|----------------|--------------------------|------------------------------|----------------------------------|
+| -------------- | ------------------------ | ---------------------------- | -------------------------------- |
 | Page           | `--color-bg`             | Warm off-white / deep cavern | None                             |
 | Card           | `.strata-card`           | `--color-surface-raised`     | 1px `--color-border`, 8px radius |
 | Card overlay   | `.strata-card::after`    | `--color-surface-overlay`    | Inherited from card              |
@@ -129,7 +129,7 @@ A subtle **noise texture** (`body::before`) gives all surfaces a stone grain fee
 Three variants, all with `cursor: pointer` and `transition: all var(--duration-fast)`.
 
 | Variant | Class          | Background       | Border                 | Text                     | Hover behavior               |
-|---------|----------------|------------------|------------------------|--------------------------|------------------------------|
+| ------- | -------------- | ---------------- | ---------------------- | ------------------------ | ---------------------------- |
 | Primary | `.btn-primary` | `--color-accent` | Transparent            | White                    | Darker bg, translateY(-1px)  |
 | Ghost   | `.btn-ghost`   | Transparent      | 1px `--color-border`   | `--color-text-secondary` | Bg tertiary, stronger border |
 | Link    | `.btn-link`    | None             | Bottom 1px transparent | `--color-accent`         | Bottom border appears        |
@@ -170,15 +170,19 @@ Placeholder uses `--color-text-tertiary`.
 `.strata-progress-track` + `.strata-progress-fill`: 6px tall, rounded. Fill has a subtle white gradient overlay
 (`::after`). Width transitions smoothly at 300ms. Accent color during clone, success color during analysis.
 
-### Pipeline steps
+### Phase log
 
-Horizontal stepper with dots + labels + connector lines. Three states:
+Vertical phase log with 6 real git phases (detect, count, compress, receive, resolve, analyze).
+Each row is a 2-column grid: indicator column (dot + vertical connector line) and content column
+(label, detail text, optional progress bar). Three dot states:
 
-- **Done**: Success green dot with checkmark SVG, success label
+- **Done**: Success green dot with checkmark SVG, success label, green connector line below
 - **Active**: Accent dot with pulse animation, primary text label
-- **Pending**: Empty dot with border, tertiary text label
+- **Pending**: Empty dot with border, tertiary text label, gray connector line below
 
-Connector lines: 24px wide, 1.5px, standard border color (done = success green).
+Detail text (right-aligned): mono font, tabular-nums, tertiary color. Shows live loaded/total
+for determinate phases. Progress bar shown only for active determinate phases. Footer shows
+total elapsed time and cancel button.
 
 ### Dialogs
 
