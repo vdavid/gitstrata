@@ -19,7 +19,7 @@
 	const viewModeToggles: { mode: ViewMode; label: string }[] = [
 		{ mode: 'all', label: 'All' },
 		{ mode: 'prod-vs-test', label: 'Prod vs test' },
-		{ mode: 'languages-only', label: 'Languages only' },
+		{ mode: 'languages-only', label: 'Languages only' }
 	];
 	let viewMode = $state<ViewMode>('all');
 	let patternFills = $state(false);

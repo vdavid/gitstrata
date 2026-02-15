@@ -502,8 +502,8 @@ body::before {
 		transparent 8px
 	);
 	mask-image: radial-gradient(ellipse at 50% 50%, black 0%, transparent 70%);
-    /*noinspection CssInvalidPropertyValue*/
-    -webkit-mask-image: radial-gradient(ellipse at 50% 50%, black 0%, transparent 70%);
+	/*noinspection CssInvalidPropertyValue*/
+	-webkit-mask-image: radial-gradient(ellipse at 50% 50%, black 0%, transparent 70%);
 }
 
 /* tig→git letter swap animation in hero heading */
@@ -529,7 +529,7 @@ body::before {
 }
 
 .tig-t {
-    /*noinspection CssUnresolvedCustomProperty*/
+	/*noinspection CssUnresolvedCustomProperty*/
 	transform: translate(
 		calc(var(--tig-dt, 0px) * (1 - cos(calc(var(--tig-swap) * 180deg))) / 2),
 		calc(-0.4em * sin(calc(var(--tig-swap) * 180deg)))
@@ -537,7 +537,7 @@ body::before {
 }
 
 .tig-g {
-    /*noinspection CssUnresolvedCustomProperty*/
+	/*noinspection CssUnresolvedCustomProperty*/
 	transform: translate(
 		calc(var(--tig-dg, 0px) * (cos(calc(var(--tig-swap) * 180deg)) - 1) / 2),
 		calc(0.4em * sin(calc(var(--tig-swap) * 180deg)))
@@ -545,7 +545,7 @@ body::before {
 }
 
 .tig-i {
-    /*noinspection CssUnresolvedCustomProperty*/
+	/*noinspection CssUnresolvedCustomProperty*/
 	transform: translateX(calc(var(--tig-di, 0px) * (1 - cos(calc(var(--tig-swap) * 180deg))) / 2));
 }
 
