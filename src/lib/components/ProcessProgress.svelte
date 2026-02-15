@@ -69,7 +69,7 @@
 		aria-atomic="true"
 	>
 		<span>
-			{current} / {total} days
+			{current} / {total} commits
 			{#if date}
 				<span class="text-[var(--color-text-tertiary)]"> -- {date}</span>
 			{/if}

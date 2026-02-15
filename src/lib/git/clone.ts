@@ -1,8 +1,20 @@
-import git, { type FsClient } from 'isomorphic-git';
+import git, { type FsClient, type HttpClient } from 'isomorphic-git';
 import http from 'isomorphic-git/http/web';
 import type { ProgressEvent } from '../types';
 
 const defaultCorsProxy = 'https://cors.isomorphic-git.org';
+const sizeWarningThreshold = 1_073_741_824; // 1 GB
+
+/** Wrap the isomorphic-git HTTP client to abort requests when signal fires */
+const makeAbortableHttp = (signal?: AbortSignal): HttpClient => {
+	if (!signal) return http;
+	return {
+		request: (args) => {
+			if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+			return http.request(args);
+		}
+	};
+};
 
 export interface CloneOptions {
 	fs: FsClient;
@@ -18,19 +30,31 @@ export const detectDefaultBranch = async (options: {
 	url: string;
 	corsProxy?: string;
 }): Promise<string> => {
-	const info = await git.getRemoteInfo({
+	const refs = await git.listServerRefs({
 		http,
 		corsProxy: options.corsProxy ?? defaultCorsProxy,
-		url: options.url
+		url: options.url,
+		prefix: 'HEAD',
+		symrefs: true,
+		protocolVersion: 2
 	});
-	// HEAD is the default branch name
-	if (info.HEAD) {
-		return info.HEAD;
+	// Find HEAD's symref target (e.g. "refs/heads/main")
+	const head = refs.find((r) => r.ref === 'HEAD');
+	if (head?.target) {
+		// Strip "refs/heads/" prefix to get the branch name
+		return head.target.replace(/^refs\/heads\//, '');
 	}
-	// Fallback: try common names
-	const heads = info.heads ?? {};
-	if ('main' in heads) return 'main';
-	if ('master' in heads) return 'master';
+	// Fallback: list all branches and try common names
+	const allRefs = await git.listServerRefs({
+		http,
+		corsProxy: options.corsProxy ?? defaultCorsProxy,
+		url: options.url,
+		prefix: 'refs/heads/',
+		protocolVersion: 2
+	});
+	const branchNames = new Set(allRefs.map((r) => r.ref.replace(/^refs\/heads\//, '')));
+	if (branchNames.has('main')) return 'main';
+	if (branchNames.has('master')) return 'master';
 	throw new Error('Could not detect default branch');
 };
 
@@ -52,9 +76,12 @@ export const cloneRepo = async (
 		// Directory may already exist
 	}
 
+	const abortableHttp = makeAbortableHttp(signal);
+	let sizeWarningEmitted = false;
+
 	await git.clone({
 		fs,
-		http,
+		http: abortableHttp,
 		dir,
 		url,
 		corsProxy: corsProxy ?? defaultCorsProxy,
@@ -62,12 +89,17 @@ export const cloneRepo = async (
 		ref: defaultBranch,
 		onProgress: (event) => {
 			if (signal?.aborted) return;
+			const total = event.total ?? 0;
 			onProgress?.({
 				type: 'clone',
 				phase: event.phase,
 				loaded: event.loaded,
-				total: event.total ?? 0
+				total
 			});
+			if (!sizeWarningEmitted && total > sizeWarningThreshold) {
+				sizeWarningEmitted = true;
+				onProgress?.({ type: 'size-warning', estimatedBytes: total });
+			}
 		},
 		onAuth: () => ({ cancel: true })
 	});
@@ -79,9 +111,11 @@ export const fetchRepo = async (
 ): Promise<void> => {
 	const { fs, dir, url, corsProxy, defaultBranch, onProgress, signal } = options;
 
+	const abortableHttp = makeAbortableHttp(signal);
+
 	await git.fetch({
 		fs,
-		http,
+		http: abortableHttp,
 		dir,
 		url,
 		corsProxy: corsProxy ?? defaultCorsProxy,

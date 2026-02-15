@@ -2,6 +2,7 @@
 	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
+	import { env } from '$env/dynamic/public';
 	import { parseRepoUrl } from '$lib/url';
 	import { getResult, saveResult } from '$lib/cache';
 	import { createAnalyzer, type AnalyzerHandle } from '$lib/worker/analyzer.api';
@@ -13,7 +14,7 @@
 	import ResultsSummary from '$lib/components/ResultsSummary.svelte';
 	import ResultsTable from '$lib/components/ResultsTable.svelte';
 
-	const corsProxy = 'https://cors.isomorphic-git.org';
+	const corsProxy = env.PUBLIC_CORS_PROXY_URL || 'https://cors.isomorphic-git.org';
 
 	type Phase = 'idle' | 'cloning' | 'processing' | 'done' | 'error';
 
@@ -55,6 +56,10 @@
 
 	// Last repo input for retry
 	let lastRepoInput = $state('');
+
+	// Size warning
+	let sizeWarningBytes = $state(0);
+	let showSizeWarning = $state(false);
 
 	// Read ?repo= from URL on initial load
 	const initialRepo = $derived.by(() => {
@@ -111,6 +116,8 @@
 		streamingLanguages = [];
 		result = undefined;
 		cachedResult = undefined;
+		sizeWarningBytes = 0;
+		showSizeWarning = false;
 		stopTimer();
 	};
 
@@ -159,6 +166,8 @@
 				errorKind = event.kind;
 				break;
 			case 'size-warning':
+				sizeWarningBytes = event.estimatedBytes;
+				showSizeWarning = true;
 				break;
 		}
 	};
@@ -284,6 +293,17 @@
 	const displayDays = $derived(result?.days ?? streamingDays);
 	const displayLanguages = $derived(result?.detectedLanguages ?? streamingLanguages);
 	const isStreaming = $derived(phase === 'processing' && !result);
+
+	const formatBytes = (bytes: number): string => {
+		if (bytes < 1024) return `${bytes} B`;
+		if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+		if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+		return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+	};
+
+	const dismissSizeWarning = () => {
+		showSizeWarning = false;
+	};
 </script>
 
 <svelte:head>
@@ -343,7 +363,20 @@
 					<div class="mt-3 flex items-center gap-3">
 						{#if retryable}
 							<button onclick={retry} class="btn-primary text-sm">
-								Retry
+								{errorKind === 'network-lost' ? 'Retry (resumes)' : 'Retry'}
+							</button>
+						{/if}
+						{#if errorKind === 'indexeddb-full'}
+							<button
+								onclick={() => {
+									const el = document.getElementById('cache-manager');
+									if (el) {
+										el.scrollIntoView({ behavior: 'smooth' });
+									}
+								}}
+								class="btn-primary text-sm"
+							>
+								Manage cache
 							</button>
 						{/if}
 						<button
@@ -381,6 +414,40 @@
 			</div>
 		{/if}
 
+		<!-- Size warning -->
+		{#if showSizeWarning && phase === 'cloning'}
+			<div
+				class="strata-card strata-fade-in mx-auto max-w-2xl border-[var(--color-warning)] p-5 mt-4"
+				role="alert"
+			>
+				<div class="flex items-start gap-3">
+					<svg
+						width="18" height="18" viewBox="0 0 24 24" fill="none"
+						stroke="var(--color-warning)" stroke-width="2"
+						stroke-linecap="round" stroke-linejoin="round"
+						class="mt-0.5 shrink-0" aria-hidden="true"
+					>
+						<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+						<line x1="12" y1="9" x2="12" y2="13" />
+						<line x1="12" y1="17" x2="12.01" y2="17" />
+					</svg>
+					<div class="min-w-0 flex-1">
+						<p class="text-sm text-[var(--color-text)]">
+							This repository is large (~{formatBytes(sizeWarningBytes)}). Downloading may take a while and use significant storage.
+						</p>
+						<div class="mt-3 flex items-center gap-3">
+							<button onclick={dismissSizeWarning} class="btn-primary text-sm">
+								Continue
+							</button>
+							<button onclick={cancel} class="btn-link text-sm">
+								Cancel
+							</button>
+						</div>
+					</div>
+				</div>
+			</div>
+		{/if}
+
 		<!-- Process progress -->
 		{#if phase === 'processing'}
 			<div class="mx-auto max-w-2xl strata-fade-in">
@@ -410,7 +477,7 @@
 								<circle cx="12" cy="12" r="10" />
 								<polyline points="12 6 12 12 16 14" />
 							</svg>
-							{cachedResult.analyzedAt.slice(0, 10)}
+							Last analyzed: {cachedResult.analyzedAt.slice(0, 10)}
 						</span>
 						<button onclick={refresh} class="btn-link">
 							Refresh
@@ -441,26 +508,17 @@
 
 			<!-- Data table (only when fully done) -->
 			{#if result}
-				<details class="group">
-					<summary
-						class="flex cursor-pointer items-center gap-2 py-2 text-sm text-[var(--color-text-secondary)] transition-colors hover:text-[var(--color-text)]"
+				<div>
+					<h2
+						class="py-2 text-sm text-[var(--color-text-secondary)]"
 						style="font-family: var(--font-mono); font-size: 0.8125rem; letter-spacing: 0.02em;"
 					>
-						<svg
-							width="14" height="14" viewBox="0 0 24 24" fill="none"
-							stroke="currentColor" stroke-width="2"
-							stroke-linecap="round" stroke-linejoin="round"
-							aria-hidden="true"
-							class="transition-transform duration-200 group-open:rotate-90"
-						>
-							<polyline points="9 18 15 12 9 6" />
-						</svg>
-						View data table
-					</summary>
+						Data table
+					</h2>
 					<div class="mt-4">
 						<ResultsTable days={result.days} detectedLanguages={result.detectedLanguages} />
 					</div>
-				</details>
+				</div>
 			{/if}
 		</div>
 	{/if}

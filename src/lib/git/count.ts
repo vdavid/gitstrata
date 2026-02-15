@@ -255,8 +255,9 @@ export const countLinesForCommit = async (
 		const basename = getBasename(file.path);
 
 		if (!lang) {
-			// Unknown extension: skip (don't add to any bucket)
-			blobCache.set(cacheKey, { lines, testLines: 0, languageId: undefined });
+			// Unknown extension: count as "other" (prod, no test heuristic)
+			blobCache.set(cacheKey, { lines, testLines: 0, languageId: 'other' });
+			addToLanguage('other', lines, 0);
 			continue;
 		}
 

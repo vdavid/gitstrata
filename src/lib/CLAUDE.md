@@ -11,9 +11,12 @@ run client-side in a Web Worker.
 - `url.ts` — Repo URL parsing and normalization (GitHub/GitLab/Bitbucket, owner/repo shorthand)
 - `cache.ts` — IndexedDB results cache using `idb`, with size tracking, LRU eviction (500 MB limit),
   and `formatBytes` helper
-- `git/clone.ts` — Clone/fetch using isomorphic-git + lightning-fs, default branch detection via `getRemoteInfo`
+- `git/clone.ts` — Clone/fetch using isomorphic-git + lightning-fs, default branch detection via
+  `listServerRefs` (protocol v2), abortable HTTP wrapper for signal support, size-warning emission
+  for repos >1 GB
 - `git/history.ts` — Commit log grouped by date, consecutive date generation, gap filling
-- `git/count.ts` — Line counting per commit tree, prod/test classification, blob dedup caching
+- `git/count.ts` — Line counting per commit tree, prod/test classification, blob dedup caching.
+  Files with unrecognized extensions are counted under the `'other'` language bucket as prod code.
 - `worker/analyzer.worker.ts` — Web Worker entry point (Comlink), orchestrates full pipeline and
   incremental refresh (`analyzeIncremental` fetches only new commits, processes new days, merges)
 - `worker/analyzer.api.ts` — Comlink wrapper for main thread consumption
