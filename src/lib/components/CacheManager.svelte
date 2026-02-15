@@ -9,6 +9,12 @@
 		type CachedRepoInfo
 	} from '$lib/cache';
 
+	interface Props {
+		id?: string;
+	}
+
+	let { id }: Props = $props();
+
 	let repos = $state<CachedRepoInfo[]>([]);
 	let totalSize = $state(0);
 	let expanded = $state(false);
@@ -56,7 +62,7 @@
 </script>
 
 {#if repos.length > 0}
-	<div class="mx-auto max-w-2xl">
+	<div {id} class="mx-auto max-w-2xl">
 		<button
 			onclick={() => (expanded = !expanded)}
 			aria-expanded={expanded}

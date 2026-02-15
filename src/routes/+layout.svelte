@@ -58,7 +58,7 @@
 		<div class="mx-auto max-w-5xl 2xl:max-w-7xl">
 			<div class="strata-line mb-6"></div>
 			<div class="flex flex-col items-center gap-4">
-				<CacheManager />
+				<CacheManager id="cache-manager" />
 				<p
 					class="text-center text-xs tracking-wide text-[var(--color-text-tertiary)]"
 					style="font-family: var(--font-mono);"

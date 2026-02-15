@@ -76,7 +76,7 @@
 				bind:value={inputValue}
 				onkeydown={handleKeydown}
 				oninput={handleInput}
-				placeholder="https://github.com/owner/repo"
+				placeholder="Example: https://github.com/sveltejs/svelte"
 				{disabled}
 				class="w-full border bg-[var(--color-surface-raised)] px-4 py-2.5
 					text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-tertiary)]

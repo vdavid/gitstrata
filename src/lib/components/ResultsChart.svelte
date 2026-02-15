@@ -16,6 +16,7 @@
 
 	type ViewMode = 'all' | 'prod-vs-test' | 'languages-only';
 	let viewMode = $state<ViewMode>('all');
+	let patternFills = $state(false);
 
 	let canvasEl: HTMLCanvasElement | undefined = $state();
 	let chart: ChartType | undefined = $state();
@@ -120,6 +121,99 @@
 
 	const maxChartColors = 12;
 
+	type PatternStyle = 'diagonal' | 'dots' | 'crosshatch' | 'horizontal' | 'vertical' | 'zigzag';
+	const patternStyles: PatternStyle[] = [
+		'diagonal',
+		'dots',
+		'crosshatch',
+		'horizontal',
+		'vertical',
+		'zigzag'
+	];
+
+	/** Create a canvas pattern with a given style and color */
+	const createPattern = (color: string, style: PatternStyle): CanvasPattern | string => {
+		const size = 10;
+		const canvas = document.createElement('canvas');
+		canvas.width = size;
+		canvas.height = size;
+		const ctx = canvas.getContext('2d');
+		if (!ctx) return color;
+
+		// Fill background with semi-transparent color
+		ctx.fillStyle = color;
+		ctx.fillRect(0, 0, size, size);
+
+		// Draw pattern overlay in a darker version
+		ctx.strokeStyle = getCssVar('--color-text');
+		ctx.globalAlpha = 0.3;
+		ctx.lineWidth = 1.5;
+
+		switch (style) {
+			case 'diagonal':
+				ctx.beginPath();
+				ctx.moveTo(0, size);
+				ctx.lineTo(size, 0);
+				ctx.stroke();
+				ctx.beginPath();
+				ctx.moveTo(-size / 2, size / 2);
+				ctx.lineTo(size / 2, -size / 2);
+				ctx.stroke();
+				ctx.beginPath();
+				ctx.moveTo(size / 2, size + size / 2);
+				ctx.lineTo(size + size / 2, size / 2);
+				ctx.stroke();
+				break;
+			case 'dots':
+				ctx.beginPath();
+				ctx.arc(size / 2, size / 2, 2, 0, Math.PI * 2);
+				ctx.fillStyle = getCssVar('--color-text');
+				ctx.globalAlpha = 0.3;
+				ctx.fill();
+				break;
+			case 'crosshatch':
+				ctx.beginPath();
+				ctx.moveTo(0, size);
+				ctx.lineTo(size, 0);
+				ctx.moveTo(0, 0);
+				ctx.lineTo(size, size);
+				ctx.stroke();
+				break;
+			case 'horizontal':
+				ctx.beginPath();
+				ctx.moveTo(0, size / 2);
+				ctx.lineTo(size, size / 2);
+				ctx.stroke();
+				break;
+			case 'vertical':
+				ctx.beginPath();
+				ctx.moveTo(size / 2, 0);
+				ctx.lineTo(size / 2, size);
+				ctx.stroke();
+				break;
+			case 'zigzag':
+				ctx.beginPath();
+				ctx.moveTo(0, size * 0.75);
+				ctx.lineTo(size / 2, size * 0.25);
+				ctx.lineTo(size, size * 0.75);
+				ctx.stroke();
+				break;
+		}
+
+		const pattern = canvasEl?.getContext('2d')?.createPattern(canvas, 'repeat');
+		return pattern ?? color;
+	};
+
+	/** Get background for a dataset: pattern if enabled, solid color otherwise */
+	const getBackground = (
+		color: string,
+		index: number
+	): string | CanvasPattern => {
+		if (!patternFills) return color;
+		const style = patternStyles[index % patternStyles.length];
+		return createPattern(color, style);
+	};
+
 	const buildDatasets = (
 		daysList: DayStats[],
 		shown: string[],
@@ -127,6 +221,7 @@
 		mode: ViewMode
 	): ChartDataset<'line'>[] => {
 		const datasets: ChartDataset<'line'>[] = [];
+		let dsIndex = 0;
 
 		if (mode === 'prod-vs-test') {
 			const prodData = daysList.map((d) => {
@@ -147,7 +242,7 @@
 			datasets.push({
 				label: 'Production',
 				data: prodData,
-				backgroundColor: getChartColor(0) + '80',
+				backgroundColor: getBackground(getChartColor(0) + '80', dsIndex++),
 				borderColor: getChartColor(0),
 				borderWidth: 1.5,
 				fill: true,
@@ -158,7 +253,7 @@
 			datasets.push({
 				label: 'Test',
 				data: testData,
-				backgroundColor: getChartTint(0) + '80',
+				backgroundColor: getBackground(getChartTint(0) + '80', dsIndex++),
 				borderColor: getChartTint(0),
 				borderWidth: 1.5,
 				fill: true,
@@ -181,7 +276,7 @@
 				datasets.push({
 					label: `${langName(langId)} (prod)`,
 					data: prodData,
-					backgroundColor: getChartColor(colorIdx) + '80',
+					backgroundColor: getBackground(getChartColor(colorIdx) + '80', dsIndex++),
 					borderColor: getChartColor(colorIdx),
 					borderWidth: 1.5,
 					fill: true,
@@ -196,7 +291,7 @@
 				datasets.push({
 					label: `${langName(langId)} (test)`,
 					data: testData,
-					backgroundColor: getChartTint(colorIdx) + '80',
+					backgroundColor: getBackground(getChartTint(colorIdx) + '80', dsIndex++),
 					borderColor: getChartTint(colorIdx),
 					borderWidth: 1.5,
 					fill: true,
@@ -212,7 +307,7 @@
 				datasets.push({
 					label: langName(langId),
 					data: totalData,
-					backgroundColor: getChartColor(colorIdx) + '80',
+					backgroundColor: getBackground(getChartColor(colorIdx) + '80', dsIndex++),
 					borderColor: getChartColor(colorIdx),
 					borderWidth: 1.5,
 					fill: true,
@@ -235,7 +330,7 @@
 			datasets.push({
 				label: 'Other',
 				data: otherData,
-				backgroundColor: getCssVar('--chart-other') + '80',
+				backgroundColor: getBackground(getCssVar('--chart-other') + '80', dsIndex++),
 				borderColor: getCssVar('--chart-other'),
 				borderWidth: 1.5,
 				fill: true,
@@ -305,6 +400,8 @@
 						padding: 12,
 						titleFont: { family: getCssVar('--font-mono').split(',')[0].replace(/'/g, ''), size: 11 },
 						bodyFont: { family: getCssVar('--font-mono').split(',')[0].replace(/'/g, ''), size: 11 },
+						footerColor: getCssVar('--color-text'),
+						footerFont: { family: getCssVar('--font-mono').split(',')[0].replace(/'/g, ''), size: 11, weight: 'bold' as const },
 						cornerRadius: 6,
 						callbacks: {
 							label: (ctx) => {
@@ -316,6 +413,16 @@
 											? `${(val / 1_000).toFixed(1)}K`
 											: String(val);
 								return `${ctx.dataset.label}: ${formatted} lines`;
+							},
+							footer: (items) => {
+								const total = items.reduce((sum, item) => sum + item.parsed.y, 0);
+								const formatted =
+									total >= 1_000_000
+										? `${(total / 1_000_000).toFixed(1)}M`
+										: total >= 1_000
+											? `${(total / 1_000).toFixed(1)}K`
+											: String(total);
+								return `Total: ${formatted} lines`;
 							}
 						}
 					},
@@ -412,6 +519,14 @@
 			</button>
 		{/each}
 		<div class="flex-1"></div>
+		<button
+			onclick={() => (patternFills = !patternFills)}
+			aria-pressed={patternFills}
+			class="strata-chip text-xs"
+			title="Toggle pattern fills for color blindness accessibility"
+		>
+			Pattern fills
+		</button>
 		<button onclick={resetZoom} class="btn-ghost text-xs">
 			Reset zoom
 		</button>
