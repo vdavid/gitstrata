@@ -16,6 +16,11 @@
 	let { days, detectedLanguages, live = false }: Props = $props();
 
 	type ViewMode = 'all' | 'prod-vs-test' | 'languages-only';
+	const viewModeToggles: { mode: ViewMode; label: string }[] = [
+		{ mode: 'all', label: 'All' },
+		{ mode: 'prod-vs-test', label: 'Prod vs test' },
+		{ mode: 'languages-only', label: 'Languages only' },
+	];
 	let viewMode = $state<ViewMode>('all');
 	let patternFills = $state(false);
 
@@ -529,7 +534,7 @@
 		role="group"
 		aria-label="Chart view mode"
 	>
-		{#each [{ mode: 'all' as ViewMode, label: 'All' }, { mode: 'prod-vs-test' as ViewMode, label: 'Prod vs test' }, { mode: 'languages-only' as ViewMode, label: 'Languages only' }] as toggle (toggle.mode)}
+		{#each viewModeToggles as toggle (toggle.mode)}
 			<button
 				onclick={() => (viewMode = toggle.mode)}
 				aria-pressed={viewMode === toggle.mode}
