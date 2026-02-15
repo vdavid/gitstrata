@@ -69,6 +69,9 @@
 	// Last repo input for retry
 	let lastRepoInput = $state('');
 
+	// Snapshot of the result we're refreshing from, so retry can re-attempt a failed refresh
+	let pendingRefresh: AnalysisResult | undefined;
+
 	// Stratigraphy tooltip
 	let showStratTooltip = $state(false);
 	let stratTooltipEl: HTMLDivElement | undefined = $state();
@@ -297,6 +300,7 @@
 		fromServerCache = false;
 		sizeWarningBytes = 0;
 		showSizeWarning = false;
+		pendingRefresh = undefined;
 		stopTimer();
 	};
 
@@ -436,15 +440,22 @@
 	};
 
 	const retry = () => {
-		if (lastRepoInput) {
+		if (pendingRefresh) {
+			// Re-attempt the failed refresh
+			result = pendingRefresh;
+			pendingRefresh = undefined;
+			refresh();
+		} else if (lastRepoInput) {
 			startAnalysis(lastRepoInput);
 		}
 	};
 
 	const refresh = async () => {
 		if (!result) return;
-		const previousResult = result;
-		const repoUrl = result.repoUrl;
+		// Snapshot strips Svelte 5 reactivity proxies so the object can be sent to the worker via postMessage
+		const previousResult = $state.snapshot(result) as AnalysisResult;
+		const repoUrl = previousResult.repoUrl;
+		pendingRefresh = previousResult;
 
 		// Keep showing cached results while refreshing
 		streamingDays = [...previousResult.days];
@@ -458,6 +469,7 @@
 		try {
 			analyzer = createAnalyzer();
 			await analyzer.analyzeIncremental(repoUrl, corsProxy, previousResult, handleProgress);
+			pendingRefresh = undefined;
 		} catch (e) {
 			stopTimer();
 			// phase may have been set to 'error' by handleProgress during the await
