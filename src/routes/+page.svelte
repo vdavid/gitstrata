@@ -88,7 +88,8 @@
 		}
 	});
 
-	// Measure tig character widths after fonts load, so the swap animation is pixel-perfect
+	// Measure tig character widths after fonts load, so the swap animation is pixel-perfect.
+	// Also listens for animationend to hand off from the initial CSS animation to JS control.
 	$effect(() => {
 		if (!tigGroupEl || !tigTEl || !tigIEl || !tigGEl) return;
 		const group = tigGroupEl;
@@ -104,6 +105,110 @@
 			group.style.setProperty('--tig-dg', `${(wt + wi) / fontSize}em`);
 			group.style.setProperty('--tig-di', `${(wg - wt) / fontSize}em`);
 		});
+		group.addEventListener('animationend', handleTigAnimationEnd);
+		return () => group.removeEventListener('animationend', handleTigAnimationEnd);
+	});
+
+	// --- Tig↔git interactive hover swap ---
+	type SwapPhase =
+		| 'initial'
+		| 'showing-git'
+		| 'hover-pending'
+		| 'animating-to-tig'
+		| 'showing-tig'
+		| 'animating-to-git';
+
+	let swapPhase: SwapPhase = 'initial';
+	let swapNeedsFreshEnter = true;
+	let swapIsHovering = false;
+	let swapHoverTimer: ReturnType<typeof setTimeout> | undefined;
+	let swapRevertTimer: ReturnType<typeof setTimeout> | undefined;
+	let swapAnim: Animation | null = null;
+
+	const swapAnimate = (from: number, to: number, onDone: () => void) => {
+		swapAnim?.cancel();
+		swapAnim = null;
+		if (!tigGroupEl) return;
+		const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+		tigGroupEl.style.setProperty('--tig-swap', String(from));
+		swapAnim = tigGroupEl.animate([{ '--tig-swap': String(from) }, { '--tig-swap': String(to) }], {
+			duration: reducedMotion ? 1 : 2000,
+			easing: 'linear',
+			fill: 'forwards'
+		});
+		swapAnim.addEventListener(
+			'finish',
+			() => {
+				tigGroupEl?.style.setProperty('--tig-swap', String(to));
+				swapAnim?.cancel();
+				swapAnim = null;
+				onDone();
+			},
+			{ once: true }
+		);
+	};
+
+	const swapStartRevertTimer = () => {
+		if (swapRevertTimer) clearTimeout(swapRevertTimer);
+		swapRevertTimer = setTimeout(() => {
+			swapRevertTimer = undefined;
+			swapPhase = 'animating-to-git';
+			swapAnimate(0, 1, () => {
+				swapPhase = 'showing-git';
+				swapNeedsFreshEnter = swapIsHovering;
+			});
+		}, 5000);
+	};
+
+	const handleTigAnimationEnd = (e: AnimationEvent) => {
+		if (e.animationName !== 'tig-swap-anim' || swapPhase !== 'initial') return;
+		if (!tigGroupEl) return;
+		tigGroupEl.style.animation = 'none';
+		tigGroupEl.style.setProperty('--tig-swap', '1');
+		swapPhase = 'showing-git';
+		swapNeedsFreshEnter = swapIsHovering;
+	};
+
+	const handleTigMouseEnter = () => {
+		swapIsHovering = true;
+		if (swapPhase === 'showing-git' && !swapNeedsFreshEnter) {
+			swapPhase = 'hover-pending';
+			swapHoverTimer = setTimeout(() => {
+				swapHoverTimer = undefined;
+				swapPhase = 'animating-to-tig';
+				swapAnimate(1, 0, () => {
+					swapPhase = 'showing-tig';
+					if (!swapIsHovering) swapStartRevertTimer();
+				});
+			}, 500);
+		} else if (swapPhase === 'showing-tig') {
+			if (swapRevertTimer) {
+				clearTimeout(swapRevertTimer);
+				swapRevertTimer = undefined;
+			}
+		}
+	};
+
+	const handleTigMouseLeave = () => {
+		swapIsHovering = false;
+		if (swapPhase === 'showing-git') {
+			swapNeedsFreshEnter = false;
+		} else if (swapPhase === 'hover-pending') {
+			if (swapHoverTimer) clearTimeout(swapHoverTimer);
+			swapHoverTimer = undefined;
+			swapPhase = 'showing-git';
+		} else if (swapPhase === 'showing-tig') {
+			swapStartRevertTimer();
+		}
+	};
+
+	// Cleanup swap timers/animation on unmount
+	$effect(() => {
+		return () => {
+			if (swapHoverTimer) clearTimeout(swapHoverTimer);
+			if (swapRevertTimer) clearTimeout(swapRevertTimer);
+			swapAnim?.cancel();
+		};
 	});
 
 	const startTimer = (kind: 'clone' | 'process') => {
@@ -366,11 +471,18 @@
 	<div class="relative py-4 text-center sm:py-6">
 		<div class="strata-hero-lines"></div>
 		<div class="relative">
+			<!-- Decorative tig↔git animation easter egg, not an interactive control -->
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<!-- prettier-ignore -->
 			<h1
 				class="text-3xl font-bold tracking-tight text-[var(--color-text)] sm:text-4xl lg:text-5xl"
 				style="font-family: var(--font-sans); letter-spacing: -0.025em;"
-			>Stra<span class="tig-group" bind:this={tigGroupEl}><span class="tig-char tig-t text-[var(--color-accent)]" bind:this={tigTEl}>t</span><span class="tig-char tig-i text-[var(--color-accent)]" bind:this={tigIEl}>i</span><span class="tig-char tig-g text-[var(--color-accent)]" bind:this={tigGEl}>g</span></span>raphy for your code</h1>
+			>Stra<span
+				class="tig-group"
+				bind:this={tigGroupEl}
+				onmouseenter={handleTigMouseEnter}
+				onmouseleave={handleTigMouseLeave}
+			><span class="tig-char tig-t text-[var(--color-accent)]" bind:this={tigTEl}>t</span><span class="tig-char tig-i text-[var(--color-accent)]" bind:this={tigIEl}>i</span><span class="tig-char tig-g text-[var(--color-accent)]" bind:this={tigGEl}>g</span></span>raphy for your code</h1>
 			<p
 				class="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-[var(--color-text-secondary)] sm:text-base"
 				style="font-family: var(--font-sans);"

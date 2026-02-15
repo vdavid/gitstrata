@@ -70,7 +70,7 @@ This creates a Pages project named `git-strata`. The actual deployments happen f
 
 ## Step 5: Set up the custom domain
 
-1. In the [Cloudflare dashboard](https://dash.cloudflare.com/), go to **Workers & Pages > git-strata > Custom
+1. In the [Cloudflare dashboard](https://dash.cloudflare.com/), go to **Compute > Workers & Pages > git-strata > Custom
    domains**.
 2. Add your domain (for example, `gitstrata.yourdomain.com`).
 3. Cloudflare will auto-create the DNS record if your domain's DNS is managed by Cloudflare.

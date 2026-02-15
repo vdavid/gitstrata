@@ -406,6 +406,8 @@ ${statBlock}`;
 	};
 </script>
 
+<!-- Click-outside/Escape handler for dismissing info popups, not an interactive control -->
+<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <div
 	class="strata-card p-5"
 	role="region"
