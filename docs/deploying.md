@@ -31,7 +31,8 @@ for the frontend config.
 
 ### What the proxy does
 
-- Forwards requests to git hosts (`/info/refs` and `/git-upload-pack` paths only)
+- Forwards requests to allowed git hosts only (GitHub, GitLab, Bitbucket)
+- Only proxies git protocol paths (`/info/refs` and `/git-upload-pack`)
 - Adds CORS headers so the browser can talk to git servers
 - Rate limits to 100 requests per minute per IP
 - When R2 is enabled: serves and accepts shared analysis results (see step 3)
@@ -53,7 +54,17 @@ The shared cache lets users benefit from each other's analyses. It's optional bu
 
 3. **Uncomment the R2 binding** in `cors-proxy/wrangler.toml` (remove the `#` from the three `[[r2_buckets]]` lines).
 
-4. **Re-deploy the CORS proxy** so it picks up the R2 binding:
+4. **Set a cache write token** to prevent unauthorized cache writes:
+
+   ```bash
+   cd cors-proxy
+   pnpm exec wrangler secret put CACHE_WRITE_TOKEN
+   ```
+
+   Enter a random secret when prompted (for example, generate one with `openssl rand -hex 32`). The frontend must send
+   this token as a Bearer header on cache uploads — see the environment variables table below.
+
+5. **Re-deploy the CORS proxy** so it picks up the R2 binding and secret:
 
    ```bash
    pnpm run deploy
@@ -124,12 +135,13 @@ Once these are set, every push to `main` that passes CI will auto-deploy both th
 
 ## Environment variables
 
-| Variable                  | Where             | Default                           | Purpose                                                         |
-| ------------------------- | ----------------- | --------------------------------- | --------------------------------------------------------------- |
-| `PUBLIC_CORS_PROXY_URL`   | Frontend (`.env`) | `https://cors.isomorphic-git.org` | URL of your deployed CORS proxy                                 |
-| `PUBLIC_SHARED_CACHE_URL` | Frontend (`.env`) | _(none)_                          | URL of shared cache API (same as CORS proxy when R2 is enabled) |
-| `PUBLIC_ANALYTICS_URL`    | Frontend (`.env`) | _(none)_                          | Umami server URL (for example, `https://umami.yourdomain.com`)  |
-| `PUBLIC_ANALYTICS_ID`     | Frontend (`.env`) | _(none)_                          | Umami website ID (UUID from your Umami dashboard)               |
+| Variable                   | Where             | Default                           | Purpose                                                         |
+| -------------------------- | ----------------- | --------------------------------- | --------------------------------------------------------------- |
+| `PUBLIC_CORS_PROXY_URL`    | Frontend (`.env`) | `https://cors.isomorphic-git.org` | URL of your deployed CORS proxy                                 |
+| `PUBLIC_SHARED_CACHE_URL`  | Frontend (`.env`) | _(none)_                          | URL of shared cache API (same as CORS proxy when R2 is enabled) |
+| `PUBLIC_CACHE_WRITE_TOKEN` | Frontend (`.env`) | _(none)_                          | Bearer token for cache writes (must match worker secret)        |
+| `PUBLIC_ANALYTICS_URL`     | Frontend (`.env`) | _(none)_                          | Umami server URL (for example, `https://umami.yourdomain.com`)  |
+| `PUBLIC_ANALYTICS_ID`      | Frontend (`.env`) | _(none)_                          | Umami website ID (UUID from your Umami dashboard)               |
 
 Both `PUBLIC_ANALYTICS_URL` and `PUBLIC_ANALYTICS_ID` must be set to enable analytics. When either is missing, no
 tracking script is loaded.
@@ -140,6 +152,7 @@ file in the repo root:
 ```bash
 PUBLIC_CORS_PROXY_URL=https://your-proxy.workers.dev
 PUBLIC_SHARED_CACHE_URL=https://your-proxy.workers.dev
+PUBLIC_CACHE_WRITE_TOKEN=your-token-here
 # PUBLIC_ANALYTICS_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 # PUBLIC_ANALYTICS_URL=https://umami.yourdomain.com
 ```
