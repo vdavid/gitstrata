@@ -62,7 +62,7 @@ const rgbToHsl = (r: number, g: number, b: number): [number, number, number] => 
 	if (max === min) return [0, 0, l];
 	const d = max - min;
 	const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-	let h = 0;
+	let h: number;
 	if (max === rn) h = ((gn - bn) / d + (gn < bn ? 6 : 0)) / 6;
 	else if (max === gn) h = ((bn - rn) / d + 2) / 6;
 	else h = ((rn - gn) / d + 4) / 6;

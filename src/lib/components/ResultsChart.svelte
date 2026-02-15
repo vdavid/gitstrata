@@ -406,6 +406,7 @@
 						borderColor: getCssVar('--color-border'),
 						borderWidth: 1,
 						padding: 12,
+						boxPadding: 6,
 						titleFont: {
 							family: getCssVar('--font-mono').split(',')[0].replace(/'/g, ''),
 							size: 11
@@ -423,23 +424,26 @@
 						cornerRadius: 6,
 						callbacks: {
 							label: (ctx) => {
-								const val = ctx.parsed.y ?? 0;
-								const formatted =
-									val >= 1_000_000
-										? `${(val / 1_000_000).toFixed(1)}M`
-										: val >= 1_000
-											? `${(val / 1_000).toFixed(1)}k`
-											: String(val);
-								return `${ctx.dataset.label}: ${formatted} lines`;
+								// Use raw dataset value, not stacked cumulative parsed.y
+								const raw = ctx.dataset.data[ctx.dataIndex];
+								const val = typeof raw === 'number' ? raw : 0;
+								const total = ctx.chart.data.datasets.reduce((sum, ds, i) => {
+									const meta = ctx.chart.getDatasetMeta(i);
+									if (meta.hidden) return sum;
+									const v = ds.data[ctx.dataIndex];
+									return sum + (typeof v === 'number' ? v : 0);
+								}, 0);
+								const pct = total > 0 ? Math.round((val / total) * 100) : 0;
+								const formatted = val.toLocaleString('en').replace(/,/g, '\u2009');
+								return `${ctx.dataset.label}: ${formatted} lines (${pct}%)`;
 							},
+							labelTextColor: () => getCssVar('--color-accent'),
 							footer: (items) => {
-								const total = items.reduce((sum, item) => sum + (item.parsed.y ?? 0), 0);
-								const formatted =
-									total >= 1_000_000
-										? `${(total / 1_000_000).toFixed(1)}M`
-										: total >= 1_000
-											? `${(total / 1_000).toFixed(1)}k`
-											: String(total);
+								const total = items.reduce((sum, item) => {
+									const raw = item.dataset.data[item.dataIndex];
+									return sum + (typeof raw === 'number' ? raw : 0);
+								}, 0);
+								const formatted = total.toLocaleString('en').replace(/,/g, '\u2009');
 								return `Total: ${formatted} lines`;
 							}
 						}

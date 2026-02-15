@@ -5,9 +5,10 @@
 	interface Props {
 		days: DayStats[];
 		detectedLanguages: string[];
+		repoUrl?: string;
 	}
 
-	let { days, detectedLanguages }: Props = $props();
+	let { days, detectedLanguages, repoUrl }: Props = $props();
 
 	const languageNameMap = $derived.by(() => {
 		const entries: [string, string][] = getLanguages().map((lang) => [lang.id, lang.name]);
@@ -115,13 +116,31 @@
 		setTimeout(() => (copyLabel = 'Copy CSV'), 2000);
 	};
 
+	const csvFilename = $derived.by(() => {
+		if (!repoUrl) return 'gitstrata-data.csv';
+		try {
+			const parsed = new URL(repoUrl);
+			const hostLabel = parsed.hostname.replace(/\.[^.]+$/, '').toLowerCase();
+			const segments = parsed.pathname
+				.replace(/^\//, '')
+				.replace(/\.git$/, '')
+				.split('/');
+			if (segments.length >= 2) {
+				return `gitstrata-${hostLabel}-${segments[0]}-${segments[1]}-data.csv`;
+			}
+		} catch {
+			// fall through
+		}
+		return 'gitstrata-data.csv';
+	});
+
 	const downloadCsv = () => {
 		const csv = generateCsv();
 		const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
 		const url = URL.createObjectURL(blob);
 		const a = document.createElement('a');
 		a.href = url;
-		a.download = 'loc-data.csv';
+		a.download = csvFilename;
 		a.click();
 		URL.revokeObjectURL(url);
 	};

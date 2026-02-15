@@ -180,7 +180,7 @@
 					swapPhase = 'showing-tig';
 					if (!swapIsHovering) swapStartRevertTimer();
 				});
-			}, 500);
+			}, 100);
 		} else if (swapPhase === 'showing-tig') {
 			if (swapRevertTimer) {
 				clearTimeout(swapRevertTimer);
@@ -460,6 +460,25 @@
 	const dismissSizeWarning = () => {
 		showSizeWarning = false;
 	};
+
+	/** Relative date label: "today", "yesterday", "3 days ago", "2 weeks ago", etc. */
+	const relativeDate = (iso: string): string => {
+		const then = new Date(iso.slice(0, 10) + 'T00:00:00');
+		const now = new Date();
+		const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+		const diffMs = today.getTime() - then.getTime();
+		const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+		if (diffDays <= 0) return 'today';
+		if (diffDays === 1) return 'yesterday';
+		if (diffDays < 14) return `${diffDays} days ago`;
+		const weeks = Math.round(diffDays / 7);
+		if (weeks < 8) return `${weeks} weeks ago`;
+		const months = Math.round(diffDays / 30);
+		if (months < 12) return `${months} months ago`;
+		const years = Math.round(diffDays / 365);
+		return `${years} ${years === 1 ? 'year' : 'years'} ago`;
+	};
 </script>
 
 <svelte:head>
@@ -650,7 +669,7 @@
 							{fromServerCache ? 'Shared result' : 'Last analyzed'}: {cachedResult.analyzedAt.slice(
 								0,
 								10
-							)}
+							)} ({relativeDate(cachedResult.analyzedAt)})
 						</span>
 						<button
 							onclick={refresh}
@@ -703,7 +722,11 @@
 						{commitDays.length === 1 ? 'commit' : 'commits'})
 					</summary>
 					<div class="mt-4">
-						<ResultsTable days={commitDays} detectedLanguages={displayLanguages} />
+						<ResultsTable
+							days={commitDays}
+							detectedLanguages={displayLanguages}
+							repoUrl={result?.repoUrl}
+						/>
 					</div>
 				</details>
 			{/if}

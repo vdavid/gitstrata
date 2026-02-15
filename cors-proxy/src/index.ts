@@ -245,11 +245,7 @@ app.all('*', async (c) => {
 		for (const [key, value] of response.headers.entries()) {
 			const lower = key.toLowerCase();
 			// Pass through content headers (but not cache-control — see below)
-			if (
-				lower === 'content-type' ||
-				lower === 'content-length' ||
-				lower === 'content-encoding'
-			) {
+			if (lower === 'content-type' || lower === 'content-length' || lower === 'content-encoding') {
 				responseHeaders.set(key, value);
 			} else if (lower === 'cache-control' && !isInfoRefsGet) {
 				responseHeaders.set(key, value);

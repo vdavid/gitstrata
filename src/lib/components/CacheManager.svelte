@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
+	import { resolve } from '$app/paths';
 	import {
 		listCachedRepos,
 		deleteRepo,
@@ -115,12 +116,13 @@
 					{#each repos as repo (repo.repoUrl)}
 						<li class="flex items-center justify-between gap-3">
 							<div class="min-w-0 flex-1">
-								<p
-									class="truncate text-[var(--color-text)]"
-									style="font-family: var(--font-mono); font-size: 0.8125rem;"
+								<a
+									href="{resolve('/')}?repo={shortName(repo.repoUrl)}"
+									class="block truncate text-[var(--color-text)] hover:text-[var(--color-accent)] hover:underline transition-colors"
+									style="font-family: var(--font-mono); font-size: 0.8125rem; text-decoration: none; transition-duration: var(--duration-fast);"
 								>
 									{shortName(repo.repoUrl)}
-								</p>
+								</a>
 								<p
 									class="text-[var(--color-text-tertiary)]"
 									style="font-family: var(--font-mono); font-size: 0.625rem; letter-spacing: 0.02em;"
