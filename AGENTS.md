@@ -123,5 +123,6 @@ Always do a last round of checks before finishing up:
 - [isomorphic-git docs](https://isomorphic-git.org/docs/en/guide)
 - [Chart.js docs](https://www.chartjs.org/docs/latest/)
 - [Style guide](docs/style-guide.md) — keep this in mind! Especially "sentence case" for titles and labels!
+- [Visual language](docs/visual-language.md) — color tokens, typography, surfaces, component patterns
 
 Happy coding!
