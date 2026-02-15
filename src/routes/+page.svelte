@@ -2,7 +2,7 @@
 	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import { env } from '$env/dynamic/public';
 	import { parseRepoUrl } from '$lib/url';
 	import { formatBytes, getResult, saveResult } from '$lib/cache';
@@ -81,7 +81,7 @@
 	// Read ?repo= from URL on initial load
 	const initialRepo = $derived.by(() => {
 		if (!browser) return '';
-		return $page.url.searchParams.get('repo') ?? '';
+		return page.url.searchParams.get('repo') ?? '';
 	});
 
 	let hasAutoStarted = $state(false);
@@ -557,10 +557,9 @@
 					</p>
 					<hr class="strat-tooltip-divider" />
 					<p>
-						<strong>Stra<span class="text-[var(--color-accent)]">git</span>raphy</strong> is the study of how your repo's layers (<em
-							>strati</em
-						>) went from <code>git init</code> to whatever it is now. Unlike real stratigraphy, it takes
-						seconds instead of millennia.
+						<strong>Stra<span class="text-[var(--color-accent)]">git</span>raphy</strong> is the
+						study of how your repo's layers (<em>strati</em>) went from <code>git init</code> to whatever
+						it is now. Unlike real stratigraphy, it takes seconds instead of millennia.
 					</p>
 				</div>
 			{/if}

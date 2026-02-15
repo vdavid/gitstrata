@@ -67,7 +67,7 @@
 		<button
 			onclick={() => (expanded = !expanded)}
 			aria-expanded={expanded}
-			class="flex items-center gap-2 text-[var(--color-text-tertiary)] transition-colors
+			class="flex cursor-pointer items-center gap-2 text-[var(--color-text-tertiary)] transition-colors
 				hover:text-[var(--color-text-secondary)]"
 			style="font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.02em; transition-duration: var(--duration-fast);"
 		>
