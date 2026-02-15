@@ -5,6 +5,8 @@ export const defaultTestDirPatterns = [
 	'test',
 	'tests',
 	'__tests__',
+	'__mocks__',
+	'__fixtures__',
 	'spec',
 	'e2e',
 	'testutil',
@@ -95,13 +97,31 @@ const languages: readonly LanguageDefinition[] = [
 		id: 'javascript',
 		name: 'JavaScript',
 		extensions: ['.js', '.jsx', '.mjs', '.cjs'],
-		testFilePatterns: ['*.test.js', '*.spec.js', '*.test.jsx', '*.spec.jsx']
+		testFilePatterns: [
+			'*.test.js',
+			'*.spec.js',
+			'*.test.jsx',
+			'*.spec.jsx',
+			'*.test.mjs',
+			'*.spec.mjs',
+			'*.test.cjs',
+			'*.spec.cjs'
+		]
 	},
 	{
 		id: 'typescript',
 		name: 'TypeScript',
 		extensions: ['.ts', '.tsx', '.mts', '.cts'],
-		testFilePatterns: ['*.test.ts', '*.spec.ts', '*.test.tsx', '*.spec.tsx']
+		testFilePatterns: [
+			'*.test.ts',
+			'*.spec.ts',
+			'*.test.tsx',
+			'*.spec.tsx',
+			'*.test.mts',
+			'*.spec.mts',
+			'*.test.cts',
+			'*.spec.cts'
+		]
 	},
 	{
 		id: 'rust',
@@ -118,12 +138,14 @@ const languages: readonly LanguageDefinition[] = [
 	{
 		id: 'c',
 		name: 'C',
-		extensions: ['.c']
+		extensions: ['.c'],
+		testFilePatterns: ['test_*.c', '*_test.c']
 	},
 	{
 		id: 'cpp',
 		name: 'C++',
-		extensions: ['.cpp', '.cc', '.cxx', '.hpp', '.hxx', '.hh']
+		extensions: ['.cpp', '.cc', '.cxx', '.hpp', '.hxx', '.hh'],
+		testFilePatterns: ['test_*.cpp', '*_test.cpp', '*_test.cc', '*_test.cxx']
 	},
 	{
 		id: 'csharp',
@@ -153,7 +175,7 @@ const languages: readonly LanguageDefinition[] = [
 		id: 'objc',
 		name: 'Objective-C',
 		extensions: ['.m', '.mm'],
-		testFilePatterns: ['*Tests.m']
+		testFilePatterns: ['*Tests.m', '*Test.m']
 	},
 	{
 		id: 'zig',
@@ -236,7 +258,8 @@ const languages: readonly LanguageDefinition[] = [
 	{
 		id: 'ocaml',
 		name: 'OCaml',
-		extensions: ['.ml', '.mli']
+		extensions: ['.ml', '.mli'],
+		testFilePatterns: ['*_test.ml']
 	},
 	{
 		id: 'fsharp',

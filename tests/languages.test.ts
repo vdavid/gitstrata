@@ -170,8 +170,39 @@ describe('isTestFile', () => {
 		expect(isTestFile('FooTest.fs', ['*Tests.fs', '*Test.fs'])).toBe(true);
 	});
 
-	it('detects Objective-C test patterns', () => {
-		expect(isTestFile('FooTests.m', ['*Tests.m'])).toBe(true);
+	it('detects Objective-C test patterns (plural and singular)', () => {
+		expect(isTestFile('FooTests.m', ['*Tests.m', '*Test.m'])).toBe(true);
+		expect(isTestFile('FooTest.m', ['*Tests.m', '*Test.m'])).toBe(true);
+	});
+
+	it('detects C test file patterns', () => {
+		expect(isTestFile('test_math.c', ['test_*.c', '*_test.c'])).toBe(true);
+		expect(isTestFile('math_test.c', ['test_*.c', '*_test.c'])).toBe(true);
+	});
+
+	it('detects C++ test file patterns', () => {
+		expect(
+			isTestFile('test_math.cpp', ['test_*.cpp', '*_test.cpp', '*_test.cc', '*_test.cxx'])
+		).toBe(true);
+		expect(
+			isTestFile('math_test.cc', ['test_*.cpp', '*_test.cpp', '*_test.cc', '*_test.cxx'])
+		).toBe(true);
+	});
+
+	it('detects OCaml test file patterns', () => {
+		expect(isTestFile('parser_test.ml', ['*_test.ml'])).toBe(true);
+	});
+
+	it('detects JS ESM test files', () => {
+		const patterns = ['*.test.mjs', '*.spec.mjs', '*.test.cjs', '*.spec.cjs'];
+		expect(isTestFile('app.test.mjs', patterns)).toBe(true);
+		expect(isTestFile('app.spec.cjs', patterns)).toBe(true);
+	});
+
+	it('detects TS ESM test files', () => {
+		const patterns = ['*.test.mts', '*.spec.mts', '*.test.cts', '*.spec.cts'];
+		expect(isTestFile('app.test.mts', patterns)).toBe(true);
+		expect(isTestFile('app.spec.cts', patterns)).toBe(true);
 	});
 });
 
@@ -194,6 +225,11 @@ describe('isInTestDir', () => {
 
 	it('detects files in spec directory (default pattern)', () => {
 		expect(isInTestDir('spec/models/user_spec.rb')).toBe(true);
+	});
+
+	it('detects files in __mocks__ and __fixtures__ directories', () => {
+		expect(isInTestDir('src/__mocks__/api.ts')).toBe(true);
+		expect(isInTestDir('src/__fixtures__/data.json')).toBe(true);
 	});
 });
 
