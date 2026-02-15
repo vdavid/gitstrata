@@ -16,10 +16,11 @@ export const getCommitsByDate = async (options: {
 	fs: FsClient;
 	dir: string;
 	ref: string;
+	gitCache?: object;
 }): Promise<DailyCommit[]> => {
-	const { fs, dir, ref } = options;
+	const { fs, dir, ref, gitCache } = options;
 
-	const commits: ReadCommitResult[] = await git.log({ fs, dir, ref });
+	const commits: ReadCommitResult[] = await git.log({ fs, dir, ref, cache: gitCache });
 
 	// git.log returns newest-first; group by date
 	const byDate = new Map<string, DailyCommit>();

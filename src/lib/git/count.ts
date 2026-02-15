@@ -3,6 +3,7 @@ import type { LanguageDefinition } from '../types';
 import type { DayStats, LanguageCount } from '../types';
 import {
 	defaultTestDirPatterns,
+	getLanguages,
 	isInTestDir,
 	isTestFile,
 	resolveHeaderLanguage
@@ -107,6 +108,13 @@ interface BlobCacheEntry {
 	languageId: string | undefined;
 }
 
+export interface FileState {
+	oid: string;
+	languageId: string | undefined;
+	lines: number;
+	testLines: number;
+}
+
 /** Cache key for blob results: (oid, filePath) tuple */
 const makeBlobCacheKey = (oid: string, filePath: string): string => {
 	return `${oid}\0${filePath}`;
@@ -121,36 +129,56 @@ interface FileEntry {
 	oid: string;
 }
 
-/** Walk a commit tree and return all blob entries */
-const listFilesAtCommit = async (options: {
+/** Cached tree entry from git.readTree */
+interface TreeEntry {
+	path: string; // filename (NOT full path)
+	oid: string;
+	type: string; // 'blob' | 'tree' | 'commit'
+}
+
+/** Read a tree object, using cache if available */
+const readTreeCached = async (
+	fs: FsClient,
+	dir: string,
+	treeOid: string,
+	treeCache: Map<string, TreeEntry[]>,
+	gitCache?: object
+): Promise<TreeEntry[]> => {
+	const cached = treeCache.get(treeOid);
+	if (cached) return cached;
+	const result = await git.readTree({ fs, dir, oid: treeOid, cache: gitCache });
+	const entries = result.tree.map((e) => ({ path: e.path, oid: e.oid, type: e.type }));
+	treeCache.set(treeOid, entries);
+	return entries;
+};
+
+/** Walk a commit tree using cached tree reads and return all blob entries */
+const listFilesAtCommitCached = async (options: {
 	fs: FsClient;
 	dir: string;
 	commitOid: string;
+	treeCache: Map<string, TreeEntry[]>;
+	gitCache?: object;
 }): Promise<FileEntry[]> => {
-	const { fs, dir, commitOid } = options;
+	const { fs, dir, commitOid, treeCache, gitCache } = options;
+	const commit = await git.readCommit({ fs, dir, oid: commitOid, cache: gitCache });
+	const rootTreeOid = commit.commit.tree;
+
 	const files: FileEntry[] = [];
 
-	await git.walk({
-		fs,
-		dir,
-		trees: [git.TREE({ ref: commitOid })],
-		map: async (filepath, entries) => {
-			if (!entries || entries.length === 0) return undefined;
-			const entry = entries[0];
-			if (!entry) return undefined;
-
-			const type = await entry.type();
-			if (type === 'blob') {
-				const oid = await entry.oid();
-				if (oid) {
-					files.push({ path: filepath, oid });
-				}
+	const walkTree = async (treeOid: string, basePath: string) => {
+		const entries = await readTreeCached(fs, dir, treeOid, treeCache, gitCache);
+		for (const entry of entries) {
+			const fullPath = basePath ? `${basePath}/${entry.path}` : entry.path;
+			if (entry.type === 'blob') {
+				files.push({ path: fullPath, oid: entry.oid });
+			} else if (entry.type === 'tree') {
+				await walkTree(entry.oid, fullPath);
 			}
-			// Return truthy to continue walking into subdirectories
-			return true;
 		}
-	});
+	};
 
+	await walkTree(rootTreeOid, '');
 	return files;
 };
 
@@ -163,7 +191,72 @@ export interface CountOptions {
 	/** Raw blob content cache by OID (shared across days) */
 	contentCache: Map<string, string>;
 	signal?: AbortSignal;
+	/** If provided, populated with per-file state for incremental diffing */
+	fileStateMap?: Map<string, FileState>;
+	/** If provided, updated with all file extensions seen */
+	allExtensions?: Set<string>;
+	/** Tree object cache: treeOid -> entries (shared across commits for massive speedup) */
+	treeCache?: Map<string, TreeEntry[]>;
+	/** isomorphic-git object cache — pass the same object to all git calls for in-memory caching */
+	gitCache?: object;
 }
+
+/** Build a set of language IDs that have test heuristics */
+const buildLangsWithTestHeuristics = (): Set<string> => {
+	const result = new Set<string>();
+	// 'other' always uses prod/test split
+	result.add('other');
+	for (const lang of getLanguages()) {
+		if (lang.testFilePatterns || lang.testDirPatterns || lang.countInlineTestLines) {
+			result.add(lang.id);
+		}
+	}
+	return result;
+};
+
+const langsWithTestHeuristics = buildLangsWithTestHeuristics();
+
+/** Aggregate line counts from a fileStateMap into DayStats */
+const computeDayStatsFromFileState = (
+	fileStateMap: Map<string, FileState>,
+	date: string,
+	messages: string[]
+): DayStats => {
+	const languages: Record<string, LanguageCount> = {};
+	let total = 0;
+
+	for (const [, state] of fileStateMap) {
+		if (!state.languageId) continue;
+		if (state.lines === 0) continue;
+
+		const langId = state.languageId;
+		const hasSplit = langsWithTestHeuristics.has(langId);
+		const existing = languages[langId];
+
+		if (hasSplit) {
+			const prod = state.lines - state.testLines;
+			const test = state.testLines;
+			const lineTotal = prod + test;
+			if (existing) {
+				existing.total += lineTotal;
+				if (existing.prod !== undefined) existing.prod += prod;
+				if (existing.test !== undefined) existing.test += test;
+			} else {
+				languages[langId] = { total: lineTotal, prod, test };
+			}
+			total += lineTotal;
+		} else {
+			if (existing) {
+				existing.total += state.lines;
+			} else {
+				languages[langId] = { total: state.lines };
+			}
+			total += state.lines;
+		}
+	}
+
+	return { date, total, languages, comments: messages };
+};
 
 /**
  * Count lines for all files at a given commit, returning DayStats.
@@ -174,20 +267,40 @@ export const countLinesForCommit = async (
 	date: string,
 	messages: string[]
 ): Promise<DayStats> => {
-	const { fs, dir, commitOid, blobCache, contentCache, signal } = options;
+	const {
+		fs,
+		dir,
+		commitOid,
+		blobCache,
+		contentCache,
+		signal,
+		fileStateMap,
+		allExtensions,
+		treeCache,
+		gitCache
+	} = options;
 
-	const files = await listFilesAtCommit({ fs, dir, commitOid });
+	const effectiveTreeCache = treeCache ?? new Map<string, TreeEntry[]>();
+	const files = await listFilesAtCommitCached({
+		fs,
+		dir,
+		commitOid,
+		treeCache: effectiveTreeCache,
+		gitCache
+	});
 
 	if (signal?.aborted) {
 		throw new Error('Cancelled');
 	}
 
 	// Collect all extensions to resolve .h ambiguity
-	const allExtensions = new Set<string>();
+	const localExtensions = new Set<string>();
 	for (const file of files) {
-		allExtensions.add(getExtension(file.path).toLowerCase());
+		const ext = getExtension(file.path).toLowerCase();
+		localExtensions.add(ext);
+		if (allExtensions) allExtensions.add(ext);
 	}
-	const extensionMap = resolveHeaderLanguage(allExtensions);
+	const extensionMap = resolveHeaderLanguage(allExtensions ?? localExtensions);
 
 	const languages: Record<string, LanguageCount> = {};
 	let total = 0;
@@ -231,6 +344,14 @@ export const countLinesForCommit = async (
 					addToLanguage(cached.languageId, cached.lines - cached.testLines, cached.testLines);
 				}
 			}
+			if (fileStateMap) {
+				fileStateMap.set(file.path, {
+					oid: file.oid,
+					languageId: cached.languageId,
+					lines: cached.lines,
+					testLines: cached.testLines
+				});
+			}
 			continue;
 		}
 
@@ -238,10 +359,18 @@ export const countLinesForCommit = async (
 		let content = contentCache.get(file.oid);
 		if (content === undefined) {
 			try {
-				const { blob } = await git.readBlob({ fs, dir, oid: file.oid });
+				const { blob } = await git.readBlob({ fs, dir, oid: file.oid, cache: gitCache });
 				if (isBinary(blob)) {
 					// Cache as empty/skipped
 					blobCache.set(cacheKey, { lines: 0, testLines: 0, languageId: undefined });
+					if (fileStateMap) {
+						fileStateMap.set(file.path, {
+							oid: file.oid,
+							languageId: undefined,
+							lines: 0,
+							testLines: 0
+						});
+					}
 					continue;
 				}
 				content = new TextDecoder().decode(blob);
@@ -258,6 +387,9 @@ export const countLinesForCommit = async (
 			// Unknown extension: count as "other" (prod, no test heuristic)
 			blobCache.set(cacheKey, { lines, testLines: 0, languageId: 'other' });
 			addToLanguage('other', lines, 0);
+			if (fileStateMap) {
+				fileStateMap.set(file.path, { oid: file.oid, languageId: 'other', lines, testLines: 0 });
+			}
 			continue;
 		}
 
@@ -272,6 +404,15 @@ export const countLinesForCommit = async (
 			languageId: langId
 		});
 
+		if (fileStateMap) {
+			fileStateMap.set(file.path, {
+				oid: file.oid,
+				languageId: langId,
+				lines: classification.lines,
+				testLines: classification.testLines
+			});
+		}
+
 		if (classification.hasSplit) {
 			addToLanguage(
 				langId,
@@ -284,6 +425,190 @@ export const countLinesForCommit = async (
 	}
 
 	return { date, total, languages, comments: messages };
+};
+
+/** Process a single file and return its FileState, using blob/content caches */
+const processFile = async (
+	filePath: string,
+	oid: string,
+	fs: FsClient,
+	dir: string,
+	blobCache: Map<string, BlobCacheEntry>,
+	contentCache: Map<string, string>,
+	extensionMap: Map<string, LanguageDefinition>,
+	gitCache?: object
+): Promise<FileState> => {
+	if (shouldSkip(filePath)) {
+		return { oid, languageId: undefined, lines: 0, testLines: 0 };
+	}
+
+	const ext = getExtension(filePath).toLowerCase();
+	const lang = extensionMap.get(ext);
+
+	const cacheKey = makeBlobCacheKey(oid, filePath);
+	const cached = blobCache.get(cacheKey);
+	if (cached) {
+		return { oid, languageId: cached.languageId, lines: cached.lines, testLines: cached.testLines };
+	}
+
+	let content = contentCache.get(oid);
+	if (content === undefined) {
+		try {
+			const { blob } = await git.readBlob({ fs, dir, oid, cache: gitCache });
+			if (isBinary(blob)) {
+				blobCache.set(cacheKey, { lines: 0, testLines: 0, languageId: undefined });
+				return { oid, languageId: undefined, lines: 0, testLines: 0 };
+			}
+			content = new TextDecoder().decode(blob);
+			contentCache.set(oid, content);
+		} catch {
+			return { oid, languageId: undefined, lines: 0, testLines: 0 };
+		}
+	}
+
+	const lines = countLines(content);
+	const basename = getBasename(filePath);
+
+	if (!lang) {
+		blobCache.set(cacheKey, { lines, testLines: 0, languageId: 'other' });
+		return { oid, languageId: 'other', lines, testLines: 0 };
+	}
+
+	const langId = lang.id;
+	const classification = classifyFile(filePath, basename, content, lines, lang);
+
+	blobCache.set(cacheKey, {
+		lines: classification.lines,
+		testLines: classification.testLines,
+		languageId: langId
+	});
+
+	return {
+		oid,
+		languageId: langId,
+		lines: classification.lines,
+		testLines: classification.testLines
+	};
+};
+
+/**
+ * Incrementally count lines by diffing two commit trees.
+ * Only processes files that changed between prevCommitOid and commitOid.
+ */
+export const countLinesForCommitIncremental = async (
+	options: CountOptions & { prevCommitOid: string },
+	fileStateMap: Map<string, FileState>,
+	allExtensions: Set<string>,
+	date: string,
+	messages: string[]
+): Promise<DayStats> => {
+	const { fs, dir, commitOid, prevCommitOid, blobCache, contentCache, signal, gitCache } = options;
+	const treeCache = options.treeCache ?? new Map<string, TreeEntry[]>();
+
+	// Read commit objects to get root tree OIDs
+	const prevCommit = await git.readCommit({ fs, dir, oid: prevCommitOid, cache: gitCache });
+	const currCommit = await git.readCommit({ fs, dir, oid: commitOid, cache: gitCache });
+	const prevRootTree = prevCommit.commit.tree;
+	const currRootTree = currCommit.commit.tree;
+
+	// Diff trees recursively using cached tree reads
+	const added: FileEntry[] = [];
+	const modified: FileEntry[] = [];
+	const deleted: string[] = [];
+
+	const collectDeletedBlobs = async (treeOid: string, basePath: string) => {
+		const entries = await readTreeCached(fs, dir, treeOid, treeCache, gitCache);
+		for (const entry of entries) {
+			const fullPath = basePath ? `${basePath}/${entry.path}` : entry.path;
+			if (entry.type === 'blob') {
+				deleted.push(fullPath);
+			} else if (entry.type === 'tree') {
+				await collectDeletedBlobs(entry.oid, fullPath);
+			}
+		}
+	};
+
+	const diffTrees = async (
+		prevTreeOid: string | undefined,
+		currTreeOid: string | undefined,
+		basePath: string
+	) => {
+		// Same tree OID = no changes in this subtree
+		if (prevTreeOid === currTreeOid) return;
+
+		const prevEntries = prevTreeOid
+			? await readTreeCached(fs, dir, prevTreeOid, treeCache, gitCache)
+			: [];
+		const currEntries = currTreeOid
+			? await readTreeCached(fs, dir, currTreeOid, treeCache, gitCache)
+			: [];
+
+		const prevMap = new Map(prevEntries.map((e) => [e.path, e]));
+		const currMap = new Map(currEntries.map((e) => [e.path, e]));
+
+		// Process current entries (additions and modifications)
+		for (const entry of currEntries) {
+			const fullPath = basePath ? `${basePath}/${entry.path}` : entry.path;
+			const prev = prevMap.get(entry.path);
+
+			if (entry.type === 'blob') {
+				if (!prev || prev.type !== 'blob') {
+					added.push({ path: fullPath, oid: entry.oid });
+				} else if (prev.oid !== entry.oid) {
+					modified.push({ path: fullPath, oid: entry.oid });
+				}
+			} else if (entry.type === 'tree') {
+				const prevSubOid = prev && prev.type === 'tree' ? prev.oid : undefined;
+				await diffTrees(prevSubOid, entry.oid, fullPath);
+			}
+		}
+
+		// Process deletions (in prev but not in curr)
+		for (const entry of prevEntries) {
+			if (currMap.has(entry.path)) continue;
+			const fullPath = basePath ? `${basePath}/${entry.path}` : entry.path;
+			if (entry.type === 'blob') {
+				deleted.push(fullPath);
+			} else if (entry.type === 'tree') {
+				await collectDeletedBlobs(entry.oid, fullPath);
+			}
+		}
+	};
+
+	await diffTrees(prevRootTree, currRootTree, '');
+
+	if (signal?.aborted) throw new Error('Cancelled');
+
+	// Process deletions
+	for (const filepath of deleted) {
+		fileStateMap.delete(filepath);
+	}
+
+	// Update allExtensions with new/modified files
+	for (const file of [...added, ...modified]) {
+		allExtensions.add(getExtension(file.path).toLowerCase());
+	}
+
+	// Re-resolve header language mapping with updated extensions
+	const extensionMap = resolveHeaderLanguage(allExtensions);
+
+	// Process added and modified files
+	for (const file of [...added, ...modified]) {
+		if (signal?.aborted) throw new Error('Cancelled');
+		const state = await processFile(
+			file.path,
+			file.oid,
+			fs,
+			dir,
+			blobCache,
+			contentCache,
+			extensionMap,
+			gitCache
+		);
+		fileStateMap.set(file.path, state);
+	}
+
+	return computeDayStatsFromFileState(fileStateMap, date, messages);
 };
 
 interface Classification {

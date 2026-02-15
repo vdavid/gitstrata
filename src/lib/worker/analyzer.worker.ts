@@ -7,7 +7,8 @@ import LightningFS from '@isomorphic-git/lightning-fs';
 import type { AnalysisResult, DayStats, ErrorKind, ProgressEvent } from '../types';
 import { cloneRepo, detectDefaultBranch, fetchRepo } from '../git/clone';
 import { fillDateGaps, getCommitsByDate } from '../git/history';
-import { countLinesForCommit } from '../git/count';
+import { countLinesForCommit, countLinesForCommitIncremental } from '../git/count';
+import type { FileState } from '../git/count';
 import { parseRepoUrl, repoToDir } from '../url';
 
 type ProgressCallback = (event: ProgressEvent) => void;
@@ -105,7 +106,8 @@ const analyzerApi = {
 
 			// Step 3: Get commit history grouped by date
 			onProgress({ type: 'process', current: 0, total: 0, date: 'Loading history...' });
-			const dailyCommits = await getCommitsByDate({ fs, dir, ref: defaultBranch });
+			const gitCache = {};
+			const dailyCommits = await getCommitsByDate({ fs, dir, ref: defaultBranch, gitCache });
 
 			if (dailyCommits.length === 0) {
 				throw new Error('No commits found in repository');
@@ -121,6 +123,10 @@ const analyzerApi = {
 				{ lines: number; testLines: number; languageId: string | undefined }
 			>();
 			const contentCache = new Map<string, string>();
+			const treeCache = new Map<string, { path: string; oid: string; type: string }[]>();
+			const fileStateMap = new Map<string, FileState>();
+			const allExtensions = new Set<string>();
+			let prevCommitOid: string | undefined;
 			const days: DayStats[] = [];
 			let prevDay: DayStats | undefined;
 
@@ -134,11 +140,41 @@ const analyzerApi = {
 				let dayStats: DayStats;
 
 				if (commit) {
-					dayStats = await countLinesForCommit(
-						{ fs, dir, commitOid: commit.hash, blobCache, contentCache },
-						date,
-						commit.messages
-					);
+					if (prevCommitOid) {
+						dayStats = await countLinesForCommitIncremental(
+							{
+								fs,
+								dir,
+								commitOid: commit.hash,
+								prevCommitOid,
+								blobCache,
+								contentCache,
+								treeCache,
+								gitCache
+							},
+							fileStateMap,
+							allExtensions,
+							date,
+							commit.messages
+						);
+					} else {
+						dayStats = await countLinesForCommit(
+							{
+								fs,
+								dir,
+								commitOid: commit.hash,
+								blobCache,
+								contentCache,
+								fileStateMap,
+								allExtensions,
+								treeCache,
+								gitCache
+							},
+							date,
+							commit.messages
+						);
+					}
+					prevCommitOid = commit.hash;
 					prevDay = dayStats;
 				} else if (prevDay) {
 					// Gap day: carry forward previous stats
@@ -201,7 +237,8 @@ const analyzerApi = {
 
 			// Step 2: Get full commit history
 			onProgress({ type: 'process', current: 0, total: 0, date: 'Loading history...' });
-			const dailyCommits = await getCommitsByDate({ fs, dir, ref: defaultBranch });
+			const gitCache = {};
+			const dailyCommits = await getCommitsByDate({ fs, dir, ref: defaultBranch, gitCache });
 
 			if (dailyCommits.length === 0) {
 				throw new Error('No commits found in repository');
@@ -233,6 +270,10 @@ const analyzerApi = {
 				{ lines: number; testLines: number; languageId: string | undefined }
 			>();
 			const contentCache = new Map<string, string>();
+			const treeCache = new Map<string, { path: string; oid: string; type: string }[]>();
+			const fileStateMap = new Map<string, FileState>();
+			const allExtensions = new Set<string>();
+			let prevCommitOid: string | undefined;
 			const newDays: DayStats[] = [];
 			// Use last cached day as prevDay for gap-filling
 			let prevDay: DayStats | undefined =
@@ -248,11 +289,41 @@ const analyzerApi = {
 				let dayStats: DayStats;
 
 				if (commit) {
-					dayStats = await countLinesForCommit(
-						{ fs, dir, commitOid: commit.hash, blobCache, contentCache },
-						date,
-						commit.messages
-					);
+					if (prevCommitOid) {
+						dayStats = await countLinesForCommitIncremental(
+							{
+								fs,
+								dir,
+								commitOid: commit.hash,
+								prevCommitOid,
+								blobCache,
+								contentCache,
+								treeCache,
+								gitCache
+							},
+							fileStateMap,
+							allExtensions,
+							date,
+							commit.messages
+						);
+					} else {
+						dayStats = await countLinesForCommit(
+							{
+								fs,
+								dir,
+								commitOid: commit.hash,
+								blobCache,
+								contentCache,
+								fileStateMap,
+								allExtensions,
+								treeCache,
+								gitCache
+							},
+							date,
+							commit.messages
+						);
+					}
+					prevCommitOid = commit.hash;
 					prevDay = dayStats;
 				} else if (prevDay) {
 					dayStats = {
