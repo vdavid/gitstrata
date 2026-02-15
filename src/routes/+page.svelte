@@ -69,6 +69,11 @@
 	// Last repo input for retry
 	let lastRepoInput = $state('');
 
+	// Stratigraphy tooltip
+	let showStratTooltip = $state(false);
+	let stratTooltipEl: HTMLDivElement | undefined = $state();
+	let stratTriggerEl: HTMLButtonElement | undefined = $state();
+
 	// Size warning
 	let sizeWarningBytes = $state(0);
 	let showSizeWarning = $state(false);
@@ -208,6 +213,33 @@
 			if (swapHoverTimer) clearTimeout(swapHoverTimer);
 			if (swapRevertTimer) clearTimeout(swapRevertTimer);
 			swapAnim?.cancel();
+		};
+	});
+
+	const toggleStratTooltip = () => {
+		showStratTooltip = !showStratTooltip;
+	};
+
+	// Close stratigraphy tooltip on click-outside or Escape
+	$effect(() => {
+		if (!showStratTooltip) return;
+		const handleClose = (e: MouseEvent) => {
+			const target = e.target as Node;
+			if (stratTooltipEl?.contains(target) || stratTriggerEl?.contains(target)) return;
+			showStratTooltip = false;
+		};
+		const handleEscape = (e: KeyboardEvent) => {
+			if (e.key === 'Escape') showStratTooltip = false;
+		};
+		// Delay click listener to avoid catching the opening click
+		const raf = requestAnimationFrame(() => {
+			window.addEventListener('click', handleClose);
+		});
+		window.addEventListener('keydown', handleEscape);
+		return () => {
+			cancelAnimationFrame(raf);
+			window.removeEventListener('click', handleClose);
+			window.removeEventListener('keydown', handleEscape);
 		};
 	});
 
@@ -496,12 +528,42 @@
 			<h1
 				class="text-3xl font-bold tracking-tight text-[var(--color-text)] sm:text-4xl lg:text-5xl"
 				style="font-family: var(--font-sans); letter-spacing: -0.025em;"
-			>Stra<span
+			><button
+				class="strat-trigger"
+				bind:this={stratTriggerEl}
+				onclick={toggleStratTooltip}
+				aria-expanded={showStratTooltip}
+			><span class="strat-underline">Stra<span
 				class="tig-group"
 				bind:this={tigGroupEl}
 				onmouseenter={handleTigMouseEnter}
 				onmouseleave={handleTigMouseLeave}
-			><span class="tig-char tig-t text-[var(--color-accent)]" bind:this={tigTEl}>t</span><span class="tig-char tig-i text-[var(--color-accent)]" bind:this={tigIEl}>i</span><span class="tig-char tig-g text-[var(--color-accent)]" bind:this={tigGEl}>g</span></span>raphy for your code</h1>
+			><span class="tig-char tig-t text-[var(--color-accent)]" bind:this={tigTEl}>t</span><span class="tig-char tig-i text-[var(--color-accent)]" bind:this={tigIEl}>i</span><span class="tig-char tig-g text-[var(--color-accent)]" bind:this={tigGEl}>g</span></span>raphy</span></button> for your code</h1>
+			{#if showStratTooltip}
+				<div class="strat-tooltip strata-fade-in" bind:this={stratTooltipEl}>
+					<p>
+						<strong>Stratigraphy</strong> is a branch of geology concerned with the study of rock
+						layers (<em>strata</em>) and layering (<em>stratification</em>).<sup
+							class="strat-tooltip-ref">[1]</sup
+						>
+						It is primarily used in the study of sedimentary and layered volcanic rocks.
+					</p>
+					<p class="strat-tooltip-source">
+						from <a
+							href="https://en.wikipedia.org/wiki/Stratigraphy"
+							target="_blank"
+							rel="noopener noreferrer">Wikipedia, the free encyclopedia</a
+						>
+					</p>
+					<hr class="strat-tooltip-divider" />
+					<p>
+						<strong>Stra<span class="text-[var(--color-accent)]">git</span>raphy</strong> is the study of how your repo's layers (<em
+							>strati</em
+						>) went from <code>git init</code> to whatever it is now. Unlike real stratigraphy, it takes
+						seconds instead of millennia.
+					</p>
+				</div>
+			{/if}
 			<p
 				class="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-[var(--color-text-secondary)] sm:text-base"
 				style="font-family: var(--font-sans);"
