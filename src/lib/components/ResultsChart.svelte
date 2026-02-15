@@ -10,9 +10,34 @@
 		detectedLanguages: string[];
 		/** Whether data is still streaming in */
 		live?: boolean;
+		/** Called when the user toggles the data table view */
+		ondatatoggle?: (show: boolean) => void;
 	}
 
-	let { days, detectedLanguages, live = false }: Props = $props();
+	let { days, detectedLanguages, live = false, ondatatoggle }: Props = $props();
+
+	let showDataTable = $state(false);
+
+	const toggleDataTable = () => {
+		showDataTable = !showDataTable;
+		ondatatoggle?.(showDataTable);
+	};
+
+	const handleKeyDown = (e: KeyboardEvent) => {
+		if (e.key === 't' || e.key === 'T') {
+			if (e.ctrlKey || e.metaKey || e.altKey) return;
+			const target = e.target as HTMLElement;
+			if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+			e.preventDefault();
+			toggleDataTable();
+		}
+	};
+
+	$effect(() => {
+		if (!browser) return;
+		window.addEventListener('keydown', handleKeyDown);
+		return () => window.removeEventListener('keydown', handleKeyDown);
+	});
 
 	type ViewMode = 'all' | 'prod-vs-test' | 'languages-only';
 	let viewMode = $state<ViewMode>('all');
@@ -386,6 +411,7 @@
 				},
 				plugins: {
 					tooltip: {
+						animation: reducedMotion ? false : { duration: 200 },
 						backgroundColor: getCssVar('--color-surface-raised'),
 						titleColor: getCssVar('--color-text'),
 						bodyColor: getCssVar('--color-text-secondary'),
@@ -520,6 +546,15 @@
 		{/each}
 		<div class="flex-1"></div>
 		<button
+			onclick={toggleDataTable}
+			aria-pressed={showDataTable}
+			class="strata-chip text-xs"
+			title="Toggle accessible data table view (keyboard: t)"
+			aria-label={showDataTable ? 'Hide data table' : 'Show data table'}
+		>
+			{showDataTable ? 'Hide' : 'Show'} data
+		</button>
+		<button
 			onclick={() => (patternFills = !patternFills)}
 			aria-pressed={patternFills}
 			class="strata-chip text-xs"
@@ -531,8 +566,8 @@
 	</div>
 
 	<!-- Chart canvas -->
-	<div class="relative h-64 w-full p-4 sm:h-80 md:h-96 lg:h-[28rem] xl:h-[32rem]">
-		<canvas bind:this={canvasEl} aria-label={ariaLabel}></canvas>
+	<div class="relative h-64 w-full p-4 sm:h-80 md:h-96 lg:h-[28rem] xl:h-[32rem]" role="img" aria-label={ariaLabel}>
+		<canvas bind:this={canvasEl}></canvas>
 	</div>
 
 	{#if live}

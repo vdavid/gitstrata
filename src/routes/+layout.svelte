@@ -3,6 +3,7 @@
 	import { resolve } from '$app/paths';
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
 	import CacheManager from '$lib/components/CacheManager.svelte';
+	import KeyboardHelp from '$lib/components/KeyboardHelp.svelte';
 
 	let { children } = $props();
 </script>
@@ -81,12 +82,15 @@
 			<div class="strata-line mb-6"></div>
 			<div class="flex flex-col items-center gap-4">
 				<CacheManager id="cache-manager" />
-				<p
-					class="text-center text-xs tracking-wide text-[var(--color-text-tertiary)]"
-					style="font-family: var(--font-mono);"
-				>
-					All processing happens in your browser. No code leaves your machine.
-				</p>
+				<div class="flex items-center gap-4">
+					<p
+						class="text-center text-xs tracking-wide text-[var(--color-text-tertiary)]"
+						style="font-family: var(--font-mono);"
+					>
+						All processing happens in your browser. No code leaves your machine.
+					</p>
+				</div>
+				<KeyboardHelp />
 			</div>
 		</div>
 	</footer>

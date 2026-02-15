@@ -27,7 +27,7 @@
 	const hasEstimate = $derived(total > 0);
 </script>
 
-<div class="strata-card p-5" role="region" aria-label="Clone progress">
+<div class="strata-card p-5" role="region" aria-label="Download progress">
 	<div class="mb-4 flex items-center justify-between">
 		<div class="flex items-center gap-2.5">
 			<div class="strata-pulse-dot bg-[var(--color-accent)]"></div>

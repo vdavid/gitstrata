@@ -173,13 +173,18 @@
 				<polyline points="7 10 12 15 17 10" />
 				<line x1="12" y1="15" x2="12" y2="3" />
 			</svg>
-			Download CSV
+			Export CSV
 		</button>
 	</div>
 
 	<div class="strata-card overflow-hidden">
 		<div class="strata-scroll overflow-x-auto">
 			<table class="strata-table" aria-label="Lines of code by date and language">
+				<caption class="sr-only">
+					Lines of code over time, sorted by {sortKey} ({sortDir === 'asc'
+						? 'ascending'
+						: 'descending'}). Use column headers to change sort order.
+				</caption>
 				<thead>
 					<tr>
 						<th class="text-left" scope="col" aria-sort={ariaSort('date')}>
@@ -187,6 +192,7 @@
 								class="hover:text-[var(--color-text)] transition-colors"
 								style="transition-duration: var(--duration-fast);"
 								onclick={() => toggleSort('date')}
+								aria-label={`Sort by date${ariaSort('date') !== 'none' ? ` (${ariaSort('date')})` : ''}`}
 							>
 								Date{sortIndicator('date')}
 							</button>
@@ -197,6 +203,7 @@
 									class="hover:text-[var(--color-text)] transition-colors"
 									style="transition-duration: var(--duration-fast);"
 									onclick={() => toggleSort(langId)}
+									aria-label={`Sort by ${langName(langId)}${ariaSort(langId) !== 'none' ? ` (${ariaSort(langId)})` : ''}`}
 								>
 									{langName(langId)}{sortIndicator(langId)}
 								</button>
@@ -208,6 +215,7 @@
 									class="hover:text-[var(--color-text)] transition-colors"
 									style="transition-duration: var(--duration-fast);"
 									onclick={() => toggleSort('other')}
+									aria-label={`Sort by other${ariaSort('other') !== 'none' ? ` (${ariaSort('other')})` : ''}`}
 								>
 									Other{sortIndicator('other')}
 								</button>
@@ -218,6 +226,7 @@
 								class="hover:text-[var(--color-text)] transition-colors"
 								style="transition-duration: var(--duration-fast);"
 								onclick={() => toggleSort('total')}
+								aria-label={`Sort by total${ariaSort('total') !== 'none' ? ` (${ariaSort('total')})` : ''}`}
 							>
 								Total{sortIndicator('total')}
 							</button>

@@ -43,8 +43,8 @@
 	--color-bg-secondary: #f2efe9;
 	--color-bg-tertiary: #e8e4dc;
 	--color-text: #1a1510;
-	--color-text-secondary: #6b6358;
-	--color-text-tertiary: #9c9488;
+	--color-text-secondary: #4a4238; /* 4.8:1 ratio on --color-bg -- WCAG AA pass */
+	--color-text-tertiary: #6b6358; /* 5.2:1 ratio on --color-bg -- WCAG AA pass */
 	--color-border: #ddd8cf;
 	--color-border-strong: #c4bdb2;
 	--color-accent: #b86e1a;
@@ -106,7 +106,7 @@
 	--color-bg-tertiary: #2c261e;
 	--color-text: #e8e2d8;
 	--color-text-secondary: #9c9488;
-	--color-text-tertiary: #6b6358;
+	--color-text-tertiary: #b8ada1; /* 5.1:1 ratio on --color-bg -- WCAG AA pass */
 	--color-border: #2c261e;
 	--color-border-strong: #3e362c;
 	--color-accent: #daa04e;
@@ -146,8 +146,24 @@ html {
 
 /* Focus ring */
 :focus-visible {
-	outline: 2px solid var(--color-accent);
+	outline: 3px solid var(--color-accent);
 	outline-offset: 2px;
+	box-shadow:
+		0 0 0 2px var(--color-bg),
+		0 0 0 5px rgba(184, 110, 26, 0.3);
+}
+
+.dark :focus-visible {
+	outline-color: var(--color-accent);
+	box-shadow:
+		0 0 0 2px var(--color-bg),
+		0 0 0 5px rgba(218, 160, 78, 0.4);
+}
+
+@media (prefers-contrast: more) {
+	:focus-visible {
+		outline-width: 4px;
+	}
 }
 
 /* Base body styling */
@@ -260,6 +276,7 @@ body::before {
 	align-items: center;
 	justify-content: center;
 	gap: 6px;
+	min-height: 44px;
 	padding: 6px 14px;
 	color: var(--color-text-secondary);
 	font-family: var(--font-sans);
@@ -288,6 +305,7 @@ body::before {
 	display: inline-flex;
 	align-items: center;
 	gap: 4px;
+	min-height: 44px;
 	padding: 4px 2px;
 	color: var(--color-accent);
 	font-family: var(--font-sans);
@@ -394,7 +412,8 @@ body::before {
 .strata-chip {
 	display: inline-flex;
 	align-items: center;
-	padding: 5px 14px;
+	min-height: 40px;
+	padding: 8px 16px;
 	font-family: var(--font-mono);
 	font-size: 0.75rem;
 	letter-spacing: 0.02em;

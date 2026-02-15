@@ -62,6 +62,9 @@
 	let sizeWarningBytes = $state(0);
 	let showSizeWarning = $state(false);
 
+	// Chart data table toggle
+	let showDataTable = $state(false);
+
 	// Read ?repo= from URL on initial load
 	const initialRepo = $derived.by(() => {
 		if (!browser) return '';
@@ -389,7 +392,9 @@
 	{/if}
 
 	<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-	<!-- Progress area (focus target for screen readers) -->
+	<!-- Focus management: this live region receives programmatic focus (via requestAnimationFrame)
+	     when analysis starts, so screen readers announce updates. tabindex={-1} allows programmatic
+	     focus without adding to tab order. WCAG 4.1.3 compliant. -->
 	<div
 		bind:this={progressAreaEl}
 		tabindex={-1}
@@ -488,9 +493,21 @@
 							</svg>
 							Last analyzed: {cachedResult.analyzedAt.slice(0, 10)}
 						</span>
-						<button onclick={refresh} class="btn-link"> Refresh </button>
+						<button
+							onclick={refresh}
+							aria-label="Refresh analysis with latest commits"
+							class="btn-link"
+						>
+							Refresh
+						</button>
 					{/if}
-					<button onclick={copyShareLink} class="btn-ghost">
+					<button
+						onclick={copyShareLink}
+						aria-label={shareCopied
+							? 'Repository link copied to clipboard'
+							: 'Copy repository link to clipboard'}
+						class="btn-ghost"
+					>
 						<svg
 							width="14"
 							height="14"
@@ -514,10 +531,15 @@
 			<ResultsSummary days={displayDays} detectedLanguages={displayLanguages} />
 
 			<!-- Chart -->
-			<ResultsChart days={displayDays} detectedLanguages={displayLanguages} live={isStreaming} />
+			<ResultsChart
+				days={displayDays}
+				detectedLanguages={displayLanguages}
+				live={isStreaming}
+				ondatatoggle={(show) => (showDataTable = show)}
+			/>
 
-			<!-- Data table (only when fully done) -->
-			{#if result}
+			<!-- Data table (when toggled or when fully done) -->
+			{#if showDataTable || result}
 				<div>
 					<h2
 						class="py-2 text-sm text-[var(--color-text-secondary)]"
@@ -526,7 +548,7 @@
 						Data table
 					</h2>
 					<div class="mt-4">
-						<ResultsTable days={result.days} detectedLanguages={result.detectedLanguages} />
+						<ResultsTable days={displayDays} detectedLanguages={displayLanguages} />
 					</div>
 				</div>
 			{/if}

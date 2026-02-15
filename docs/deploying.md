@@ -18,9 +18,9 @@ This outputs a static site to `build/`.
 1. Push the repo to GitHub (or GitLab).
 2. In the Cloudflare dashboard, go to **Workers & Pages > Create > Pages > Connect to Git**.
 3. Select the repository and configure:
-    - **Build command:** `pnpm build`
-    - **Build output directory:** `build`
-    - **Root directory:** `/` (the repo root, not `cors-proxy/`)
+   - **Build command:** `pnpm build`
+   - **Build output directory:** `build`
+   - **Root directory:** `/` (the repo root, not `cors-proxy/`)
 4. Add environment variables if needed (see below).
 5. Deploy.
 
@@ -80,7 +80,7 @@ For local frontend development, you don't need to run the CORS proxy. The dev se
 ## Environment variables
 
 | Variable                | Where             | Default                           | Purpose                             |
-|-------------------------|-------------------|-----------------------------------|-------------------------------------|
+| ----------------------- | ----------------- | --------------------------------- | ----------------------------------- |
 | `PUBLIC_CORS_PROXY_URL` | Frontend (`.env`) | `https://cors.isomorphic-git.org` | URL of your deployed CORS proxy     |
 | `PUBLIC_ANALYTICS_ID`   | Frontend (`.env`) | _(none)_                          | Optional analytics (e.g. Plausible) |
 

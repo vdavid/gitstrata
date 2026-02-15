@@ -31,7 +31,7 @@
 
 <button
 	onclick={toggle}
-	class="group relative flex h-8 w-8 items-center justify-center rounded-md
+	class="group relative flex h-11 w-11 items-center justify-center rounded-md
 		text-[var(--color-text-tertiary)] transition-all
 		hover:text-[var(--color-accent)]"
 	style="transition-duration: var(--duration-fast); transition-timing-function: var(--ease-out-expo);"

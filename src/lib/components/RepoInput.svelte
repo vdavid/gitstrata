@@ -64,7 +64,15 @@
 	};
 
 	const handleInput = () => {
-		if (error) error = '';
+		if (error) {
+			const trimmed = inputValue.trim();
+			if (trimmed) {
+				const validationError = validate(trimmed);
+				error = validationError ?? '';
+			} else {
+				error = '';
+			}
+		}
 	};
 </script>
 
