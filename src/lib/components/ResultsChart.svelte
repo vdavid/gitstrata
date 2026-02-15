@@ -23,6 +23,17 @@
 	let chart: ChartType | undefined = $state();
 	let chartReady = $state(false);
 
+	// Track theme so the chart re-reads CSS variables on light/dark switch
+	let isDark = $state(browser && document.documentElement.classList.contains('dark'));
+	$effect(() => {
+		if (!browser) return;
+		const observer = new MutationObserver(() => {
+			isDark = document.documentElement.classList.contains('dark');
+		});
+		observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+		return () => observer.disconnect();
+	});
+
 	// Dynamic import to avoid SSR issues with hammerjs
 	let ChartConstructor: typeof ChartType | undefined = $state();
 
@@ -241,7 +252,7 @@
 				backgroundColor: getBackground(getChartColor(0) + '80', dsIndex++),
 				borderColor: getChartColor(0),
 				borderWidth: 1.5,
-				fill: true,
+				fill: 'origin',
 				tension: 0.3,
 				pointRadius: 0,
 				pointHitRadius: 6
@@ -252,7 +263,7 @@
 				backgroundColor: getBackground(getChartTint(0) + '80', dsIndex++),
 				borderColor: getChartTint(0),
 				borderWidth: 1.5,
-				fill: true,
+				fill: '-1',
 				tension: 0.3,
 				pointRadius: 0,
 				pointHitRadius: 6
@@ -275,7 +286,7 @@
 					backgroundColor: getBackground(getChartColor(colorIdx) + '80', dsIndex++),
 					borderColor: getChartColor(colorIdx),
 					borderWidth: 1.5,
-					fill: true,
+					fill: datasets.length === 0 ? 'origin' : '-1',
 					tension: 0.3,
 					pointRadius: 0,
 					pointHitRadius: 6
@@ -290,7 +301,7 @@
 					backgroundColor: getBackground(getChartTint(colorIdx) + '80', dsIndex++),
 					borderColor: getChartTint(colorIdx),
 					borderWidth: 1.5,
-					fill: true,
+					fill: datasets.length === 0 ? 'origin' : '-1',
 					tension: 0.3,
 					pointRadius: 0,
 					pointHitRadius: 6
@@ -306,7 +317,7 @@
 					backgroundColor: getBackground(getChartColor(colorIdx) + '80', dsIndex++),
 					borderColor: getChartColor(colorIdx),
 					borderWidth: 1.5,
-					fill: true,
+					fill: datasets.length === 0 ? 'origin' : '-1',
 					tension: 0.3,
 					pointRadius: 0,
 					pointHitRadius: 6
@@ -329,7 +340,7 @@
 				backgroundColor: getBackground(getCssVar('--chart-other') + '80', dsIndex++),
 				borderColor: getCssVar('--chart-other'),
 				borderWidth: 1.5,
-				fill: true,
+				fill: datasets.length === 0 ? 'origin' : '-1',
 				tension: 0.3,
 				pointRadius: 0,
 				pointHitRadius: 6
@@ -478,9 +489,11 @@
 		return `Stacked area chart showing ${totalLines} lines of code across ${langCount} languages from ${first.date} to ${last.date}`;
 	});
 
-	// Render/update chart when days or viewMode change
+	// Render/update chart when days, viewMode, or theme change
 	$effect(() => {
 		if (!canvasEl || !chartReady || !ChartConstructor) return;
+		// Read isDark so this effect re-runs on theme switch, re-reading CSS variables
+		void isDark;
 
 		const { shown, other: hasOther } = computeVisibleLanguages(days, detectedLanguages);
 		const datasets = buildDatasets(days, shown, hasOther, viewMode);
