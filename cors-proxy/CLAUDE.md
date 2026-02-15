@@ -29,7 +29,8 @@ responses; otherwise just a pass-through proxy.
 - **Shared results cache (optional)**: When an R2 bucket binding (`RESULTS`) is present, two cache routes
   activate. Without the binding, they return 404 and the proxy behaves as before.
   - `GET /cache/v1/:repoHash` — returns gzip-compressed JSON from R2, 5-min edge cache.
-  - `PUT /cache/v1/:repoHash` — accepts gzip-compressed `SharedCacheEntry` JSON. Validates shape,
+  - `PUT /cache/v1/:repoHash` — accepts gzip-compressed `SharedCacheEntry` JSON. Requires `Authorization: Bearer`
+    token when `CACHE_WRITE_TOKEN` secret is set (via `wrangler secret put`). Validates shape,
     10 MB size limit, repo URL hash match, and write rate limit (10/min per IP).
   - R2 object key: `results/v1/{sha256(repoUrl)}.json.gz`.
   - The R2 binding is commented out in `wrangler.toml` by default — uncomment to enable.

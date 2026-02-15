@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 
 type Bindings = {
 	RESULTS?: R2Bucket;
+	CACHE_WRITE_TOKEN?: string;
 };
 
 const app = new Hono<{ Bindings: Bindings }>();
@@ -116,6 +117,14 @@ app.put('/cache/v1/:repoHash', async (c) => {
 	const bucket = c.env.RESULTS;
 	if (!bucket) {
 		return c.text('Not found', 404, corsHeaders);
+	}
+
+	const writeToken = c.env.CACHE_WRITE_TOKEN;
+	if (writeToken) {
+		const auth = c.req.header('authorization');
+		if (auth !== `Bearer ${writeToken}`) {
+			return c.text('Unauthorized', 401, corsHeaders);
+		}
 	}
 
 	const ip = c.req.header('cf-connecting-ip') ?? c.req.header('x-forwarded-for') ?? 'unknown';

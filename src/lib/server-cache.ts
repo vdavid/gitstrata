@@ -2,6 +2,7 @@ import { env } from '$env/dynamic/public';
 import type { AnalysisResult, SharedCacheEntry } from './types';
 
 const getBaseUrl = (): string | undefined => env.PUBLIC_SHARED_CACHE_URL || undefined;
+const getWriteToken = (): string | undefined => env.PUBLIC_CACHE_WRITE_TOKEN || undefined;
 
 /** SHA-256 hash a string, returned as hex */
 const sha256 = async (input: string): Promise<string> => {
@@ -56,9 +57,18 @@ export const uploadServerResult = async (result: AnalysisResult): Promise<void> 
 		const repoHash = await sha256(result.repoUrl);
 		const compressed = await gzipCompress(JSON.stringify(entry));
 
+		const headers: Record<string, string> = {
+			'Content-Type': 'application/json',
+			'Content-Encoding': 'gzip'
+		};
+		const writeToken = getWriteToken();
+		if (writeToken) {
+			headers['Authorization'] = `Bearer ${writeToken}`;
+		}
+
 		await fetch(`${baseUrl}/cache/v1/${repoHash}`, {
 			method: 'PUT',
-			headers: { 'Content-Type': 'application/json', 'Content-Encoding': 'gzip' },
+			headers,
 			body: compressed
 		});
 	} catch {
