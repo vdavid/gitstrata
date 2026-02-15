@@ -9,7 +9,6 @@ import {
 	resolveHeaderLanguage
 } from '../languages';
 
-/** Create a concurrency limiter that runs at most `limit` async tasks at once */
 const createLimiter = (limit: number) => {
 	const queue: (() => void)[] = [];
 	let active = 0;
@@ -77,7 +76,6 @@ const skipPatterns: readonly string[] = [
 	'*.avif'
 ];
 
-/** Check if a filename should be skipped */
 const shouldSkip = (filename: string): boolean => {
 	const base = filename.split('/').pop() ?? filename;
 	for (const pattern of skipPatterns) {
@@ -90,7 +88,6 @@ const shouldSkip = (filename: string): boolean => {
 	return false;
 };
 
-/** Check for binary content (null bytes in first 8000 bytes) */
 const isBinary = (content: Uint8Array): boolean => {
 	const limit = Math.min(content.length, 8000);
 	for (let i = 0; i < limit; i++) {
@@ -99,7 +96,6 @@ const isBinary = (content: Uint8Array): boolean => {
 	return false;
 };
 
-/** Count lines in text content */
 export const countLines = (content: string): number => {
 	if (content.length === 0) return 0;
 	let lines = 0;
@@ -111,7 +107,6 @@ export const countLines = (content: string): number => {
 	return lines;
 };
 
-/** Get the file extension including the dot, or empty string */
 const getExtension = (path: string): string => {
 	const base = path.split('/').pop() ?? path;
 	const dotIdx = base.lastIndexOf('.');
@@ -119,12 +114,10 @@ const getExtension = (path: string): string => {
 	return base.slice(dotIdx);
 };
 
-/** Get the basename of a path */
 const getBasename = (path: string): string => {
 	return path.split('/').pop() ?? path;
 };
 
-/** Cached blob result: line count and classification */
 interface BlobCacheEntry {
 	lines: number;
 	testLines: number;
@@ -138,28 +131,21 @@ export interface FileState {
 	testLines: number;
 }
 
-/** Cache key for blob results: (oid, filePath) tuple */
 const makeBlobCacheKey = (oid: string, filePath: string): string => {
 	return `${oid}\0${filePath}`;
 };
 
-/**
- * Tree entry from isomorphic-git readTree or walk.
- * We use git.walk to traverse the tree recursively.
- */
 interface FileEntry {
 	path: string;
 	oid: string;
 }
 
-/** Cached tree entry from git.readTree */
 interface TreeEntry {
 	path: string; // filename (NOT full path)
 	oid: string;
 	type: string; // 'blob' | 'tree' | 'commit'
 }
 
-/** Read a tree object, using cache if available */
 const readTreeCached = async (
 	fs: FsClient,
 	dir: string,
@@ -175,7 +161,6 @@ const readTreeCached = async (
 	return entries;
 };
 
-/** Walk a commit tree using cached tree reads and return all blob entries */
 const listFilesAtCommitCached = async (options: {
 	fs: FsClient;
 	dir: string;
@@ -205,7 +190,7 @@ const listFilesAtCommitCached = async (options: {
 	return files;
 };
 
-export interface CountOptions {
+interface CountOptions {
 	fs: FsClient;
 	dir: string;
 	commitOid: string;
@@ -224,7 +209,6 @@ export interface CountOptions {
 	gitCache?: object;
 }
 
-/** Build a set of language IDs that have test heuristics */
 const buildLangsWithTestHeuristics = (): Set<string> => {
 	const result = new Set<string>();
 	// 'other' always uses prod/test split
@@ -239,7 +223,6 @@ const buildLangsWithTestHeuristics = (): Set<string> => {
 
 const langsWithTestHeuristics = buildLangsWithTestHeuristics();
 
-/** Aggregate line counts from a fileStateMap into DayStats */
 const computeDayStatsFromFileState = (
 	fileStateMap: Map<string, FileState>,
 	date: string,
@@ -281,10 +264,7 @@ const computeDayStatsFromFileState = (
 	return { date, total, languages, comments: messages };
 };
 
-/**
- * Count lines for all files at a given commit, returning DayStats.
- * Uses blob dedup caches to avoid redundant reads and counts.
- */
+/** Full tree walk; uses blob dedup caches to avoid redundant reads. */
 export const countLinesForCommit = async (
 	options: CountOptions,
 	date: string,
@@ -380,7 +360,6 @@ export const countLinesForCommit = async (
 	return { date, total, languages, comments: messages };
 };
 
-/** Process a single file and return its FileState, using blob/content caches */
 const processFile = async (
 	filePath: string,
 	oid: string,
@@ -444,10 +423,7 @@ const processFile = async (
 	};
 };
 
-/**
- * Incrementally count lines by diffing two commit trees.
- * Only processes files that changed between prevCommitOid and commitOid.
- */
+/** Diff-based: only processes files changed between prevCommitOid and commitOid. */
 export const countLinesForCommitIncremental = async (
 	options: CountOptions & { prevCommitOid: string },
 	fileStateMap: Map<string, FileState>,

@@ -14,7 +14,6 @@ import { parseRepoUrl, repoToDir } from '../url';
 
 type ProgressCallback = (event: ProgressEvent) => void;
 
-/** Classify an error into a user-friendly category */
 const classifyError = (error: unknown): { message: string; kind: ErrorKind } => {
 	const raw = error instanceof Error ? error.message : String(error);
 	const lower = raw.toLowerCase();
@@ -80,8 +79,7 @@ const analyzerApi = {
 
 		// Initialize lightning-fs with a unique name for persistence
 		const fsName = `git-strata-${parsed.host}-${parsed.owner}-${parsed.repo}`;
-		const lfs = new LightningFS(fsName);
-		const fs = lfs;
+		const fs = new LightningFS(fsName);
 
 		try {
 			// Step 1: Detect default branch

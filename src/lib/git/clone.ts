@@ -5,7 +5,6 @@ import type { ProgressEvent } from '../types';
 const defaultCorsProxy = 'https://cors.isomorphic-git.org';
 const sizeWarningThreshold = 1_073_741_824; // 1 GB
 
-/** Wrap the isomorphic-git HTTP client to abort requests when signal fires */
 const makeAbortableHttp = (signal?: AbortSignal): HttpClient => {
 	if (!signal) return http;
 	return {
@@ -16,7 +15,7 @@ const makeAbortableHttp = (signal?: AbortSignal): HttpClient => {
 	};
 };
 
-export interface CloneOptions {
+interface CloneOptions {
 	fs: FsClient;
 	dir: string;
 	url: string;
@@ -25,7 +24,6 @@ export interface CloneOptions {
 	signal?: AbortSignal;
 }
 
-/** Detect the default branch (HEAD symref) of a remote repository */
 export const detectDefaultBranch = async (options: {
 	url: string;
 	corsProxy?: string;
@@ -58,7 +56,6 @@ export const detectDefaultBranch = async (options: {
 	throw new Error('Could not detect default branch');
 };
 
-/** Clone a repository using isomorphic-git with progress and cancellation support */
 export const cloneRepo = async (
 	options: CloneOptions & { defaultBranch: string }
 ): Promise<void> => {
@@ -105,7 +102,6 @@ export const cloneRepo = async (
 	});
 };
 
-/** Fetch new commits for an already-cloned repository */
 export const fetchRepo = async (
 	options: CloneOptions & { defaultBranch: string }
 ): Promise<void> => {

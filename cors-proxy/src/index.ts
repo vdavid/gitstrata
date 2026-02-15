@@ -57,9 +57,7 @@ async function sha256Hex(input: string): Promise<string> {
 
 const maxBodySize = 10 * 1024 * 1024; // 10 MB
 
-function isValidCacheEntry(
-	data: unknown
-): data is {
+function isValidCacheEntry(data: unknown): data is {
 	version: 1;
 	repoUrl: string;
 	headCommit: string;

@@ -25,12 +25,21 @@ var AllChecks = []CheckDefinition{
 		Run:         RunESLint,
 	},
 	{
+		ID:          "frontend-knip",
+		Nickname:    "knip",
+		DisplayName: "knip",
+		App:         AppFrontend,
+		Tech:        "SvelteKit",
+		DependsOn:   []string{"frontend-prettier"},
+		Run:         RunKnip,
+	},
+	{
 		ID:          "frontend-svelte-check",
 		Nickname:    "svelte-check",
 		DisplayName: "svelte-check",
 		App:         AppFrontend,
 		Tech:        "SvelteKit",
-		DependsOn:   []string{"frontend-eslint"},
+		DependsOn:   []string{"frontend-knip"},
 		Run:         RunSvelteCheck,
 	},
 	{

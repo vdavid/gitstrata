@@ -43,11 +43,11 @@ Run the smallest set of checks possible for efficiency while maintaining confide
 
 - Running a single test: `pnpm vitest run -t "<test_name>"`
 - Run all: `./scripts/check.sh`
-- Running specific checks: `./scripts/check.sh --check {prettier,eslint,svelte-check,vitest,pnpm-audit,gofmt,go-vet,staticcheck,go-tests}`
+- Running specific checks: `./scripts/check.sh --check {prettier,eslint,knip,svelte-check,vitest,pnpm-audit,gofmt,go-vet,staticcheck,go-tests}`
 - CI mode (no auto-fixing): `./scripts/check.sh --ci`
 - See also: `./scripts/check.sh --help`
 
-Frontend (SvelteKit): `prettier` → `eslint` → `svelte-check` → `vitest` | `pnpm-audit`
+Frontend (SvelteKit): `prettier` → `eslint` → `knip` → `svelte-check` → `vitest` | `pnpm-audit`
 Scripts (Go): `gofmt` → `go-vet` → `go-tests` | `gofmt` → `staticcheck`
 
 ## TypeScript

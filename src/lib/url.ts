@@ -1,11 +1,7 @@
-export interface ParsedRepo {
-	/** Normalized HTTPS URL (no trailing .git) */
+interface ParsedRepo {
 	url: string;
-	/** Host (e.g. 'github.com') */
 	host: string;
-	/** Repository owner */
 	owner: string;
-	/** Repository name */
 	repo: string;
 }
 
@@ -70,7 +66,6 @@ export const parseRepoUrl = (input: string): ParsedRepo => {
 	};
 };
 
-/** Produce a filesystem-safe directory name from a parsed repo */
 export const repoToDir = (parsed: ParsedRepo): string => {
 	return `/${parsed.host}/${parsed.owner}/${parsed.repo}`;
 };

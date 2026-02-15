@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { formatBytes } from '$lib/cache';
+
 	interface Props {
 		phase: 'cloning' | 'processing';
 		clonePhase: string;
@@ -72,12 +74,6 @@
 		const msPerDay = processElapsedMs / processCurrent;
 		return Math.round(msPerDay * (processTotal - processCurrent));
 	});
-
-	const formatBytes = (bytes: number): string => {
-		if (bytes < 1024) return `${bytes} B`;
-		if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-		return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-	};
 
 	const formatTime = (ms: number): string => {
 		const secs = Math.floor(ms / 1000);

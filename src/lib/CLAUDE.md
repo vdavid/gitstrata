@@ -54,6 +54,4 @@ run client-side in a Web Worker.
   `computeDayStatsFromFileState` aggregates the map into DayStats.
 - Date gaps are filled by carrying forward the previous day's stats with `comments: ["-"]`
 - Languages without test heuristics have no prod/test split (LanguageCount.prod/test stay undefined)
-- Cache exports backwards-compatible aliases (`cacheResult`, `getCachedResult`, etc.) alongside new
-  names (`saveResult`, `getResult`, `deleteRepo`, `clearAll`)
 - Incremental refresh: `analyzeIncremental` uses `git.fetch` + processes only days after last cached date

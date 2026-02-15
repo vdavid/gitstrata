@@ -5,7 +5,7 @@
 	import { page } from '$app/stores';
 	import { env } from '$env/dynamic/public';
 	import { parseRepoUrl } from '$lib/url';
-	import { getResult, saveResult } from '$lib/cache';
+	import { formatBytes, getResult, saveResult } from '$lib/cache';
 	import { fetchServerResult, uploadServerResult } from '$lib/server-cache';
 	import { createAnalyzer, type AnalyzerHandle } from '$lib/worker/analyzer.api';
 	import type { AnalysisResult, DayStats, ErrorKind, ProgressEvent } from '$lib/types';
@@ -327,13 +327,6 @@
 	const commitDays = $derived(
 		displayDays.filter((d) => d.comments.length === 0 || d.comments[0] !== '-')
 	);
-
-	const formatBytes = (bytes: number): string => {
-		if (bytes < 1024) return `${bytes} B`;
-		if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-		if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-		return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
-	};
 
 	const dismissSizeWarning = () => {
 		showSizeWarning = false;

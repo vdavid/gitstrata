@@ -8,7 +8,7 @@ const storeName = 'results';
 /** 500 MB cache limit for LRU eviction */
 const maxCacheBytes = 500 * 1024 * 1024;
 
-export interface CachedResult {
+interface CachedResult {
 	repoUrl: string;
 	result: AnalysisResult;
 	lastAccessed: string; // ISO 8601
@@ -32,7 +32,6 @@ const getDb = async (): Promise<IDBPDatabase> => {
 	});
 };
 
-/** Estimate the byte size of a JSON-serializable object */
 const estimateSize = (value: unknown): number => {
 	try {
 		return new Blob([JSON.stringify(value)]).size;
@@ -41,14 +40,13 @@ const estimateSize = (value: unknown): number => {
 	}
 };
 
-/** Format byte size for display (e.g. "12.4 MB") */
 export const formatBytes = (bytes: number): string => {
 	if (bytes < 1024) return `${bytes} B`;
 	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-	return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+	if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+	return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 };
 
-/** Store an analysis result in the cache, with LRU eviction if needed */
 export const saveResult = async (result: AnalysisResult): Promise<void> => {
 	const db = await getDb();
 	const sizeBytes = estimateSize(result);
@@ -65,7 +63,6 @@ export const saveResult = async (result: AnalysisResult): Promise<void> => {
 	await db.put(storeName, entry);
 };
 
-/** Retrieve a cached analysis result by normalized repo URL */
 export const getResult = async (repoUrl: string): Promise<AnalysisResult | undefined> => {
 	const db = await getDb();
 	const entry = (await db.get(storeName, repoUrl)) as CachedResult | undefined;
@@ -78,7 +75,6 @@ export const getResult = async (repoUrl: string): Promise<AnalysisResult | undef
 	return entry.result;
 };
 
-/** List all cached repos with their metadata */
 export const listCachedRepos = async (): Promise<CachedRepoInfo[]> => {
 	const db = await getDb();
 	const entries = (await db.getAll(storeName)) as CachedResult[];
@@ -90,26 +86,22 @@ export const listCachedRepos = async (): Promise<CachedRepoInfo[]> => {
 	}));
 };
 
-/** Delete a single cached result */
 export const deleteRepo = async (repoUrl: string): Promise<void> => {
 	const db = await getDb();
 	await db.delete(storeName, repoUrl);
 };
 
-/** Clear all cached results */
 export const clearAll = async (): Promise<void> => {
 	const db = await getDb();
 	await db.clear(storeName);
 };
 
-/** Get total cache size in bytes */
 export const getTotalSize = async (): Promise<number> => {
 	const db = await getDb();
 	const entries = (await db.getAll(storeName)) as CachedResult[];
 	return entries.reduce((sum, e) => sum + (e.sizeBytes ?? 0), 0);
 };
 
-/** Evict least-recently-used entries until there's room for `neededBytes` */
 const evictIfNeeded = async (
 	db: IDBPDatabase,
 	neededBytes: number,
@@ -131,7 +123,3 @@ const evictIfNeeded = async (
 		await db.delete(storeName, entry.repoUrl);
 	}
 };
-
-// Keep backwards-compatible aliases for existing imports
-export { saveResult as cacheResult, getResult as getCachedResult };
-export { deleteRepo as deleteCachedResult, clearAll as clearCache };

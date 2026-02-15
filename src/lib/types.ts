@@ -1,10 +1,6 @@
-/** Line counts for a single language in a single day */
 export interface LanguageCount {
-	/** Total lines (prod + test) */
 	total: number;
-	/** Lines classified as production code (undefined if no prod/test heuristic exists) */
 	prod?: number;
-	/** Lines classified as test code (undefined if no prod/test heuristic exists) */
 	test?: number;
 }
 
@@ -37,7 +33,6 @@ export interface SharedCacheEntry {
 	updatedAt: string; // ISO 8601
 }
 
-/** Categorized error types for user-facing messages */
 export type ErrorKind =
 	| 'not-found'
 	| 'auth-required'
@@ -48,7 +43,6 @@ export type ErrorKind =
 	| 'cancelled'
 	| 'unknown';
 
-/** Progress updates from the worker */
 export type ProgressEvent =
 	| { type: 'clone'; phase: string; loaded: number; total: number }
 	| { type: 'process'; current: number; total: number; date: string }
@@ -57,7 +51,6 @@ export type ProgressEvent =
 	| { type: 'error'; message: string; kind: ErrorKind }
 	| { type: 'size-warning'; estimatedBytes: number };
 
-/** Definition for a recognized language in the registry */
 export interface LanguageDefinition {
 	id: string;
 	name: string;
