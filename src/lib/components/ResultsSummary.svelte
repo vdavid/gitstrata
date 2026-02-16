@@ -306,7 +306,7 @@
 			class="mt-2 text-[var(--color-text)]"
 			style="font-family: var(--font-mono); font-size: 1.125rem; font-weight: 500; letter-spacing: -0.01em;"
 		>
-			Overall: {avgDailyGrowth >= 0 ? '+' : ''}{formatNumber(avgDailyGrowth)}/day
+			Ever: {avgDailyGrowth >= 0 ? '+' : ''}{formatNumber(avgDailyGrowth)}/d
 		</p>
 		<div class="mt-1 flex items-center gap-1">
 			<p
