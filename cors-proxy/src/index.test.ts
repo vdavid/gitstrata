@@ -100,6 +100,35 @@ describe('PUT /cache/v1/:repoHash', () => {
 		expect(res.status).toBe(413);
 	});
 
+	it('rejects early when Content-Length exceeds limit', async () => {
+		const bucket = mockR2Bucket();
+		const res = await app.request(
+			'/cache/v1/somehash',
+			{
+				method: 'PUT',
+				body: new Uint8Array(1),
+				headers: { 'content-length': '20000000' }
+			},
+			{ RESULTS: bucket }
+		);
+		expect(res.status).toBe(413);
+		expect(await res.text()).toContain('Max 10 MB');
+	});
+
+	it('rejects decompressed payload that exceeds 50 MB', async () => {
+		const bucket = mockR2Bucket();
+		// Highly compressible string: gzips to a few KB, decompresses to ~60 MB
+		const huge = 'a'.repeat(60 * 1024 * 1024);
+		const compressed = await gzip(huge);
+		const res = await app.request(
+			'/cache/v1/somehash',
+			{ method: 'PUT', body: compressed },
+			{ RESULTS: bucket }
+		);
+		expect(res.status).toBe(413);
+		expect(await res.text()).toContain('Decompressed payload too large');
+	});
+
 	it('rejects invalid gzip payload', async () => {
 		const bucket = mockR2Bucket();
 		const res = await app.request(

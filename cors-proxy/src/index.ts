@@ -76,6 +76,7 @@ async function sha256Hex(input: string): Promise<string> {
 }
 
 const maxBodySize = 10 * 1024 * 1024; // 10 MB
+const maxDecompressedSize = 50 * 1024 * 1024; // 50 MB — guards against gzip bombs
 
 function isValidCacheEntry(data: unknown): data is {
 	version: 1;
@@ -146,18 +147,41 @@ app.put('/cache/v1/:repoHash', async (c) => {
 		return c.text('Write rate limit exceeded. Max 10 writes per minute.', 429, getCorsHeaders(c));
 	}
 
+	// Reject oversized payloads before buffering the body
+	const contentLength = parseInt(c.req.header('content-length') ?? '', 10);
+	if (contentLength > maxBodySize) {
+		return c.text('Request body too large. Max 10 MB.', 413, getCorsHeaders(c));
+	}
+
 	const body = await c.req.arrayBuffer();
 	if (body.byteLength > maxBodySize) {
 		return c.text('Request body too large. Max 10 MB.', 413, getCorsHeaders(c));
 	}
 
-	// Decompress gzip to validate JSON
-	const decompressed = new Response(
-		new Blob([body]).stream().pipeThrough(new DecompressionStream('gzip'))
-	);
+	// Decompress gzip with a size limit to guard against gzip bombs
+	const decompressedStream = new Blob([body]).stream().pipeThrough(new DecompressionStream('gzip'));
+	const reader = decompressedStream.getReader();
+	const chunks: Uint8Array[] = [];
+	let totalDecompressedSize = 0;
+	try {
+		for (;;) {
+			const { done, value } = await reader.read();
+			if (done) break;
+			totalDecompressedSize += value.byteLength;
+			if (totalDecompressedSize > maxDecompressedSize) {
+				reader.cancel();
+				return c.text('Decompressed payload too large. Max 50 MB.', 413, getCorsHeaders(c));
+			}
+			chunks.push(value);
+		}
+	} catch {
+		return c.text('Invalid gzip or JSON payload.', 400, getCorsHeaders(c));
+	}
+
 	let parsed: unknown;
 	try {
-		parsed = await decompressed.json();
+		const text = await new Blob(chunks).text();
+		parsed = JSON.parse(text);
 	} catch {
 		return c.text('Invalid gzip or JSON payload.', 400, getCorsHeaders(c));
 	}
