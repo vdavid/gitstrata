@@ -4,9 +4,10 @@
     interface Props {
         days: DayStats[]
         detectedLanguages: string[]
+        onHighlightDate?: (date: string | null) => void
     }
 
-    let { days }: Props = $props()
+    let { days, onHighlightDate }: Props = $props()
 
     // --- Total lines ---
     const totalLines = $derived(days.length > 0 ? days[days.length - 1].total : 0)
@@ -377,7 +378,12 @@
     </div>
 
     <!-- Peak day -->
-    <div class="strata-card p-4">
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div
+        class="strata-card p-4"
+        onmouseenter={() => onHighlightDate?.(peakDay.date || null)}
+        onmouseleave={() => onHighlightDate?.(null)}
+    >
         <p
             class="text-[var(--color-text-tertiary)]"
             style="font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.05em; text-transform: uppercase;"

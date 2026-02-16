@@ -12,9 +12,11 @@
         detectedLanguages: string[]
         /** Whether data is still streaming in */
         live?: boolean
+        /** When set, the chart highlights this date (crosshair + strip data) */
+        highlightDate?: string | null
     }
 
-    let { days, detectedLanguages, live = false }: Props = $props()
+    let { days, detectedLanguages, live = false, highlightDate = null }: Props = $props()
 
     type ViewMode = 'all' | 'prod-vs-test' | 'languages-only'
     const viewModeToggles: { mode: ViewMode; label: string }[] = [
@@ -560,6 +562,37 @@
             idleStripDate = days[lastIdx].date
             idleStripTotal = total
         }
+    })
+
+    // External highlight (e.g. hovering the "Peak day" stat card)
+    $effect(() => {
+        if (!chart || days.length === 0) return
+        const rec = chart as unknown as Record<string, unknown>
+
+        if (!highlightDate) {
+            // Clear highlight — revert to idle
+            rec.__crosshairX = undefined
+            isHovering = false
+            chart.draw()
+            return
+        }
+
+        const dataIndex = days.findIndex((d) => d.date === highlightDate)
+        if (dataIndex < 0) return
+
+        // Position crosshair at the date's x-pixel
+        const xPixel = chart.scales.x.getPixelForValue(new Date(highlightDate).getTime())
+        rec.__crosshairX = xPixel
+
+        // Update strip with this date's data
+        const datasets = chart.data.datasets as ChartDataset<'line'>[]
+        const { items, total } = computeStripFromDatasets(datasets, dataIndex)
+        hoverStripItems = items
+        hoverStripDate = highlightDate
+        hoverStripTotal = total
+        isHovering = true
+
+        chart.draw()
     })
 
     // Clean up on component destroy

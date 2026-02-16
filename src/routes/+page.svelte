@@ -363,6 +363,7 @@
     const displayDays = $derived(result?.days ?? streamingDays)
     const displayLanguages = $derived(result?.detectedLanguages ?? streamingLanguages)
     const isStreaming = $derived(phase === 'processing' && !result)
+    let chartHighlightDate = $state<string | null>(null)
 
     /** Only days with actual commits (excludes gap-filled carry-forward days) */
     const commitDays = $derived(displayDays.filter((d) => d.comments.length === 0 || d.comments[0] !== '-'))
@@ -598,10 +599,19 @@
             {/if}
 
             <!-- Summary stats -->
-            <ResultsSummary days={displayDays} detectedLanguages={displayLanguages} />
+            <ResultsSummary
+                days={displayDays}
+                detectedLanguages={displayLanguages}
+                onHighlightDate={(d) => (chartHighlightDate = d)}
+            />
 
             <!-- Chart -->
-            <ResultsChart days={displayDays} detectedLanguages={displayLanguages} live={isStreaming} />
+            <ResultsChart
+                days={displayDays}
+                detectedLanguages={displayLanguages}
+                live={isStreaming}
+                highlightDate={chartHighlightDate}
+            />
 
             <!-- Data table (collapsible, collapsed by default) -->
             {#if result}
