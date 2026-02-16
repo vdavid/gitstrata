@@ -1,4 +1,6 @@
 import { Hono } from 'hono'
+import { validateCacheEntry } from './validate-cache-entry'
+import { verifyHeadCommit } from './verify-head-commit'
 
 type Bindings = {
     RESULTS?: R2Bucket
@@ -94,24 +96,6 @@ async function sha256Hex(input: string): Promise<string> {
 const maxBodySize = 10 * 1024 * 1024 // 10 MB
 const maxDecompressedSize = 50 * 1024 * 1024 // 50 MB — guards against gzip bombs
 
-function isValidCacheEntry(data: unknown): data is {
-    version: 1
-    repoUrl: string
-    headCommit: string
-    result: { days: unknown[] }
-    updatedAt: string
-} {
-    if (typeof data !== 'object' || data === null) return false
-    const obj = data as Record<string, unknown>
-    if (obj.version !== 1) return false
-    if (typeof obj.repoUrl !== 'string') return false
-    if (typeof obj.headCommit !== 'string') return false
-    if (typeof obj.updatedAt !== 'string') return false
-    if (typeof obj.result !== 'object' || obj.result === null) return false
-    const result = obj.result as Record<string, unknown>
-    return Array.isArray(result.days)
-}
-
 // --- Cache routes (only active when R2 binding RESULTS is present) ---
 
 app.get('/cache/v1/:repoHash', async (c) => {
@@ -206,14 +190,22 @@ app.put('/cache/v1/:repoHash', async (c) => {
         return c.text('Invalid gzip or JSON payload.', 400, getCorsHeaders(c))
     }
 
-    if (!isValidCacheEntry(parsed)) {
-        return c.text('Invalid cache entry shape.', 400, getCorsHeaders(c))
+    const validationError = validateCacheEntry(parsed)
+    if (validationError) {
+        return c.text(validationError, 400, getCorsHeaders(c))
     }
 
+    const entry = parsed as { repoUrl: string; headCommit: string }
+
     const repoHash = c.req.param('repoHash')
-    const expectedHash = await sha256Hex(parsed.repoUrl)
+    const expectedHash = await sha256Hex(entry.repoUrl)
     if (expectedHash !== repoHash) {
         return c.text('repoUrl hash does not match path.', 400, getCorsHeaders(c))
+    }
+
+    const commitError = await verifyHeadCommit(entry.repoUrl, entry.headCommit)
+    if (commitError) {
+        return c.text(commitError, 400, getCorsHeaders(c))
     }
 
     await bucket.put(`results/v1/${repoHash}.json.gz`, body, {

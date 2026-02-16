@@ -36,7 +36,18 @@ responses; otherwise just a pass-through proxy.
     - `PUT /cache/v1/:repoHash` — accepts gzip-compressed `SharedCacheEntry` JSON. Requires `Authorization: Bearer`
       token matching the `CACHE_WRITE_TOKEN` secret (set via `wrangler secret put`). In production (when
       `ALLOWED_ORIGIN` is set), cache writes are rejected with 403 if the token is not configured — fail-closed. In dev
-      (no `ALLOWED_ORIGIN`), writes are open. Validates shape, 10 MB size limit, repo URL hash match, and write rate
-      limit (10/min per IP).
+      (no `ALLOWED_ORIGIN`), writes are open. Full PUT validation pipeline:
+        1. Auth check (Bearer token)
+        2. Rate limit (100 req/min general, 10 writes/min)
+        3. Size guard + gzip decompress + JSON parse (10 MB compressed, 50 MB decompressed)
+        4. `validateCacheEntry` (`validate-cache-entry.ts`) — shape, repoUrl format, headCommit hex, day caps, date
+           format, number invariants, language ID allowlist, comment types
+        5. Repo hash check (SHA-256 of repoUrl must match `:repoHash`)
+        6. `verifyHeadCommit` (`verify-head-commit.ts`) — fetches `/info/refs?service=git-upload-pack` from the real git
+           host and confirms the submitted headCommit OID exists in the response (5 s timeout, fail-closed)
+        7. R2 put
     - R2 object key: `results/v1/{sha256(repoUrl)}.json.gz`.
     - The R2 binding is commented out in `wrangler.toml` by default — uncomment to enable.
+- **Shared language IDs** (`shared/language-ids.ts`): Single source of truth for all valid language IDs, imported by
+  both the Cloudflare Worker (for cache entry validation) and the frontend. A drift-detection test
+  (`tests/language-ids-sync.test.ts`) ensures `validLanguageIds` stays in sync with `src/lib/languages.ts`.
