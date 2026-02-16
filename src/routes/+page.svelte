@@ -95,9 +95,13 @@
     // Snapshot of the result we're refreshing from, so retry can re-attempt a failed refresh
     let pendingRefresh: AnalysisResult | undefined
 
-    // Size warning
+    // Size warning (during clone, from worker)
     let sizeWarningBytes = $state(0)
     let showSizeWarning = $state(false)
+
+    // Pre-clone size gate (from forge API)
+    const sizeGateThresholdBytes = 500 * 1024 * 1024
+    let sizeGateBytes = $state(0)
 
     // Read ?repo= from URL on initial load
     const initialRepo = $derived.by(() => {
@@ -168,6 +172,7 @@
         fromServerCache = false
         sizeWarningBytes = 0
         showSizeWarning = false
+        sizeGateBytes = 0
         pendingRefresh = undefined
         stopTimer()
     }
@@ -245,7 +250,27 @@
         streamingLanguages = Object.keys(seen).sort((a, b) => (langTotals[b] ?? 0) - (langTotals[a] ?? 0))
     }
 
-    const startAnalysis = async (repoInput: string) => {
+    /** Fetch repo size in bytes from the forge API. Returns null if unavailable. */
+    const fetchRepoSizeBytes = async (host: string, owner: string, repo: string): Promise<number | null> => {
+        try {
+            if (host === 'github.com') {
+                const resp = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
+                    signal: AbortSignal.timeout(5000),
+                })
+                if (!resp.ok) return null
+                const data = await resp.json()
+                return typeof data.size === 'number' ? data.size * 1024 : null
+            }
+            // GitLab/Bitbucket: size not reliably available without auth
+            return null
+        } catch {
+            return null
+        }
+    }
+
+    const formatGb = (bytes: number): string => (bytes / 1024 ** 3).toFixed(1)
+
+    const startAnalysis = async (repoInput: string, force = false) => {
         // Cancel any running analysis
         cancel()
         resetState()
@@ -275,6 +300,15 @@
                 return
             }
 
+            // Pre-clone size gate (GitHub only, skipped on force or API failure)
+            if (!force) {
+                const sizeBytes = await fetchRepoSizeBytes(parsed.host, parsed.owner, parsed.repo)
+                if (sizeBytes !== null && sizeBytes > sizeGateThresholdBytes) {
+                    sizeGateBytes = sizeBytes
+                    return
+                }
+            }
+
             // Wait for any previous worker's HTTP cleanup before opening new connections
             if (cancelCleanup) {
                 await cancelCleanup
@@ -300,6 +334,14 @@
                 errorKind = 'unknown'
             }
         }
+    }
+
+    const forceAnalysis = () => {
+        void startAnalysis(lastRepoInput, true)
+    }
+
+    const dismissSizeGate = () => {
+        sizeGateBytes = 0
     }
 
     let cancelCleanup: Promise<void> | undefined
@@ -374,6 +416,17 @@
 
     /** Only days with actual commits (excludes gap-filled carry-forward days) */
     const commitDays = $derived(displayDays.filter((d) => d.comments.length === 0 || d.comments[0] !== '-'))
+
+    const displayRepoSlug = $derived.by(() => {
+        const input = result?.repoUrl ?? lastRepoInput
+        if (!input) return ''
+        try {
+            const parsed = parseRepoUrl(input)
+            return `${parsed.owner}/${parsed.repo}`
+        } catch {
+            return ''
+        }
+    })
 
     const dismissSizeWarning = () => {
         showSizeWarning = false
@@ -477,6 +530,42 @@
         </div>
     {/if}
 
+    <!-- Size gate -->
+    {#if sizeGateBytes > 0 && phase === 'idle'}
+        <div class="strata-card strata-fade-in mx-auto max-w-2xl border-warning p-4">
+            <div class="flex items-start gap-3">
+                <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="var(--color-warning)"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    class="mt-1 shrink-0"
+                    aria-hidden="true"
+                >
+                    <path
+                        d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+                    />
+                    <line x1="12" y1="9" x2="12" y2="13" />
+                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+                <div class="min-w-0 flex-1">
+                    <p class="text-sm text-foreground">
+                        This repo is ~{formatGb(sizeGateBytes)} GB. You probably don't want to load that in your browser.
+                        But if you insist, it'll probably work &mdash; it'll just take a looong time and a few gigs of RAM.
+                    </p>
+                    <div class="mt-3 flex items-center gap-3">
+                        <button onclick={forceAnalysis} class="btn-primary text-sm"> Load anyway </button>
+                        <button onclick={dismissSizeGate} class="btn-link text-sm"> Try another repo </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {/if}
+
     <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
     <!-- Focus management: this live region receives programmatic focus (via requestAnimationFrame)
 	     when analysis starts, so screen readers announce updates. tabindex={-1} allows programmatic
@@ -493,6 +582,7 @@
         {#if phase === 'cloning' || phase === 'processing'}
             <div class="mx-auto max-w-2xl strata-fade-in">
                 <PipelineProgress
+                    repoSlug={displayRepoSlug}
                     {phase}
                     {clonePhase}
                     {cloneLoaded}
@@ -547,6 +637,15 @@
     <!-- Results -->
     {#if displayDays.length > 0}
         <div class="space-y-8">
+            {#if displayRepoSlug}
+                <h2
+                    class="strata-fade-in text-center text-sm text-foreground-tertiary"
+                    style="font-family: var(--font-mono); font-weight: 400; letter-spacing: 0.02em;"
+                >
+                    <span class="text-accent">{displayRepoSlug}</span>
+                </h2>
+            {/if}
+
             <!-- Cached badge + refresh + share -->
             {#if result}
                 <div class="flex flex-wrap items-center justify-center gap-3 strata-fade-in">

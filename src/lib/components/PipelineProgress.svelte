@@ -2,6 +2,7 @@
     import { formatBytes } from '$lib/cache'
 
     interface Props {
+        repoSlug?: string
         phase: 'cloning' | 'processing'
         clonePhase: string
         cloneLoaded: number
@@ -15,6 +16,7 @@
     }
 
     let {
+        repoSlug = '',
         phase,
         clonePhase,
         cloneLoaded,
@@ -435,6 +437,11 @@ ${statBlock}`
     onkeydown={handleKeydown}
     onclick={handleOutsideClick}
 >
+    {#if repoSlug}
+        <p class="mb-4 text-sm text-foreground-tertiary" style="font-family: var(--font-mono); letter-spacing: 0.02em;">
+            Getting <span class="text-accent">{repoSlug}</span>&hellip;
+        </p>
+    {/if}
     <ol class="phase-log" role="list" aria-label="Clone phases">
         {#each phases as phaseDef, i (phaseDef.id)}
             {@const state = getPhaseState(i)}

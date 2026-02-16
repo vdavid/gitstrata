@@ -1,5 +1,7 @@
 <script lang="ts">
+    import { onMount } from 'svelte'
     import { parseRepoUrl } from '$lib/url'
+    import { pickFeaturedRepos, pickPlaceholder } from '$lib/featured-repos'
 
     interface Props {
         onsubmit: (repoUrl: string) => void
@@ -11,6 +13,9 @@
 
     let inputValue = $state('')
     let error = $state('')
+    let currentRepos = $state<{ owner: string; repo: string }[]>([])
+    let currentPlaceholder = $state('Example: https://github.com/sveltejs/svelte')
+    let genKey = $state(0)
 
     $effect(() => {
         if (initialValue) {
@@ -18,11 +23,18 @@
         }
     })
 
-    const quickExamples = [
-        { label: 'sveltejs/svelte', value: 'sveltejs/svelte' },
-        { label: 'denoland/deno', value: 'denoland/deno' },
-        { label: 'expressjs/express', value: 'expressjs/express' },
-    ]
+    onMount(() => {
+        const repos = pickFeaturedRepos(3)
+        currentRepos = repos
+        currentPlaceholder = pickPlaceholder(repos)
+    })
+
+    const handleMore = () => {
+        const repos = pickFeaturedRepos(3)
+        currentRepos = repos
+        currentPlaceholder = pickPlaceholder(repos)
+        genKey++
+    }
 
     const validate = (value: string): string | undefined => {
         try {
@@ -84,7 +96,7 @@
                 bind:value={inputValue}
                 onkeydown={handleKeydown}
                 oninput={handleInput}
-                placeholder="Example: https://github.com/sveltejs/svelte"
+                placeholder={currentPlaceholder}
                 {disabled}
                 class="w-full border bg-surface-raised px-4 py-3
 					text-sm text-foreground placeholder:text-foreground-tertiary
@@ -120,20 +132,35 @@
         style="font-family: var(--font-mono); letter-spacing: 0.02em;"
     >
         <span>try:</span>
-        {#each quickExamples as example, i (example.value)}
-            {#if i > 0}
-                <span class="text-border-strong">/</span>
-            {/if}
+        {#key genKey}
+            {#each currentRepos as repo, i (`${repo.owner}/${repo.repo}`)}
+                {#if i > 0}
+                    <span class="text-border-strong">/</span>
+                {/if}
+                <button
+                    onclick={() => handleExample(`${repo.owner}/${repo.repo}`)}
+                    {disabled}
+                    class="strata-fade-in cursor-pointer text-foreground-secondary transition-colors
+						hover:text-accent
+						disabled:cursor-not-allowed disabled:opacity-50"
+                    style="transition-duration: var(--duration-fast); animation-delay: {i * 60}ms;"
+                >
+                    {repo.owner}/{repo.repo}
+                </button>
+            {/each}
+        {/key}
+        {#if currentRepos.length > 0}
+            <span class="text-border-strong">/</span>
             <button
-                onclick={() => handleExample(example.value)}
+                onclick={handleMore}
                 {disabled}
-                class="cursor-pointer text-foreground-secondary transition-colors
+                class="cursor-pointer text-foreground-tertiary transition-colors
 					hover:text-accent
 					disabled:cursor-not-allowed disabled:opacity-50"
                 style="transition-duration: var(--duration-fast);"
             >
-                {example.label}
+                more
             </button>
-        {/each}
+        {/if}
     </div>
 </div>
