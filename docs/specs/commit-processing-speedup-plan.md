@@ -26,16 +26,16 @@ Files to change:
 
 - `src/lib/git/count.ts` — add `FileState`, `IncrementalContext`, `countLinesForCommitIncremental`,
   `computeDayStatsFromMap` helper
-- `src/lib/worker/analyzer.worker.ts` — maintain fileStateMap + allExtensions in the loop, use incremental for
-  commits after the first
+- `src/lib/worker/analyzer.worker.ts` — maintain fileStateMap + allExtensions in the loop, use incremental for commits
+  after the first
 
 ## 2. Parallel blob reads
 
 **Problem:** Blob reads inside `countLinesForCommit` (and the new incremental function) are sequential — one
 `git.readBlob()` at a time.
 
-**Solution:** Use `Promise.all` with a concurrency limiter to read multiple blobs in parallel. Since `readBlob` is
-async I/O to lightning-fs/IndexedDB, parallelism helps.
+**Solution:** Use `Promise.all` with a concurrency limiter to read multiple blobs in parallel. Since `readBlob` is async
+I/O to lightning-fs/IndexedDB, parallelism helps.
 
 Key details:
 

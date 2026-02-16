@@ -41,34 +41,33 @@ for the frontend config.
 
 The shared cache lets users benefit from each other's analyses. It's optional but recommended.
 
-1. **Enable R2 in your Cloudflare account**: Go to the
-   [Cloudflare dashboard](https://dash.cloudflare.com/) > **R2 Object Storage** and follow the prompts to activate R2
-   (it's free-tier friendly).
+1. **Enable R2 in your Cloudflare account**: Go to the [Cloudflare dashboard](https://dash.cloudflare.com/) > **R2
+   Object Storage** and follow the prompts to activate R2 (it's free-tier friendly).
 
 2. **Create the bucket**:
 
-   ```bash
-   cd cors-proxy
-   pnpm exec wrangler r2 bucket create git-strata-results
-   ```
+    ```bash
+    cd cors-proxy
+    pnpm exec wrangler r2 bucket create git-strata-results
+    ```
 
 3. **Uncomment the R2 binding** in `cors-proxy/wrangler.toml` (remove the `#` from the three `[[r2_buckets]]` lines).
 
 4. **Set a cache write token** to prevent unauthorized cache writes:
 
-   ```bash
-   cd cors-proxy
-   pnpm exec wrangler secret put CACHE_WRITE_TOKEN
-   ```
+    ```bash
+    cd cors-proxy
+    pnpm exec wrangler secret put CACHE_WRITE_TOKEN
+    ```
 
-   Enter a random secret when prompted (for example, generate one with `openssl rand -hex 32`). The frontend must send
-   this token as a Bearer header on cache uploads — see the environment variables table below.
+    Enter a random secret when prompted (for example, generate one with `openssl rand -hex 32`). The frontend must send
+    this token as a Bearer header on cache uploads — see the environment variables table below.
 
 5. **Re-deploy the CORS proxy** so it picks up the R2 binding and secret:
 
-   ```bash
-   pnpm run deploy
-   ```
+    ```bash
+    pnpm run deploy
+    ```
 
 ## Step 4: Create the Cloudflare Pages project (frontend)
 
@@ -96,9 +95,9 @@ GitHub secrets.
 1. Go to [Cloudflare dashboard > My Profile > API Tokens](https://dash.cloudflare.com/profile/api-tokens).
 2. Click **Create Token**.
 3. Use the **Custom token** template with these permissions:
-   - Account > Workers Scripts: Edit
-   - Account > Cloudflare Pages: Edit
-   - Account > R2 Storage: Edit (if using shared cache)
+    - Account > Workers Scripts: Edit
+    - Account > Cloudflare Pages: Edit
+    - Account > R2 Storage: Edit (if using shared cache)
 4. Copy the token.
 
 ### Find your account ID
@@ -146,8 +145,8 @@ Once these are set, every push to `main` that passes CI will auto-deploy both th
 | `PUBLIC_ANALYTICS_ID`      | Frontend (`.env`)            | _(none)_                          | Umami website ID (UUID from your Umami dashboard)               |
 
 `PUBLIC_CACHE_WRITE_TOKEN` and `CACHE_WRITE_TOKEN` must have the same value. The frontend token is hard-coded in
-`ci.yml` for production builds. The worker token is set via `wrangler secret put` (production) or
-`cors-proxy/.dev.vars` (local dev).
+`ci.yml` for production builds. The worker token is set via `wrangler secret put` (production) or `cors-proxy/.dev.vars`
+(local dev).
 
 Both `PUBLIC_ANALYTICS_URL` and `PUBLIC_ANALYTICS_ID` must be set to enable analytics. When either is missing, no
 tracking script is loaded.
@@ -185,5 +184,5 @@ pnpm dev
 pnpm build
 ```
 
-Outputs a static site to `build/`. This directory is plain HTML/CSS/JS and works on any static host (Vercel, Netlify,
-or just a file server).
+Outputs a static site to `build/`. This directory is plain HTML/CSS/JS and works on any static host (Vercel, Netlify, or
+just a file server).

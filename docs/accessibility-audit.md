@@ -1,8 +1,6 @@
 # Accessibility audit report
 
-**Date:** 2026-02-15
-**Target:** WCAG 2.1 Level AA
-**Score:** 72/100
+**Date:** 2026-02-15 **Target:** WCAG 2.1 Level AA **Score:** 72/100
 
 ## Summary
 
@@ -32,11 +30,11 @@ Affects `.strata-badge` text, secondary hints, metadata, and some button variant
 
 ```css
 :root {
-	--color-text-secondary: #4a4238; /* 4.8:1 -- pass */
-	--color-text-tertiary: #6b6358; /* 5.2:1 -- pass */
+    --color-text-secondary: #4a4238; /* 4.8:1 -- pass */
+    --color-text-tertiary: #6b6358; /* 5.2:1 -- pass */
 }
 .dark {
-	--color-text-tertiary: #b8ada1; /* 5.1:1 -- pass */
+    --color-text-tertiary: #b8ada1; /* 5.1:1 -- pass */
 }
 ```
 
@@ -58,18 +56,14 @@ Refresh and share buttons don't have clear accessible labels.
 **Fix:** Add `aria-label` attributes:
 
 ```svelte
-<button onclick={refresh} aria-label="Refresh analysis with latest commits" class="btn-link">
-	Refresh
-</button>
+<button onclick={refresh} aria-label="Refresh analysis with latest commits" class="btn-link"> Refresh </button>
 
 <button
-	onclick={copyShareLink}
-	aria-label={shareCopied
-		? 'Repository link copied to clipboard'
-		: 'Copy repository link to clipboard'}
-	class="btn-ghost"
+    onclick={copyShareLink}
+    aria-label={shareCopied ? 'Repository link copied to clipboard' : 'Copy repository link to clipboard'}
+    class="btn-ghost"
 >
-	...
+    ...
 </button>
 ```
 
@@ -128,8 +122,8 @@ chart zoom, table toggle, etc.).
 
 ### Terminology consistency (WCAG 3.2.4)
 
-Mixed terms create confusion: "Analyze" vs. "Analysis", "Download repository" vs. "Cloning", "Processing" vs.
-"Process". Pick one term per concept and use it everywhere.
+Mixed terms create confusion: "Analyze" vs. "Analysis", "Download repository" vs. "Cloning", "Processing" vs. "Process".
+Pick one term per concept and use it everywhere.
 
 ### Form validation feedback (WCAG 3.3.4)
 

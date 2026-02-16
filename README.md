@@ -6,8 +6,8 @@
 
 **Stratigraphy for your code.**
 
-A browser-native lines-of-code counter that visualizes how a public Git repository grows over time,
-broken down by language and prod/test. Zero server-side compute — everything runs in the browser.
+A browser-native lines-of-code counter that visualizes how a public Git repository grows over time, broken down by
+language and prod/test. Zero server-side compute — everything runs in the browser.
 
 ## Features
 
@@ -45,9 +45,9 @@ CORS proxy (Cloudflare Worker)
 └── Forwards git protocol bytes with CORS headers
 ```
 
-The worker clones the repo into an in-browser filesystem, walks the commit history day by day,
-counts lines per language, classifies prod vs test, and streams results back to the main thread
-for live chart rendering. See [spec.md](spec.md) for the full design.
+The worker clones the repo into an in-browser filesystem, walks the commit history day by day, counts lines per
+language, classifies prod vs test, and streams results back to the main thread for live chart rendering. See
+[spec.md](spec.md) for the full design.
 
 ## Tech stack
 
@@ -70,8 +70,7 @@ pnpm install
 pnpm dev
 ```
 
-The dev server uses the public `https://cors.isomorphic-git.org` proxy, so you don't need to
-run the CORS proxy locally.
+The dev server uses the public `https://cors.isomorphic-git.org` proxy, so you don't need to run the CORS proxy locally.
 
 ### Testing
 
@@ -103,8 +102,8 @@ pnpm format            # prettier
 
 ## Deploying
 
-See [docs/deploying.md](docs/deploying.md) for step-by-step deployment instructions for both
-the frontend (Cloudflare Pages) and the CORS proxy (Cloudflare Workers).
+See [docs/deploying.md](docs/deploying.md) for step-by-step deployment instructions for both the frontend (Cloudflare
+Pages) and the CORS proxy (Cloudflare Workers).
 
 ## License
 

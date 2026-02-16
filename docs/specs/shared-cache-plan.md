@@ -47,11 +47,11 @@ Add an R2 bucket to the existing CORS proxy worker (same `wrangler.toml`). R2 is
 
 ```ts
 interface SharedCacheEntry {
-	version: 1;
-	repoUrl: string;
-	headCommit: string; // OID of HEAD at analysis time — for freshness check
-	result: AnalysisResult;
-	updatedAt: string; // ISO 8601
+    version: 1
+    repoUrl: string
+    headCommit: string // OID of HEAD at analysis time — for freshness check
+    result: AnalysisResult
+    updatedAt: string // ISO 8601
 }
 ```
 
@@ -130,8 +130,8 @@ check. If `env.RESULTS` (the R2 binding) doesn't exist, the routes return 404. K
 # bucket_name = "git-strata-results"
 ```
 
-**`src/lib/types.ts`** — Add `headCommit: string` to `AnalysisResult`. This is the HEAD OID at analysis time. Needed
-for freshness checking even without the server cache (it tells us whether anything changed since last analysis).
+**`src/lib/types.ts`** — Add `headCommit: string` to `AnalysisResult`. This is the HEAD OID at analysis time. Needed for
+freshness checking even without the server cache (it tells us whether anything changed since last analysis).
 
 **`src/lib/worker/analyzer.worker.ts`** — After `detectDefaultBranch`, resolve the HEAD commit OID and include it in the
 result. During incremental, update it.
@@ -169,10 +169,10 @@ Third user requests same repo (same day, no new commits)
 
 - **Concurrent writes**: Last-write-wins. Results are deterministic, so both writes produce the same data for the same
   HEAD commit. If HEAD differs, the later write with newer HEAD is correct.
-- **Force push / rewritten history**: The `headCommit` won't match, triggering incremental analysis. But if history
-  was rewritten, the incremental merge may have stale days. Mitigation: if the cached `days` array has dates after the
-  repo's actual first commit but the commits don't match, fall back to full analysis. This is an edge case we can punt on
-  initially.
+- **Force push / rewritten history**: The `headCommit` won't match, triggering incremental analysis. But if history was
+  rewritten, the incremental merge may have stale days. Mitigation: if the cached `days` array has dates after the
+  repo's actual first commit but the commits don't match, fall back to full analysis. This is an edge case we can punt
+  on initially.
 - **Very large results**: R2 has no per-object size limit (up to 5 TB), but we cap uploads at 10 MB on the proxy side.
   Most repos produce results well under 1 MB.
 - **R2 costs**: Free tier includes 10 million reads/month and 1 million writes/month. More than enough.

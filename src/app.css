@@ -10,898 +10,893 @@
  */
 
 :root {
-	/* chart colors (light mode) — bright mineral palette */
-	--chart-1: #4a90c8; /* ocean blue */
-	--chart-1-tint: #c0daea;
-	--chart-2: #5aaa70; /* serpentine green */
-	--chart-2-tint: #c2e6c8;
-	--chart-3: #d4922e; /* sandstone amber */
-	--chart-3-tint: #f0d8a8;
-	--chart-4: #a868a8; /* amethyst */
-	--chart-4-tint: #dcc0dc;
-	--chart-5: #d06a48; /* red clay */
-	--chart-5-tint: #eac0a8;
-	--chart-6: #48b0b0; /* malachite teal */
-	--chart-6-tint: #a8e0e0;
-	--chart-7: #b8a44e; /* pyrite gold */
-	--chart-7-tint: #e2d8a0;
-	--chart-8: #c85a78; /* rhodonite */
-	--chart-8-tint: #e8b8c8;
-	--chart-9: #6880b0; /* slate blue */
-	--chart-9-tint: #b8c8e0;
-	--chart-10: #58b090; /* jade */
-	--chart-10-tint: #a8e2cc;
-	--chart-11: #9878c4; /* charoite */
-	--chart-11-tint: #d0c0e4;
-	--chart-12: #4a98bc; /* azurite */
-	--chart-12-tint: #a8d6e6;
-	--chart-other: #c4bab0; /* limestone */
-	--chart-other-tint: #dedad4;
+    /* chart colors (light mode) — bright mineral palette */
+    --chart-1: #4a90c8; /* ocean blue */
+    --chart-1-tint: #c0daea;
+    --chart-2: #5aaa70; /* serpentine green */
+    --chart-2-tint: #c2e6c8;
+    --chart-3: #d4922e; /* sandstone amber */
+    --chart-3-tint: #f0d8a8;
+    --chart-4: #a868a8; /* amethyst */
+    --chart-4-tint: #dcc0dc;
+    --chart-5: #d06a48; /* red clay */
+    --chart-5-tint: #eac0a8;
+    --chart-6: #48b0b0; /* malachite teal */
+    --chart-6-tint: #a8e0e0;
+    --chart-7: #b8a44e; /* pyrite gold */
+    --chart-7-tint: #e2d8a0;
+    --chart-8: #c85a78; /* rhodonite */
+    --chart-8-tint: #e8b8c8;
+    --chart-9: #6880b0; /* slate blue */
+    --chart-9-tint: #b8c8e0;
+    --chart-10: #58b090; /* jade */
+    --chart-10-tint: #a8e2cc;
+    --chart-11: #9878c4; /* charoite */
+    --chart-11-tint: #d0c0e4;
+    --chart-12: #4a98bc; /* azurite */
+    --chart-12-tint: #a8d6e6;
+    --chart-other: #c4bab0; /* limestone */
+    --chart-other-tint: #dedad4;
 
-	/* ui tokens (light mode) — warm stone */
-	--color-bg: #faf8f5;
-	--color-bg-secondary: #f2efe9;
-	--color-bg-tertiary: #e8e4dc;
-	--color-text: #1a1510;
-	--color-text-secondary: #4a4238; /* 4.8:1 ratio on --color-bg -- WCAG AA pass */
-	--color-text-tertiary: #6b6358; /* 5.2:1 ratio on --color-bg -- WCAG AA pass */
-	--color-border: #ddd8cf;
-	--color-border-strong: #c4bdb2;
-	--color-accent: #b86e1a;
-	--color-accent-hover: #a05e12;
-	--color-accent-light: #f5e8d4;
-	--color-accent-muted: #dab87e;
-	--color-success: #4a8c5c;
-	--color-error: #b83a2a;
-	--color-error-light: #fdf0ee;
-	--color-warning: #9e8b3e;
+    /* ui tokens (light mode) — warm stone */
+    --color-bg: #faf8f5;
+    --color-bg-secondary: #f2efe9;
+    --color-bg-tertiary: #e8e4dc;
+    --color-text: #1a1510;
+    --color-text-secondary: #4a4238; /* 4.8:1 ratio on --color-bg -- WCAG AA pass */
+    --color-text-tertiary: #6b6358; /* 5.2:1 ratio on --color-bg -- WCAG AA pass */
+    --color-border: #ddd8cf;
+    --color-border-strong: #c4bdb2;
+    --color-accent: #b86e1a;
+    --color-accent-hover: #a05e12;
+    --color-accent-light: #f5e8d4;
+    --color-accent-muted: #dab87e;
+    --color-success: #4a8c5c;
+    --color-error: #b83a2a;
+    --color-error-light: #fdf0ee;
+    --color-warning: #9e8b3e;
 
-	/* surfaces */
-	--color-surface-raised: #ffffff;
-	--color-surface-overlay: rgba(26, 21, 16, 0.03);
+    /* surfaces */
+    --color-surface-raised: #ffffff;
+    --color-surface-overlay: rgba(26, 21, 16, 0.03);
 
-	/* type */
-	--font-sans: 'DM Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
-	--font-mono: 'DM Mono', ui-monospace, 'Cascadia Code', monospace;
+    /* type */
+    --font-sans: 'DM Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
+    --font-mono: 'DM Mono', ui-monospace, 'Cascadia Code', monospace;
 
-	/* motion */
-	--ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
-	--duration-fast: 150ms;
-	--duration-normal: 250ms;
-	--duration-slow: 500ms;
+    /* motion */
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    --duration-fast: 150ms;
+    --duration-normal: 250ms;
+    --duration-slow: 500ms;
 }
 
 .dark {
-	/* chart colors (dark mode) — brighter minerals on dark stone */
-	--chart-1: #5a9ece;
-	--chart-1-tint: #1e3a54;
-	--chart-2: #6ab87e;
-	--chart-2-tint: #1e3a28;
-	--chart-3: #daa04e;
-	--chart-3-tint: #4a3218;
-	--chart-4: #b07eb0;
-	--chart-4-tint: #3a1e3a;
-	--chart-5: #da7a5a;
-	--chart-5-tint: #4a2218;
-	--chart-6: #5abebe;
-	--chart-6-tint: #1e3a3a;
-	--chart-7: #c4b05a;
-	--chart-7-tint: #3a3218;
-	--chart-8: #d07088;
-	--chart-8-tint: #3a1e28;
-	--chart-9: #7088c0;
-	--chart-9-tint: #1e2838;
-	--chart-10: #5abe90;
-	--chart-10-tint: #1e3a28;
-	--chart-11: #a088cc;
-	--chart-11-tint: #2e1e42;
-	--chart-12: #5a9ec0;
-	--chart-12-tint: #1e3040;
-	--chart-other: #6b6358;
-	--chart-other-tint: #3a342c;
+    /* chart colors (dark mode) — brighter minerals on dark stone */
+    --chart-1: #5a9ece;
+    --chart-1-tint: #1e3a54;
+    --chart-2: #6ab87e;
+    --chart-2-tint: #1e3a28;
+    --chart-3: #daa04e;
+    --chart-3-tint: #4a3218;
+    --chart-4: #b07eb0;
+    --chart-4-tint: #3a1e3a;
+    --chart-5: #da7a5a;
+    --chart-5-tint: #4a2218;
+    --chart-6: #5abebe;
+    --chart-6-tint: #1e3a3a;
+    --chart-7: #c4b05a;
+    --chart-7-tint: #3a3218;
+    --chart-8: #d07088;
+    --chart-8-tint: #3a1e28;
+    --chart-9: #7088c0;
+    --chart-9-tint: #1e2838;
+    --chart-10: #5abe90;
+    --chart-10-tint: #1e3a28;
+    --chart-11: #a088cc;
+    --chart-11-tint: #2e1e42;
+    --chart-12: #5a9ec0;
+    --chart-12-tint: #1e3040;
+    --chart-other: #6b6358;
+    --chart-other-tint: #3a342c;
 
-	/* ui tokens (dark mode) — deep cavern stone */
-	--color-bg: #12100c;
-	--color-bg-secondary: #1e1a14;
-	--color-bg-tertiary: #2c261e;
-	--color-text: #e8e2d8;
-	--color-text-secondary: #9c9488;
-	--color-text-tertiary: #b8ada1; /* 5.1:1 ratio on --color-bg -- WCAG AA pass */
-	--color-border: #2c261e;
-	--color-border-strong: #3e362c;
-	--color-accent: #daa04e;
-	--color-accent-hover: #e8b46a;
-	--color-accent-light: #2c2010;
-	--color-accent-muted: #8b6e3e;
-	--color-success: #6ab87e;
-	--color-error: #da5a4a;
-	--color-error-light: #2a1410;
-	--color-warning: #c4b05a;
+    /* ui tokens (dark mode) — deep cavern stone */
+    --color-bg: #12100c;
+    --color-bg-secondary: #1e1a14;
+    --color-bg-tertiary: #2c261e;
+    --color-text: #e8e2d8;
+    --color-text-secondary: #9c9488;
+    --color-text-tertiary: #b8ada1; /* 5.1:1 ratio on --color-bg -- WCAG AA pass */
+    --color-border: #2c261e;
+    --color-border-strong: #3e362c;
+    --color-accent: #daa04e;
+    --color-accent-hover: #e8b46a;
+    --color-accent-light: #2c2010;
+    --color-accent-muted: #8b6e3e;
+    --color-success: #6ab87e;
+    --color-error: #da5a4a;
+    --color-error-light: #2a1410;
+    --color-warning: #c4b05a;
 
-	/* surfaces */
-	--color-surface-raised: #1a1610;
-	--color-surface-overlay: rgba(232, 226, 216, 0.02);
+    /* surfaces */
+    --color-surface-raised: #1a1610;
+    --color-surface-overlay: rgba(232, 226, 216, 0.02);
 }
 
 /* Smooth transitions for theme switching */
 html {
-	transition:
-		background-color var(--duration-normal) var(--ease-out-expo),
-		color var(--duration-normal) var(--ease-out-expo);
+    transition:
+        background-color var(--duration-normal) var(--ease-out-expo),
+        color var(--duration-normal) var(--ease-out-expo);
 }
 
 @media (prefers-reduced-motion: reduce) {
-	html {
-		transition: none;
-	}
+    html {
+        transition: none;
+    }
 
-	*,
-	*::before,
-	*::after {
-		animation-duration: 0.01ms !important;
-		animation-iteration-count: 1 !important;
-		transition-duration: 0.01ms !important;
-	}
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
 }
 
 /* Focus ring — in @layer base so Tailwind utilities (e.g. focus-visible:outline-none) can override */
 @layer base {
-	:focus-visible {
-		outline: 3px solid var(--color-accent);
-		outline-offset: 2px;
-		box-shadow:
-			0 0 0 2px var(--color-bg),
-			0 0 0 5px rgba(184, 110, 26, 0.3);
-	}
+    :focus-visible {
+        outline: 3px solid var(--color-accent);
+        outline-offset: 2px;
+        box-shadow:
+            0 0 0 2px var(--color-bg),
+            0 0 0 5px rgba(184, 110, 26, 0.3);
+    }
 
-	.dark :focus-visible {
-		outline-color: var(--color-accent);
-		box-shadow:
-			0 0 0 2px var(--color-bg),
-			0 0 0 5px rgba(218, 160, 78, 0.4);
-	}
+    .dark :focus-visible {
+        outline-color: var(--color-accent);
+        box-shadow:
+            0 0 0 2px var(--color-bg),
+            0 0 0 5px rgba(218, 160, 78, 0.4);
+    }
 
-	@media (prefers-contrast: more) {
-		:focus-visible {
-			outline-width: 4px;
-		}
-	}
+    @media (prefers-contrast: more) {
+        :focus-visible {
+            outline-width: 4px;
+        }
+    }
 }
 
 /* Base body styling */
 body {
-	background-color: var(--color-bg);
-	color: var(--color-text);
-	font-family: var(--font-sans);
-	-webkit-font-smoothing: antialiased;
-	-moz-osx-font-smoothing: grayscale;
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 /* Noise texture overlay — subtle stone grain */
 body::before {
-	content: '';
-	position: fixed;
-	inset: 0;
-	pointer-events: none;
-	z-index: 9999;
-	opacity: 0.025;
-	background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-	background-repeat: repeat;
-	background-size: 256px 256px;
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.025;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 256px 256px;
 }
 
 .dark body::before {
-	opacity: 0.04;
+    opacity: 0.04;
 }
 
 /* Strata line — decorative horizontal rule */
 .strata-line {
-	height: 1px;
-	background: linear-gradient(
-		90deg,
-		transparent 0%,
-		var(--color-border) 15%,
-		var(--color-border-strong) 50%,
-		var(--color-border) 85%,
-		transparent 100%
-	);
+    height: 1px;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        var(--color-border) 15%,
+        var(--color-border-strong) 50%,
+        var(--color-border) 85%,
+        transparent 100%
+    );
 }
 
 /* Strata card — the primary surface */
 .strata-card {
-	background-color: var(--color-surface-raised);
-	border: 1px solid var(--color-border);
-	border-radius: 8px;
-	position: relative;
+    background-color: var(--color-surface-raised);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    position: relative;
 }
 
 .strata-card::after {
-	content: '';
-	position: absolute;
-	inset: 0;
-	border-radius: 8px;
-	pointer-events: none;
-	background: var(--color-surface-overlay);
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 8px;
+    pointer-events: none;
+    background: var(--color-surface-overlay);
 }
 
 /* Strata badge — inline label */
 .strata-badge {
-	display: inline-flex;
-	align-items: center;
-	gap: 8px;
-	padding: 4px 12px;
-	border: 1px solid var(--color-border);
-	border-radius: 999px;
-	font-size: 0.75rem;
-	font-family: var(--font-mono);
-	color: var(--color-text-secondary);
-	background-color: var(--color-bg-secondary);
-	letter-spacing: 0.02em;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-family: var(--font-mono);
+    color: var(--color-text-secondary);
+    background-color: var(--color-bg-secondary);
+    letter-spacing: 0.02em;
 }
 
 /* Button variants */
 .btn-primary {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	gap: 8px;
-	padding: 12px 24px;
-	background-color: var(--color-accent);
-	color: #fff;
-	font-family: var(--font-sans);
-	font-weight: 500;
-	font-size: 0.875rem;
-	border-radius: 6px;
-	border: 1px solid transparent;
-	cursor: pointer;
-	transition: all var(--duration-fast) var(--ease-out-expo);
-	letter-spacing: 0.01em;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 24px;
+    background-color: var(--color-accent);
+    color: #fff;
+    font-family: var(--font-sans);
+    font-weight: 500;
+    font-size: 0.875rem;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all var(--duration-fast) var(--ease-out-expo);
+    letter-spacing: 0.01em;
 }
 
 .btn-primary:hover {
-	background-color: var(--color-accent-hover);
-	transform: translateY(-1px);
+    background-color: var(--color-accent-hover);
+    transform: translateY(-1px);
 }
 
 .btn-primary:active {
-	transform: translateY(0);
+    transform: translateY(0);
 }
 
 .btn-primary:disabled {
-	opacity: 0.5;
-	cursor: not-allowed;
-	transform: none;
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
 }
 
 .btn-ghost {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	gap: 8px;
-	min-height: 44px;
-	padding: 8px 16px;
-	color: var(--color-text-secondary);
-	font-family: var(--font-sans);
-	font-weight: 400;
-	font-size: 0.875rem;
-	border-radius: 6px;
-	border: 1px solid var(--color-border);
-	background: transparent;
-	cursor: pointer;
-	transition: all var(--duration-fast) var(--ease-out-expo);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 8px 16px;
+    color: var(--color-text-secondary);
+    font-family: var(--font-sans);
+    font-weight: 400;
+    font-size: 0.875rem;
+    border-radius: 6px;
+    border: 1px solid var(--color-border);
+    background: transparent;
+    cursor: pointer;
+    transition: all var(--duration-fast) var(--ease-out-expo);
 }
 
 .btn-ghost:hover {
-	background-color: var(--color-bg-tertiary);
-	color: var(--color-text);
-	border-color: var(--color-border-strong);
+    background-color: var(--color-bg-tertiary);
+    color: var(--color-text);
+    border-color: var(--color-border-strong);
 }
 
 .btn-ghost:disabled {
-	opacity: 0.5;
-	cursor: not-allowed;
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 /* Link style button */
 .btn-link {
-	display: inline-flex;
-	align-items: center;
-	gap: 4px;
-	min-height: 44px;
-	padding: 4px 4px;
-	color: var(--color-accent);
-	font-family: var(--font-sans);
-	font-weight: 500;
-	font-size: 0.875rem;
-	background: none;
-	border: none;
-	cursor: pointer;
-	transition: color var(--duration-fast) var(--ease-out-expo);
-	text-decoration: none;
-	border-bottom: 1px solid transparent;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 44px;
+    padding: 4px 4px;
+    color: var(--color-accent);
+    font-family: var(--font-sans);
+    font-weight: 500;
+    font-size: 0.875rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: color var(--duration-fast) var(--ease-out-expo);
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
 }
 
 .btn-link:hover {
-	color: var(--color-accent-hover);
-	border-bottom-color: var(--color-accent-hover);
+    color: var(--color-accent-hover);
+    border-bottom-color: var(--color-accent-hover);
 }
 
 /* Progress bar styling */
 .strata-progress-track {
-	height: 6px;
-	width: 100%;
-	overflow: hidden;
-	border-radius: 3px;
-	background-color: var(--color-bg-tertiary);
-	border: 1px solid var(--color-border);
+    height: 6px;
+    width: 100%;
+    overflow: hidden;
+    border-radius: 3px;
+    background-color: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border);
 }
 
 .strata-progress-fill {
-	height: 100%;
-	border-radius: 2px;
-	transition: width 300ms var(--ease-out-expo);
-	position: relative;
+    height: 100%;
+    border-radius: 2px;
+    transition: width 300ms var(--ease-out-expo);
+    position: relative;
 }
 
 .strata-progress-fill::after {
-	content: '';
-	position: absolute;
-	inset: 0;
-	background: linear-gradient(
-		90deg,
-		transparent 0%,
-		rgba(255, 255, 255, 0.15) 50%,
-		transparent 100%
-	);
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.15) 50%, transparent 100%);
 }
 
 /* Pulse dot for active states */
 @keyframes strata-pulse {
-	0%,
-	100% {
-		opacity: 1;
-	}
-	50% {
-		opacity: 0.4;
-	}
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.4;
+    }
 }
 
 .strata-pulse-dot {
-	width: 8px;
-	height: 8px;
-	border-radius: 50%;
-	animation: strata-pulse 2s ease-in-out infinite;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    animation: strata-pulse 2s ease-in-out infinite;
 }
 
 /* Fade-in animation */
 @keyframes strata-fade-in {
-	from {
-		opacity: 0;
-		transform: translateY(8px);
-	}
-	to {
-		opacity: 1;
-		transform: translateY(0);
-	}
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .strata-fade-in {
-	animation: strata-fade-in var(--duration-slow) var(--ease-out-expo) both;
+    animation: strata-fade-in var(--duration-slow) var(--ease-out-expo) both;
 }
 
 /* Stagger children */
 .strata-stagger > * {
-	animation: strata-fade-in var(--duration-slow) var(--ease-out-expo) both;
+    animation: strata-fade-in var(--duration-slow) var(--ease-out-expo) both;
 }
 
 .strata-stagger > *:nth-child(1) {
-	animation-delay: 0ms;
+    animation-delay: 0ms;
 }
 .strata-stagger > *:nth-child(2) {
-	animation-delay: 60ms;
+    animation-delay: 60ms;
 }
 .strata-stagger > *:nth-child(3) {
-	animation-delay: 120ms;
+    animation-delay: 120ms;
 }
 .strata-stagger > *:nth-child(4) {
-	animation-delay: 180ms;
+    animation-delay: 180ms;
 }
 .strata-stagger > *:nth-child(5) {
-	animation-delay: 240ms;
+    animation-delay: 240ms;
 }
 
 /* Chip toggle (for chart view modes) */
 .strata-chip {
-	display: inline-flex;
-	align-items: center;
-	min-height: 40px;
-	padding: 8px 16px;
-	font-family: var(--font-mono);
-	font-size: 0.75rem;
-	letter-spacing: 0.02em;
-	border-radius: 999px;
-	border: 1px solid var(--color-border);
-	color: var(--color-text-secondary);
-	background: transparent;
-	cursor: pointer;
-	transition: all var(--duration-fast) var(--ease-out-expo);
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+    padding: 8px 16px;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.02em;
+    border-radius: 999px;
+    border: 1px solid var(--color-border);
+    color: var(--color-text-secondary);
+    background: transparent;
+    cursor: pointer;
+    transition: all var(--duration-fast) var(--ease-out-expo);
 }
 
 .strata-chip:hover {
-	border-color: var(--color-border-strong);
-	color: var(--color-text);
+    border-color: var(--color-border-strong);
+    color: var(--color-text);
 }
 
 .strata-chip[aria-pressed='true'] {
-	background-color: var(--color-accent);
-	border-color: var(--color-accent);
-	color: #fff;
+    background-color: var(--color-accent);
+    border-color: var(--color-accent);
+    color: #fff;
 }
 
 /* Table styling */
 .strata-table {
-	width: 100%;
-	font-size: 0.875rem;
-	border-collapse: collapse;
+    width: 100%;
+    font-size: 0.875rem;
+    border-collapse: collapse;
 }
 
 .strata-table thead {
-	background-color: var(--color-bg-secondary);
+    background-color: var(--color-bg-secondary);
 }
 
 .strata-table th {
-	padding: 8px 12px;
-	font-family: var(--font-mono);
-	font-weight: 400;
-	font-size: 0.75rem;
-	letter-spacing: 0.05em;
-	text-transform: uppercase;
-	color: var(--color-text-tertiary);
-	border-bottom: 1px solid var(--color-border);
-	white-space: nowrap;
+    padding: 8px 12px;
+    font-family: var(--font-mono);
+    font-weight: 400;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--color-text-tertiary);
+    border-bottom: 1px solid var(--color-border);
+    white-space: nowrap;
 }
 
 .strata-table td {
-	padding: 8px 12px;
-	font-family: var(--font-mono);
-	font-variant-numeric: tabular-nums;
-	border-bottom: 1px solid var(--color-border);
-	color: var(--color-text);
+    padding: 8px 12px;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    border-bottom: 1px solid var(--color-border);
+    color: var(--color-text);
 }
 
 .strata-table tbody tr {
-	transition: background-color var(--duration-fast) ease;
+    transition: background-color var(--duration-fast) ease;
 }
 
 .strata-table tbody tr:hover {
-	background-color: var(--color-surface-overlay);
+    background-color: var(--color-surface-overlay);
 }
 
 .strata-table tbody tr:last-child td {
-	border-bottom: none;
+    border-bottom: none;
 }
 
 /* Hero decorative strata lines */
 @keyframes strata-lines-shift {
-	0% {
-		background-position: 0 0;
-	}
-	100% {
-		background-position: 0 -8px;
-	}
+    0% {
+        background-position: 0 0;
+    }
+    100% {
+        background-position: 0 -8px;
+    }
 }
 
 .strata-hero-lines {
-	position: absolute;
-	inset: 0;
-	pointer-events: none;
-	opacity: 0.06;
-	background-image: repeating-linear-gradient(
-		0deg,
-		var(--color-text) 0px,
-		var(--color-text) 1px,
-		transparent 1px,
-		transparent 8px
-	);
-	mask-image: radial-gradient(ellipse at 50% 50%, black 0%, transparent 70%);
-	/*noinspection CssInvalidPropertyValue*/
-	-webkit-mask-image: radial-gradient(ellipse at 50% 50%, black 0%, transparent 70%);
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.06;
+    background-image: repeating-linear-gradient(
+        0deg,
+        var(--color-text) 0px,
+        var(--color-text) 1px,
+        transparent 1px,
+        transparent 8px
+    );
+    mask-image: radial-gradient(ellipse at 50% 50%, black 0%, transparent 70%);
+    /*noinspection CssInvalidPropertyValue*/
+    -webkit-mask-image: radial-gradient(ellipse at 50% 50%, black 0%, transparent 70%);
 }
 
 /* tig→git letter swap animation in hero heading */
 @property --tig-swap {
-	syntax: '<number>';
-	initial-value: 0;
-	inherits: true;
+    syntax: '<number>';
+    initial-value: 0;
+    inherits: true;
 }
 
 .tig-group {
-	display: inline;
-	animation: tig-swap-anim 2s linear 5s forwards;
+    display: inline;
+    animation: tig-swap-anim 2s linear 5s forwards;
 }
 
 @keyframes tig-swap-anim {
-	to {
-		--tig-swap: 1;
-	}
+    to {
+        --tig-swap: 1;
+    }
 }
 
 .tig-char {
-	display: inline-block;
+    display: inline-block;
 }
 
 .tig-t {
-	/*noinspection CssUnresolvedCustomProperty*/
-	transform: translate(
-		calc(var(--tig-dt, 0px) * (1 - cos(calc(var(--tig-swap) * 180deg))) / 2),
-		calc(-0.4em * sin(calc(var(--tig-swap) * 180deg)))
-	);
+    /*noinspection CssUnresolvedCustomProperty*/
+    transform: translate(
+        calc(var(--tig-dt, 0px) * (1 - cos(calc(var(--tig-swap) * 180deg))) / 2),
+        calc(-0.4em * sin(calc(var(--tig-swap) * 180deg)))
+    );
 }
 
 .tig-g {
-	/*noinspection CssUnresolvedCustomProperty*/
-	transform: translate(
-		calc(var(--tig-dg, 0px) * (cos(calc(var(--tig-swap) * 180deg)) - 1) / 2),
-		calc(0.4em * sin(calc(var(--tig-swap) * 180deg)))
-	);
+    /*noinspection CssUnresolvedCustomProperty*/
+    transform: translate(
+        calc(var(--tig-dg, 0px) * (cos(calc(var(--tig-swap) * 180deg)) - 1) / 2),
+        calc(0.4em * sin(calc(var(--tig-swap) * 180deg)))
+    );
 }
 
 .tig-i {
-	/*noinspection CssUnresolvedCustomProperty*/
-	transform: translateX(calc(var(--tig-di, 0px) * (1 - cos(calc(var(--tig-swap) * 180deg))) / 2));
+    /*noinspection CssUnresolvedCustomProperty*/
+    transform: translateX(calc(var(--tig-di, 0px) * (1 - cos(calc(var(--tig-swap) * 180deg))) / 2));
 }
 
 /* Scrollbar styling for tables */
 .strata-scroll::-webkit-scrollbar {
-	height: 6px;
+    height: 6px;
 }
 
 .strata-scroll::-webkit-scrollbar-track {
-	background: var(--color-bg-tertiary);
-	border-radius: 3px;
+    background: var(--color-bg-tertiary);
+    border-radius: 3px;
 }
 
 .strata-scroll::-webkit-scrollbar-thumb {
-	background: var(--color-border-strong);
-	border-radius: 3px;
+    background: var(--color-border-strong);
+    border-radius: 3px;
 }
 
 .strata-scroll::-webkit-scrollbar-thumb:hover {
-	background: var(--color-text-tertiary);
+    background: var(--color-text-tertiary);
 }
 
 /* Phase log — vertical step indicator */
 .phase-log {
-	list-style: none;
-	padding: 0;
-	margin: 0;
+    list-style: none;
+    padding: 0;
+    margin: 0;
 }
 
 .phase-row {
-	display: grid;
-	grid-template-columns: 16px 1fr;
-	column-gap: 12px;
+    display: grid;
+    grid-template-columns: 16px 1fr;
+    column-gap: 12px;
 }
 
 .phase-indicator {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 .phase-dot {
-	width: 16px;
-	height: 16px;
-	border-radius: 50%;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	flex-shrink: 0;
-	transition: all var(--duration-fast) var(--ease-out-expo);
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all var(--duration-fast) var(--ease-out-expo);
 }
 
 .phase-dot--done {
-	background-color: var(--color-success);
-	color: #fff;
+    background-color: var(--color-success);
+    color: #fff;
 }
 
 .phase-dot--active {
-	background-color: var(--color-accent);
-	animation: strata-pulse 2s ease-in-out infinite;
+    background-color: var(--color-accent);
+    animation: strata-pulse 2s ease-in-out infinite;
 }
 
 .phase-dot--pending {
-	background-color: transparent;
-	border: 1.5px solid var(--color-border);
+    background-color: transparent;
+    border: 1.5px solid var(--color-border);
 }
 
 .phase-connector {
-	width: 1.5px;
-	flex: 1;
-	background-color: var(--color-border);
-	transition: background-color var(--duration-fast) var(--ease-out-expo);
+    width: 1.5px;
+    flex: 1;
+    background-color: var(--color-border);
+    transition: background-color var(--duration-fast) var(--ease-out-expo);
 }
 
 .phase-connector--done {
-	background-color: var(--color-success);
+    background-color: var(--color-success);
 }
 
 .phase-content {
-	padding-bottom: 12px;
-	min-height: 28px;
+    padding-bottom: 12px;
+    min-height: 28px;
 }
 
 .phase-content--last {
-	padding-bottom: 0;
+    padding-bottom: 0;
 }
 
 .phase-header {
-	display: flex;
-	align-items: baseline;
-	justify-content: space-between;
-	gap: 12px;
-	min-height: 16px;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 16px;
 }
 
 .phase-label {
-	font-family: var(--font-sans);
-	font-size: 0.75rem;
-	font-weight: 500;
-	letter-spacing: 0.01em;
-	white-space: nowrap;
+    font-family: var(--font-sans);
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
 }
 
 .phase-label--done {
-	color: var(--color-success);
+    color: var(--color-success);
 }
 
 .phase-label--active {
-	color: var(--color-text);
+    color: var(--color-text);
 }
 
 .phase-label--pending {
-	color: var(--color-text-tertiary);
+    color: var(--color-text-tertiary);
 }
 
 .phase-detail {
-	font-family: var(--font-mono);
-	font-size: 0.75rem;
-	font-variant-numeric: tabular-nums;
-	letter-spacing: 0.02em;
-	color: var(--color-text-tertiary);
-	white-space: nowrap;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+    color: var(--color-text-tertiary);
+    white-space: nowrap;
 }
 
 .phase-eta {
-	display: block;
-	margin-top: 4px;
-	font-family: var(--font-mono);
-	font-size: 0.75rem;
-	font-variant-numeric: tabular-nums;
-	letter-spacing: 0.02em;
-	color: var(--color-text-tertiary);
+    display: block;
+    margin-top: 4px;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+    color: var(--color-text-tertiary);
 }
 
 /* Phase label group — wraps label, elapsed time, and info icon inline */
 .phase-label-group {
-	display: flex;
-	align-items: baseline;
-	gap: 8px;
-	flex-shrink: 1;
-	min-width: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex-shrink: 1;
+    min-width: 0;
 }
 
 /* Per-phase elapsed time */
 .phase-elapsed {
-	font-family: var(--font-mono);
-	font-size: 0.75rem;
-	font-variant-numeric: tabular-nums;
-	letter-spacing: 0.02em;
-	white-space: nowrap;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
 }
 
 .phase-elapsed--active {
-	color: var(--color-accent);
+    color: var(--color-accent);
 }
 
 .phase-elapsed--done {
-	color: var(--color-text-tertiary);
+    color: var(--color-text-tertiary);
 }
 
 /* Info icon button */
 .phase-info-anchor {
-	position: relative;
-	display: inline-flex;
-	align-items: center;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
 }
 
 .phase-info-btn {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	width: 20px;
-	height: 20px;
-	padding: 0;
-	border: none;
-	background: none;
-	color: var(--color-text-tertiary);
-	cursor: pointer;
-	border-radius: 50%;
-	transition: color var(--duration-fast) var(--ease-out-expo);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--color-text-tertiary);
+    cursor: pointer;
+    border-radius: 50%;
+    transition: color var(--duration-fast) var(--ease-out-expo);
 }
 
 .phase-info-btn:hover {
-	color: var(--color-accent);
+    color: var(--color-accent);
 }
 
 /* Fade-in animation for info icon when phase becomes active */
 @keyframes phase-info-appear {
-	from {
-		opacity: 0;
-	}
-	to {
-		opacity: 1;
-	}
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
 }
 
 .phase-info-fade-in {
-	animation: phase-info-appear var(--duration-slow) var(--ease-out-expo) both;
+    animation: phase-info-appear var(--duration-slow) var(--ease-out-expo) both;
 }
 
 /* Info popup */
 .phase-info-popup {
-	position: absolute;
-	top: calc(100% + 8px);
-	left: -4px;
-	z-index: 10;
-	width: 320px;
-	padding: 12px 16px;
-	background-color: var(--color-surface-raised);
-	border: 1px solid var(--color-border);
-	border-radius: 8px;
-	animation: strata-fade-in var(--duration-fast) var(--ease-out-expo) both;
+    position: absolute;
+    top: calc(100% + 8px);
+    left: -4px;
+    z-index: 10;
+    width: 320px;
+    padding: 12px 16px;
+    background-color: var(--color-surface-raised);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    animation: strata-fade-in var(--duration-fast) var(--ease-out-expo) both;
 }
 
 .phase-info-popup p {
-	margin: 0 0 8px;
-	font-family: var(--font-sans);
-	font-size: 0.75rem;
-	line-height: 1.5;
-	color: var(--color-text-secondary);
+    margin: 0 0 8px;
+    font-family: var(--font-sans);
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: var(--color-text-secondary);
 }
 
 .phase-info-popup p:last-child {
-	margin-bottom: 0;
+    margin-bottom: 0;
 }
 
 .phase-info-popup strong {
-	color: var(--color-text);
-	font-weight: 600;
+    color: var(--color-text);
+    font-weight: 600;
 }
 
 .phase-info-stat {
-	display: inline-flex;
-	align-items: center;
-	gap: 4px;
-	margin-top: 8px;
-	padding: 4px 12px;
-	font-family: var(--font-mono);
-	font-size: 0.75rem;
-	font-variant-numeric: tabular-nums;
-	letter-spacing: 0.02em;
-	color: var(--color-text-secondary);
-	background-color: var(--color-bg-secondary);
-	border: 1px solid var(--color-border);
-	border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 8px;
+    padding: 4px 12px;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+    color: var(--color-text-secondary);
+    background-color: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
 }
 
 .phase-info-stat-value {
-	color: var(--color-accent);
-	font-weight: 500;
+    color: var(--color-accent);
+    font-weight: 500;
 }
 
 /* Footer total time */
 .phase-footer-time {
-	display: inline-flex;
-	align-items: baseline;
-	gap: 4px;
-	font-size: 0.75rem;
-	letter-spacing: 0.02em;
-	color: var(--color-text-tertiary);
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+    font-size: 0.75rem;
+    letter-spacing: 0.02em;
+    color: var(--color-text-tertiary);
 }
 
 .phase-footer-label {
-	font-family: var(--font-sans);
+    font-family: var(--font-sans);
 }
 
 .phase-footer-value {
-	font-family: var(--font-mono);
-	font-variant-numeric: tabular-nums;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
 }
 
 /* Stratigraphy tooltip trigger — dotted underline on hero heading */
 .strat-trigger {
-	background: none;
-	border: none;
-	padding: 0;
-	margin: 0;
-	font: inherit;
-	color: inherit;
-	letter-spacing: inherit;
-	line-height: inherit;
-	text-align: inherit;
-	cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    color: inherit;
+    letter-spacing: inherit;
+    line-height: inherit;
+    text-align: inherit;
+    cursor: pointer;
 }
 
 .strat-underline {
-	text-decoration: underline dotted;
-	text-decoration-color: var(--color-accent-muted);
-	text-underline-offset: 6px;
-	text-decoration-thickness: 1.5px;
-	text-decoration-skip-ink: none;
+    text-decoration: underline dotted;
+    text-decoration-color: var(--color-accent-muted);
+    text-underline-offset: 6px;
+    text-decoration-thickness: 1.5px;
+    text-decoration-skip-ink: none;
 }
 
 /* Stratigraphy tooltip */
 .strat-tooltip {
-	position: absolute;
-	top: calc(100% + 8px);
-	left: 50%;
-	transform: translateX(-50%);
-	width: min(400px, calc(100vw - 32px));
-	padding: 16px 20px;
-	background-color: var(--color-surface-raised);
-	border: 1px solid var(--color-border);
-	border-radius: 8px;
-	text-align: left;
-	z-index: 10;
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(400px, calc(100vw - 32px));
+    padding: 16px 20px;
+    background-color: var(--color-surface-raised);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    text-align: left;
+    z-index: 10;
 }
 
 .strat-tooltip p {
-	margin: 0;
-	font-family: var(--font-sans);
-	font-size: 0.875rem;
-	line-height: 1.6;
-	color: var(--color-text-secondary);
-	font-weight: 400;
+    margin: 0;
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    line-height: 1.6;
+    color: var(--color-text-secondary);
+    font-weight: 400;
 }
 
 .strat-tooltip strong {
-	color: var(--color-text);
-	font-weight: 600;
+    color: var(--color-text);
+    font-weight: 600;
 }
 
 .strat-tooltip code {
-	font-family: var(--font-mono);
-	font-size: 0.875rem;
-	padding: 1px 5px;
-	background-color: var(--color-bg-secondary);
-	border: 1px solid var(--color-border);
-	border-radius: 3px;
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+    padding: 1px 5px;
+    background-color: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: 3px;
 }
 
 .strat-tooltip-ref {
-	font-size: 0.75rem;
-	color: var(--color-text-tertiary);
+    font-size: 0.75rem;
+    color: var(--color-text-tertiary);
 }
 
 .strat-tooltip .strat-tooltip-source {
-	margin-top: 4px;
-	font-size: 0.75rem;
-	color: var(--color-text-tertiary);
-	font-style: italic;
+    margin-top: 4px;
+    font-size: 0.75rem;
+    color: var(--color-text-tertiary);
+    font-style: italic;
 }
 
 .strat-tooltip-source a {
-	color: var(--color-accent);
-	text-decoration: none;
+    color: var(--color-accent);
+    text-decoration: none;
 }
 
 .strat-tooltip-source a:hover {
-	text-decoration: underline;
+    text-decoration: underline;
 }
 
 .strat-tooltip-divider {
-	border: none;
-	border-top: 1px solid var(--color-border);
-	margin: 12px 0;
+    border: none;
+    border-top: 1px solid var(--color-border);
+    margin: 12px 0;
 }

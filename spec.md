@@ -97,9 +97,9 @@ After the user submits a repo URL:
 
 - The input area stays visible at the top (user can cancel and enter a different repo).
 - Below it, a **progress section** appears:
-  - Progress bar with bytes received (for example: "Downloading... 12.4 MB / ~38 MB")
-  - Elapsed time
-  - "Cancel" button that immediately stops the clone and cleans up
+    - Progress bar with bytes received (for example: "Downloading... 12.4 MB / ~38 MB")
+    - Elapsed time
+    - "Cancel" button that immediately stops the clone and cleans up
 - If the repo was previously analyzed and cached, skip to phase 3 with a "Last analyzed: YYYY-MM-DD" badge and a
   "Refresh" button to re-clone.
 
@@ -107,18 +107,18 @@ After the user submits a repo URL:
 
 ```ts
 await git.clone({
-	fs,
-	http,
-	dir: `/${repoId}`,
-	url: repoUrl,
-	corsProxy: CORS_PROXY_URL,
-	singleBranch: true,
-	ref: defaultBranch, // 'main' or 'master', detect via git.getRemoteInfo2 first
-	onProgress: (event) => {
-		/* update progress bar */
-	},
-	onAuth: () => ({ cancel: true }) // public repos only for now — fail fast on auth
-});
+    fs,
+    http,
+    dir: `/${repoId}`,
+    url: repoUrl,
+    corsProxy: CORS_PROXY_URL,
+    singleBranch: true,
+    ref: defaultBranch, // 'main' or 'master', detect via git.getRemoteInfo2 first
+    onProgress: (event) => {
+        /* update progress bar */
+    },
+    onAuth: () => ({ cancel: true }), // public repos only for now — fail fast on auth
+})
 ```
 
 **Default branch detection:** Before cloning, call `git.getRemoteInfo2({ http, corsProxy, url })` to discover the
@@ -129,9 +129,9 @@ default branch (`HEAD` symref). This avoids hardcoding `main`.
 After the clone is complete (or was cached):
 
 - Progress bar updates to show commit processing:
-  - "Processing commits... 142 / 387"
-  - Estimated time remaining (based on running average of time per commit)
-  - "Cancel" button
+    - "Processing commits... 142 / 387"
+    - Estimated time remaining (based on running average of time per commit)
+    - "Cancel" button
 - A **live preview chart** starts rendering as results come in — each processed day adds a data point. This gives the
   user something to look at while processing continues.
 
@@ -180,14 +180,14 @@ always gets light gray. Each language also gets a lighter tint for its test laye
 
 #### Data table (below the chart)
 
-A sortable table with one row per date and dynamic columns based on detected languages (matching the chart layers).
-Show a "Copy CSV" button and a "Download CSV" button. CSV columns: `date`, then one column per displayed language
-(using the same ≥5% threshold), then `other`, then `total`.
+A sortable table with one row per date and dynamic columns based on detected languages (matching the chart layers). Show
+a "Copy CSV" button and a "Download CSV" button. CSV columns: `date`, then one column per displayed language (using the
+same ≥5% threshold), then `other`, then `total`.
 
 #### Share
 
-A "Copy link" button that copies the current URL (which has `?repo=...`). When someone opens that link, the app
-loads the landing page, starts analyzing immediately, and shows results (or cached results).
+A "Copy link" button that copies the current URL (which has `?repo=...`). When someone opens that link, the app loads
+the landing page, starts analyzing immediately, and shows results (or cached results).
 
 ## Language registry
 
@@ -197,32 +197,32 @@ support a new language, just add an entry to the registry.
 
 ```ts
 interface LanguageDefinition {
-	/** Unique identifier, used as map key (e.g. 'python', 'cpp', 'rust') */
-	id: string;
-	/** Display name (e.g. 'Python', 'C++', 'Rust') */
-	name: string;
-	/** File extensions including the dot (e.g. ['.py', '.pyw']) */
-	extensions: string[];
-	/**
-	 * Optional: filename patterns that identify test files for this language.
-	 * Glob-style patterns matched against the basename.
-	 * Example for Python: ['test_*.py', '*_test.py', 'conftest.py']
-	 * Example for Go: ['*_test.go']
-	 */
-	testFilePatterns?: string[];
-	/**
-	 * Optional: directory names that indicate test code.
-	 * Falls back to the global defaults: ['test', 'tests', '__tests__', 'e2e', 'testutil', 'testdata']
-	 */
-	testDirPatterns?: string[];
-	/**
-	 * Optional: a function that counts inline test lines within a prod file.
-	 * Used for languages like Rust where tests live inside prod files (#[cfg(test)] blocks).
-	 * Returns the number of lines that should be classified as test code.
-	 */
-	countInlineTestLines?: (content: string) => number;
-	/** Whether this is a "meta" category (like Docs or Config) rather than a programming language */
-	isMeta?: boolean;
+    /** Unique identifier, used as map key (e.g. 'python', 'cpp', 'rust') */
+    id: string
+    /** Display name (e.g. 'Python', 'C++', 'Rust') */
+    name: string
+    /** File extensions including the dot (e.g. ['.py', '.pyw']) */
+    extensions: string[]
+    /**
+     * Optional: filename patterns that identify test files for this language.
+     * Glob-style patterns matched against the basename.
+     * Example for Python: ['test_*.py', '*_test.py', 'conftest.py']
+     * Example for Go: ['*_test.go']
+     */
+    testFilePatterns?: string[]
+    /**
+     * Optional: directory names that indicate test code.
+     * Falls back to the global defaults: ['test', 'tests', '__tests__', 'e2e', 'testutil', 'testdata']
+     */
+    testDirPatterns?: string[]
+    /**
+     * Optional: a function that counts inline test lines within a prod file.
+     * Used for languages like Rust where tests live inside prod files (#[cfg(test)] blocks).
+     * Returns the number of lines that should be classified as test code.
+     */
+    countInlineTestLines?: (content: string) => number
+    /** Whether this is a "meta" category (like Docs or Config) rather than a programming language */
+    isMeta?: boolean
 }
 ```
 
@@ -279,39 +279,39 @@ first match in registry order wins (but this is unlikely in practice).
 ```ts
 /** Line counts for a single language in a single day */
 interface LanguageCount {
-	/** Total lines (prod + test) */
-	total: number;
-	/** Lines classified as production code (undefined if no prod/test heuristic exists) */
-	prod?: number;
-	/** Lines classified as test code (undefined if no prod/test heuristic exists) */
-	test?: number;
+    /** Total lines (prod + test) */
+    total: number
+    /** Lines classified as production code (undefined if no prod/test heuristic exists) */
+    prod?: number
+    /** Lines classified as test code (undefined if no prod/test heuristic exists) */
+    test?: number
 }
 
 /** One row per calendar date */
 interface DayStats {
-	date: string; // 'YYYY-MM-DD'
-	total: number; // Sum of all languages
-	languages: Record<string, LanguageCount>; // Keyed by language id (e.g. 'python', 'rust')
-	comments: string[]; // Commit messages for this day
+    date: string // 'YYYY-MM-DD'
+    total: number // Sum of all languages
+    languages: Record<string, LanguageCount> // Keyed by language id (e.g. 'python', 'rust')
+    comments: string[] // Commit messages for this day
 }
 
 /** Full analysis result, stored in cache */
 interface AnalysisResult {
-	repoUrl: string;
-	defaultBranch: string;
-	analyzedAt: string; // ISO 8601
-	/** Language ids that appear in this result, sorted by final-day line count descending */
-	detectedLanguages: string[];
-	days: DayStats[];
+    repoUrl: string
+    defaultBranch: string
+    analyzedAt: string // ISO 8601
+    /** Language ids that appear in this result, sorted by final-day line count descending */
+    detectedLanguages: string[]
+    days: DayStats[]
 }
 
 /** Progress updates from the worker */
 type ProgressEvent =
-	| { type: 'clone'; phase: string; loaded: number; total: number }
-	| { type: 'process'; current: number; total: number; date: string }
-	| { type: 'day-result'; day: DayStats } // for live chart preview
-	| { type: 'done'; result: AnalysisResult }
-	| { type: 'error'; message: string };
+    | { type: 'clone'; phase: string; loaded: number; total: number }
+    | { type: 'process'; current: number; total: number; date: string }
+    | { type: 'day-result'; day: DayStats } // for live chart preview
+    | { type: 'done'; result: AnalysisResult }
+    | { type: 'error'; message: string }
 ```
 
 ## CORS proxy
@@ -329,8 +329,8 @@ A minimal Cloudflare Worker using Hono. Lives in a `cors-proxy/` directory with 
 - Rate limit: max 100 requests per minute per IP (use Cloudflare's built-in rate limiting)
 - Reject requests to non-git URLs for security (only allow paths containing `/info/refs` or `/git-upload-pack`)
 
-**For local development:** Use the public `https://cors.isomorphic-git.org` proxy so devs don't need to deploy a
-Worker locally.
+**For local development:** Use the public `https://cors.isomorphic-git.org` proxy so devs don't need to deploy a Worker
+locally.
 
 The proxy should be deployable with a single `pnpm run deploy` from the `cors-proxy/` directory.
 
@@ -344,7 +344,7 @@ Use `git.log()` to get all commits on the default branch. Group by date (YYYY-MM
 day but collect all commit messages.
 
 ```ts
-const commits = await git.log({ fs, dir, ref: defaultBranch });
+const commits = await git.log({ fs, dir, ref: defaultBranch })
 // Group by date, keep first (latest) hash per date
 ```
 
@@ -353,20 +353,20 @@ const commits = await git.log({ fs, dir, ref: defaultBranch });
 For each day (in chronological order — important for live chart preview):
 
 1. `git.readTree({ fs, dir, oid: commitHash })` — get the recursive file tree
-   - Actually: resolve commit → tree, then walk recursively with `git.readTree`
+    - Actually: resolve commit → tree, then walk recursively with `git.readTree`
 2. For each file entry in the tree:
-   - Skip files matching `skipPatterns` (lock files, binary extensions — see `stats.go` for the base list)
-   - `git.readBlob({ fs, dir, oid: blobOid })` — get file content
-   - Skip binary content (check for null bytes in the first 8000 bytes)
-   - Match the file extension against the language registry to determine the language id
-   - Count total lines (count `\n` characters; add one if content doesn't end with `\n`)
-   - Determine prod vs test:
-     1. If the language has `countInlineTestLines`, call it to split inline test lines from prod
-     2. Else if the file matches the language's `testFilePatterns`, classify all lines as test
-     3. Else if any path segment matches `testDirPatterns` (or the global defaults), classify all lines as test
-     4. Otherwise, classify all lines as prod
-   - Accumulate into `DayStats.languages[languageId]`
-   - Files whose extension matches no registry entry go into the `"other"` bucket
+    - Skip files matching `skipPatterns` (lock files, binary extensions — see `stats.go` for the base list)
+    - `git.readBlob({ fs, dir, oid: blobOid })` — get file content
+    - Skip binary content (check for null bytes in the first 8000 bytes)
+    - Match the file extension against the language registry to determine the language id
+    - Count total lines (count `\n` characters; add one if content doesn't end with `\n`)
+    - Determine prod vs test:
+        1. If the language has `countInlineTestLines`, call it to split inline test lines from prod
+        2. Else if the file matches the language's `testFilePatterns`, classify all lines as test
+        3. Else if any path segment matches `testDirPatterns` (or the global defaults), classify all lines as test
+        4. Otherwise, classify all lines as prod
+    - Accumulate into `DayStats.languages[languageId]`
+    - Files whose extension matches no registry entry go into the `"other"` bucket
 3. Send a `day-result` progress event to the main thread so the chart updates live
 
 ### Step 3: Fill date gaps
@@ -379,8 +379,8 @@ For dates between the first and last commit that have no commits, carry forward 
 ### Performance optimization: blob deduplication
 
 Many files don't change between commits. The same blob OID appears across many days. **Cache blob content by OID** in
-the worker's memory to avoid redundant reads from IndexedDB. This is the single biggest optimization — it mirrors the
-Go tool's use of `git cat-file --batch` which deduplicates naturally.
+the worker's memory to avoid redundant reads from IndexedDB. This is the single biggest optimization — it mirrors the Go
+tool's use of `git cat-file --batch` which deduplicates naturally.
 
 Also cache the _line count and category_ per `(blobOid, filePath)` tuple, not just the content. That way, if the same
 blob appears in the same path across multiple commits, you skip both the read and the count.
@@ -396,8 +396,8 @@ already there. Use `git.fetch()` instead of `git.clone()` to pull only new commi
 
 **Cache key:** Repository URL (normalized: strip `.git` suffix, lowercase).
 
-**Eviction:** Store a list of cached repos with last-access timestamps. If total IndexedDB usage exceeds 500 MB,
-evict the least recently used repo. Show a "Manage cache" option in the UI footer where users can clear specific repos.
+**Eviction:** Store a list of cached repos with last-access timestamps. If total IndexedDB usage exceeds 500 MB, evict
+the least recently used repo. Show a "Manage cache" option in the UI footer where users can clear specific repos.
 
 ### 2. Results cache (IndexedDB, separate store)
 
@@ -407,13 +407,13 @@ After processing, store the `AnalysisResult` in a separate IndexedDB object stor
 2. Display "Last analyzed: YYYY-MM-DD" badge
 3. Offer a "Refresh" button that fetches new commits, processes only the new days, and appends to the cached result
 
-This "incremental refresh" is a great UX win: if a user analyzed a repo last week, refreshing only needs to process
-the last 7 days of commits instead of the entire history.
+This "incremental refresh" is a great UX win: if a user analyzed a repo last week, refreshing only needs to process the
+last 7 days of commits instead of the entire history.
 
 ## Accessibility
 
-- **Chart:** Include a visually hidden summary (`aria-label`) on the canvas describing the trend (for example:
-  "Stacked area chart showing 42,000 lines of code across 12 languages over 2 years").
+- **Chart:** Include a visually hidden summary (`aria-label`) on the canvas describing the trend (for example: "Stacked
+  area chart showing 42,000 lines of code across 12 languages over 2 years").
 - **Data table:** Always present below the chart as an accessible alternative. Use proper `<th>` and `scope` attributes.
 - **Color blindness:** Use a palette tested against protanopia, deuteranopia, and tritanopia. Add pattern fills
   (stripes, dots) as a toggleable option.
@@ -462,9 +462,9 @@ pnpm build    # outputs to build/
 Configure in `svelte.config.js`:
 
 ```js
-import adapter from '@sveltejs/adapter-static';
+import adapter from '@sveltejs/adapter-static'
 
-export default { kit: { adapter: adapter() } };
+export default { kit: { adapter: adapter() } }
 ```
 
 ### CORS proxy
@@ -560,8 +560,10 @@ For local dev, `PUBLIC_CORS_PROXY_URL` defaults to `https://cors.isomorphic-git.
 - [ ] Implement `clone.ts`: clone/fetch with isomorphic-git + lightning-fs, progress callbacks, cancellation
 - [ ] Implement default branch detection via `git.getRemoteInfo2`
 - [ ] Implement `history.ts`: `git.log()` → group by date, collect messages, generate consecutive dates
-- [ ] Implement `languages.ts`: language registry with ~35 language definitions (extensions, test patterns, inline detectors)
-- [ ] Implement `count.ts`: line counting, extension-based language matching, prod/test classification using the registry
+- [ ] Implement `languages.ts`: language registry with ~35 language definitions (extensions, test patterns, inline
+      detectors)
+- [ ] Implement `count.ts`: line counting, extension-based language matching, prod/test classification using the
+      registry
 - [ ] Implement Rust `#[cfg(test)]` inline test detector (as a `countInlineTestLines` function in the registry)
 - [ ] Implement blob content caching (by OID) in worker memory for deduplication
 - [ ] Wire up the full pipeline: clone → log → process → return `AnalysisResult`

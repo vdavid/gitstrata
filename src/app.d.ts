@@ -1,13 +1,13 @@
-declare module 'chartjs-adapter-date-fns';
+declare module 'chartjs-adapter-date-fns'
 
 // See https://svelte.dev/docs/kit/types#app
 // for information about these interfaces
 declare global {
-	namespace App {
-		// interface Error {}
-		// interface Locals {}
-		// interface PageData {}
-		// interface PageState {}
-		// interface Platform {}
-	}
+    namespace App {
+        // interface Error {}
+        // interface Locals {}
+        // interface PageData {}
+        // interface PageState {}
+        // interface Platform {}
+    }
 }

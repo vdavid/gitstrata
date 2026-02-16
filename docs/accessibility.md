@@ -104,8 +104,8 @@ After reaching AA compliance:
 
 1. **Add to CI** -- integrate axe-core into automated tests, keep Svelte a11y warnings enabled
 2. **Quarterly reviews** -- run automated + manual testing, update docs as needed
-3. **New feature checklist** -- must pass axe-core, support keyboard nav, work with screen readers,
-   meet contrast requirements, and respect motion preferences
+3. **New feature checklist** -- must pass axe-core, support keyboard nav, work with screen readers, meet contrast
+   requirements, and respect motion preferences
 
 ## Resources
 
@@ -115,6 +115,5 @@ After reaching AA compliance:
 
 ## Status
 
-**Current compliance:** 72% WCAG 2.1 Level AA
-**Target:** 100% WCAG 2.1 Level AA
-**Estimated effort:** 17--23 hours over two to three weeks
+**Current compliance:** 72% WCAG 2.1 Level AA **Target:** 100% WCAG 2.1 Level AA **Estimated effort:** 17--23 hours over
+two to three weeks

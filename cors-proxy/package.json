@@ -1,20 +1,20 @@
 {
-	"name": "git-strata-cors-proxy",
-	"private": true,
-	"type": "module",
-	"packageManager": "pnpm@10.29.2",
-	"scripts": {
-		"preinstall": "node -e \"if(!/pnpm/.test(process.env.npm_config_user_agent))throw new Error('Use pnpm to install dependencies')\"",
-		"dev": "wrangler dev",
-		"deploy": "wrangler deploy",
-		"test": "vitest run"
-	},
-	"dependencies": {
-		"hono": "^4.11.9"
-	},
-	"devDependencies": {
-		"@cloudflare/workers-types": "^4.20260214.0",
-		"vitest": "^4.0.18",
-		"wrangler": "^4.65.0"
-	}
+    "name": "git-strata-cors-proxy",
+    "private": true,
+    "type": "module",
+    "packageManager": "pnpm@10.29.2",
+    "scripts": {
+        "preinstall": "node -e \"if(!/pnpm/.test(process.env.npm_config_user_agent))throw new Error('Use pnpm to install dependencies')\"",
+        "dev": "wrangler dev",
+        "deploy": "wrangler deploy",
+        "test": "vitest run"
+    },
+    "dependencies": {
+        "hono": "^4.11.9"
+    },
+    "devDependencies": {
+        "@cloudflare/workers-types": "^4.20260214.0",
+        "vitest": "^4.0.18",
+        "wrangler": "^4.65.0"
+    }
 }

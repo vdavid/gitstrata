@@ -1,8 +1,8 @@
 # Visual language
 
-git strata's design system, documented from the codebase. The metaphor is **geological stratigraphy** — layers of
-rock, mineral colors, warm stone surfaces, and subtle grain texture. The interface should feel like reading a
-well-formatted field notebook: warm, precise, and honest.
+git strata's design system, documented from the codebase. The metaphor is **geological stratigraphy** — layers of rock,
+mineral colors, warm stone surfaces, and subtle grain texture. The interface should feel like reading a well-formatted
+field notebook: warm, precise, and honest.
 
 ## Color system
 
@@ -33,8 +33,8 @@ All colors live as CSS custom properties on `:root` (light) and `.dark` (dark). 
 
 ### Chart palette
 
-12 named mineral/geological colors plus an "other" bucket. Each has a main variant (production code) and a tint
-(test layers or dark-mode fill).
+12 named mineral/geological colors plus an "other" bucket. Each has a main variant (production code) and a tint (test
+layers or dark-mode fill).
 
 | Index | Name              | Light main | Dark main |
 | ----- | ----------------- | ---------- | --------- |
@@ -52,8 +52,8 @@ All colors live as CSS custom properties on `:root` (light) and `.dark` (dark). 
 | 12    | Azurite           | `#2e7090`  | `#5a9ec0` |
 | other | Limestone         | `#b0a898`  | `#6b6358` |
 
-Chart colors are accessed via `--chart-N` (main) and `--chart-N-tint` (test/secondary fill). Languages
-with < 5% share at the latest data point are bucketed into "other."
+Chart colors are accessed via `--chart-N` (main) and `--chart-N-tint` (test/secondary fill). Languages with < 5% share
+at the latest data point are bucketed into "other."
 
 ## Typography
 
@@ -137,15 +137,14 @@ All animations respect `prefers-reduced-motion: reduce` (set to 0.01ms duration)
 | Input          | `<input>`                | `--color-surface-raised`     | 1px `--color-border`, 6px radius |
 | Progress track | `.strata-progress-track` | `--color-bg-tertiary`        | 1px `--color-border`, 3px radius |
 
-A subtle **noise texture** (`body::before`) gives all surfaces a stone grain feel at very low opacity
-(2.5% light, 4% dark).
+A subtle **noise texture** (`body::before`) gives all surfaces a stone grain feel at very low opacity (2.5% light, 4%
+dark).
 
 ### Decorative elements
 
-- **Strata line** (`.strata-line`): 1px horizontal gradient that fades at both ends. Used as header/footer
-  separator.
-- **Hero lines** (`.strata-hero-lines`): Repeating horizontal lines with radial mask, shifted with a slow
-  animation. Background texture for the hero section.
+- **Strata line** (`.strata-line`): 1px horizontal gradient that fades at both ends. Used as header/footer separator.
+- **Hero lines** (`.strata-hero-lines`): Repeating horizontal lines with radial mask, shifted with a slow animation.
+  Background texture for the hero section.
 
 ## Component patterns
 
@@ -163,27 +162,26 @@ All buttons have `:disabled` state at 50% opacity with `cursor: not-allowed`.
 
 ### Badge
 
-`.strata-badge`: Pill-shaped (`border-radius: 999px`), mono font, 0.75rem, with icon + text. Used for status
-indicators like "Last analyzed: 2025-01-15."
+`.strata-badge`: Pill-shaped (`border-radius: 999px`), mono font, 0.75rem, with icon + text. Used for status indicators
+like "Last analyzed: 2025-01-15."
 
 ### Chip toggle
 
-`.strata-chip`: Pill-shaped toggle buttons for chart view modes. `aria-pressed="true"` state fills with accent
-color and white text.
+`.strata-chip`: Pill-shaped toggle buttons for chart view modes. `aria-pressed="true"` state fills with accent color and
+white text.
 
 ### Cards
 
-`.strata-card`: The primary container. White/raised surface, 1px border, 8px radius, with a subtle overlay
-`::after` pseudo-element. Used for: summary stat cards (compact: `px-4 py-3.5`), progress panel (`p-5`),
-chart container, data table wrapper, error alerts, cache manager.
+`.strata-card`: The primary container. White/raised surface, 1px border, 8px radius, with a subtle overlay `::after`
+pseudo-element. Used for: summary stat cards (compact: `px-4 py-3.5`), progress panel (`p-5`), chart container, data
+table wrapper, error alerts, cache manager.
 
 Error cards override border color: `border-[var(--color-error)]`.
 
 ### Tables
 
-`.strata-table`: Full-width, collapsed borders. Mono font throughout. Uppercase headers with wide tracking.
-Hover rows get `--color-surface-overlay`. Wrapped in `.strata-scroll` for horizontal overflow with styled
-scrollbar.
+`.strata-table`: Full-width, collapsed borders. Mono font throughout. Uppercase headers with wide tracking. Hover rows
+get `--color-surface-overlay`. Wrapped in `.strata-scroll` for horizontal overflow with styled scrollbar.
 
 ### Inputs
 
@@ -197,17 +195,16 @@ Placeholder uses `--color-text-tertiary`.
 
 ### Phase log
 
-Vertical phase log with 6 real git phases (detect, count, compress, receive, resolve, analyze).
-Each row is a 2-column grid: indicator column (dot + vertical connector line) and content column
-(label, detail text, optional progress bar). Three dot states:
+Vertical phase log with 6 real git phases (detect, count, compress, receive, resolve, analyze). Each row is a 2-column
+grid: indicator column (dot + vertical connector line) and content column (label, detail text, optional progress bar).
+Three dot states:
 
 - **Done**: Success green dot with checkmark SVG, success label, green connector line below
 - **Active**: Accent dot with pulse animation, primary text label
 - **Pending**: Empty dot with border, tertiary text label, gray connector line below
 
-Detail text (right-aligned): mono font, tabular-nums, tertiary color. Shows live loaded/total
-for determinate phases. Progress bar shown only for active determinate phases. Footer shows
-total elapsed time and cancel button.
+Detail text (right-aligned): mono font, tabular-nums, tertiary color. Shows live loaded/total for determinate phases.
+Progress bar shown only for active determinate phases. Footer shows total elapsed time and cancel button.
 
 ### Dialogs
 

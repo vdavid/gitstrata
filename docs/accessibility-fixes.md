@@ -1,7 +1,7 @@
 # Accessibility fixes
 
-Detailed code changes for all critical and high-priority accessibility issues. See the
-[audit](accessibility-audit.md) for context.
+Detailed code changes for all critical and high-priority accessibility issues. See the [audit](accessibility-audit.md)
+for context.
 
 ## Critical fixes (do these first)
 
@@ -13,15 +13,15 @@ Detailed code changes for all critical and high-priority accessibility issues. S
 
 ```css
 :root {
-	--color-text: #1a1510;
-	--color-text-secondary: #6b6358; /* fail: 4.2:1 ratio */
-	--color-text-tertiary: #9c9488;
+    --color-text: #1a1510;
+    --color-text-secondary: #6b6358; /* fail: 4.2:1 ratio */
+    --color-text-tertiary: #9c9488;
 }
 
 .dark {
-	--color-text: #e8e2d8;
-	--color-text-secondary: #9c9488;
-	--color-text-tertiary: #6b6358; /* fail: 2.8:1 ratio */
+    --color-text: #e8e2d8;
+    --color-text-secondary: #9c9488;
+    --color-text-tertiary: #6b6358; /* fail: 2.8:1 ratio */
 }
 ```
 
@@ -29,15 +29,15 @@ Detailed code changes for all critical and high-priority accessibility issues. S
 
 ```css
 :root {
-	--color-text: #1a1510;
-	--color-text-secondary: #4a4238; /* 4.8:1 ratio -- pass */
-	--color-text-tertiary: #6b6358; /* 5.2:1 ratio -- pass */
+    --color-text: #1a1510;
+    --color-text-secondary: #4a4238; /* 4.8:1 ratio -- pass */
+    --color-text-tertiary: #6b6358; /* 5.2:1 ratio -- pass */
 }
 
 .dark {
-	--color-text: #e8e2d8;
-	--color-text-secondary: #9c9488;
-	--color-text-tertiary: #b8ada1; /* 5.1:1 ratio -- pass */
+    --color-text: #e8e2d8;
+    --color-text-secondary: #9c9488;
+    --color-text-tertiary: #b8ada1; /* 5.1:1 ratio -- pass */
 }
 ```
 
@@ -51,12 +51,12 @@ Verify with WebAIM Contrast Checker.
 
 ```svelte
 {#if cachedResult}
-	<span class="strata-badge">...</span>
-	<button onclick={refresh} class="btn-link"> Refresh </button>
+    <span class="strata-badge">...</span>
+    <button onclick={refresh} class="btn-link"> Refresh </button>
 {/if}
 <button onclick={copyShareLink} class="btn-ghost">
-	<svg ... aria-hidden="true">...</svg>
-	{shareCopied ? 'Copied!' : 'Copy link'}
+    <svg ... aria-hidden="true">...</svg>
+    {shareCopied ? 'Copied!' : 'Copy link'}
 </button>
 ```
 
@@ -64,20 +64,16 @@ Verify with WebAIM Contrast Checker.
 
 ```svelte
 {#if cachedResult}
-	<span class="strata-badge">...</span>
-	<button onclick={refresh} aria-label="Refresh analysis with latest commits" class="btn-link">
-		Refresh
-	</button>
+    <span class="strata-badge">...</span>
+    <button onclick={refresh} aria-label="Refresh analysis with latest commits" class="btn-link"> Refresh </button>
 {/if}
 <button
-	onclick={copyShareLink}
-	aria-label={shareCopied
-		? 'Repository link copied to clipboard'
-		: 'Copy repository link to clipboard'}
-	class="btn-ghost"
+    onclick={copyShareLink}
+    aria-label={shareCopied ? 'Repository link copied to clipboard' : 'Copy repository link to clipboard'}
+    class="btn-ghost"
 >
-	<svg ... aria-hidden="true">...</svg>
-	{shareCopied ? 'Copied!' : 'Copy link'}
+    <svg ... aria-hidden="true">...</svg>
+    {shareCopied ? 'Copied!' : 'Copy link'}
 </button>
 ```
 
@@ -89,31 +85,31 @@ Add a `showDataTable` state and a toggle button in the chart toolbar:
 
 ```svelte
 <script lang="ts">
-	let showDataTable = $state(false);
+    let showDataTable = $state(false)
 
-	const handleKeyDown = (e: KeyboardEvent) => {
-		if (e.key === 't' || e.key === 'T') {
-			if (e.ctrlKey || e.metaKey) return;
-			e.preventDefault();
-			showDataTable = !showDataTable;
-		}
-	};
+    const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 't' || e.key === 'T') {
+            if (e.ctrlKey || e.metaKey) return
+            e.preventDefault()
+            showDataTable = !showDataTable
+        }
+    }
 
-	$effect(() => {
-		window.addEventListener('keydown', handleKeyDown);
-		return () => window.removeEventListener('keydown', handleKeyDown);
-	});
+    $effect(() => {
+        window.addEventListener('keydown', handleKeyDown)
+        return () => window.removeEventListener('keydown', handleKeyDown)
+    })
 </script>
 
 <!-- Add toggle button alongside existing view mode buttons -->
 <button
-	onclick={() => (showDataTable = !showDataTable)}
-	aria-pressed={showDataTable}
-	class="strata-chip text-xs"
-	title="Toggle accessible data table view (keyboard: t)"
-	aria-label={showDataTable ? 'Hide data table' : 'Show data table'}
+    onclick={() => (showDataTable = !showDataTable)}
+    aria-pressed={showDataTable}
+    class="strata-chip text-xs"
+    title="Toggle accessible data table view (keyboard: t)"
+    aria-label={showDataTable ? 'Hide data table' : 'Show data table'}
 >
-	{showDataTable ? 'Hide' : 'Show'} data
+    {showDataTable ? 'Hide' : 'Show'} data
 </button>
 
 <!-- Add role="img" to the canvas -->
@@ -121,10 +117,10 @@ Add a `showDataTable` state and a toggle button in the chart toolbar:
 
 <!-- Render a data table when toggled on -->
 {#if showDataTable && days.length > 0}
-	<div class="strata-card p-4">
-		<h3 class="mb-3 text-sm font-semibold text-[var(--color-text)]">Data table</h3>
-		<!-- Reuse ResultsTable or render inline -->
-	</div>
+    <div class="strata-card p-4">
+        <h3 class="mb-3 text-sm font-semibold text-[var(--color-text)]">Data table</h3>
+        <!-- Reuse ResultsTable or render inline -->
+    </div>
 {/if}
 ```
 
@@ -138,16 +134,16 @@ This needs either importing `ResultsTable` into `ResultsChart`, or wiring the to
 
 ```css
 button {
-	min-height: 44px;
-	min-width: 44px;
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
+    min-height: 44px;
+    min-width: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .strata-chip {
-	min-height: 40px;
-	padding: 8px 16px;
+    min-height: 40px;
+    padding: 8px 16px;
 }
 ```
 
@@ -173,8 +169,8 @@ Change `h-8 w-8` to `h-11 w-11` and add an `aria-label`:
 
 ```css
 :focus-visible {
-	outline: 2px solid var(--color-accent);
-	outline-offset: 2px;
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
 }
 ```
 
@@ -182,24 +178,24 @@ Change `h-8 w-8` to `h-11 w-11` and add an `aria-label`:
 
 ```css
 :focus-visible {
-	outline: 3px solid var(--color-accent);
-	outline-offset: 2px;
-	box-shadow:
-		0 0 0 2px var(--color-bg),
-		0 0 0 5px rgba(184, 110, 26, 0.3);
+    outline: 3px solid var(--color-accent);
+    outline-offset: 2px;
+    box-shadow:
+        0 0 0 2px var(--color-bg),
+        0 0 0 5px rgba(184, 110, 26, 0.3);
 }
 
 .dark :focus-visible {
-	outline-color: var(--color-accent-light);
-	box-shadow:
-		0 0 0 2px var(--color-bg),
-		0 0 0 5px rgba(218, 160, 78, 0.4);
+    outline-color: var(--color-accent-light);
+    box-shadow:
+        0 0 0 2px var(--color-bg),
+        0 0 0 5px rgba(218, 160, 78, 0.4);
 }
 
 @media (prefers-contrast: more) {
-	:focus-visible {
-		outline-width: 4px;
-	}
+    :focus-visible {
+        outline-width: 4px;
+    }
 }
 ```
 
@@ -248,16 +244,12 @@ Add `aria-label` to sort buttons with the current direction:
 
 ```svelte
 <button
-	aria-label={`Sort by Date ${
-		ariaSort('date') === 'ascending'
-			? '(ascending)'
-			: ariaSort('date') === 'descending'
-				? '(descending)'
-				: ''
-	}`.trim()}
-	onclick={() => toggleSort('date')}
+    aria-label={`Sort by Date ${
+        ariaSort('date') === 'ascending' ? '(ascending)' : ariaSort('date') === 'descending' ? '(descending)' : ''
+    }`.trim()}
+    onclick={() => toggleSort('date')}
 >
-	Date{sortIndicator('date')}
+    Date{sortIndicator('date')}
 </button>
 ```
 
@@ -289,11 +281,11 @@ Repeat for all sortable columns.
 
 ```svelte
 <button
-	onclick={() => handleDelete(repo.repoUrl)}
-	class="btn-ghost shrink-0 px-2 py-1 text-xs"
-	aria-label={`Delete cached data for ${shortName(repo.repoUrl)}`}
+    onclick={() => handleDelete(repo.repoUrl)}
+    class="btn-ghost shrink-0 px-2 py-1 text-xs"
+    aria-label={`Delete cached data for ${shortName(repo.repoUrl)}`}
 >
-	Delete
+    Delete
 </button>
 ```
 

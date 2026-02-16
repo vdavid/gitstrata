@@ -7,7 +7,8 @@
 
 ## Executive Summary
 
-The post-fix accessibility re-audit confirms successful implementation of all critical and high-priority fixes from the initial accessibility audit. One critical bug was discovered during verification and immediately corrected.
+The post-fix accessibility re-audit confirms successful implementation of all critical and high-priority fixes from the
+initial accessibility audit. One critical bug was discovered during verification and immediately corrected.
 
 - **Previous Score:** 72/100
 - **Current Score:** 98/100
@@ -155,7 +156,8 @@ All required criteria pass:
 
 ## Conclusion
 
-The git strata application achieves **WCAG 2.1 Level AA compliance** with a score of **98/100** and is ready for production deployment with full confidence in accessibility for users with diverse abilities.
+The git strata application achieves **WCAG 2.1 Level AA compliance** with a score of **98/100** and is ready for
+production deployment with full confidence in accessibility for users with diverse abilities.
 
 ---
 

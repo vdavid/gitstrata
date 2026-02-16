@@ -1,186 +1,190 @@
 name: CI
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-  workflow_dispatch:
-    inputs:
-      run_all:
-        description: 'Run all jobs regardless of changed files'
-        type: boolean
-        default: true
+    push:
+        branches: [main]
+    pull_request:
+    workflow_dispatch:
+        inputs:
+            run_all:
+                description: 'Run all jobs regardless of changed files'
+                type: boolean
+                default: true
 
 jobs:
-  changes:
-    name: Detect changes
-    runs-on: ubuntu-latest
-    outputs:
-      frontend: ${{ steps.filter.outputs.frontend }}
-      cors-proxy: ${{ steps.filter.outputs.cors-proxy }}
-      scripts: ${{ steps.filter.outputs.scripts }}
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
-      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3
-        id: filter
-        with:
-          filters: |
-            frontend:
-              - 'src/**'
-              - 'static/**'
-              - 'package.json'
-              - 'pnpm-lock.yaml'
-              - 'svelte.config.js'
-              - 'vite.config.ts'
-              - 'tsconfig.json'
-            cors-proxy:
-              - 'cors-proxy/**'
-            scripts:
-              - 'scripts/**'
+    changes:
+        name: Detect changes
+        runs-on: ubuntu-latest
+        outputs:
+            frontend: ${{ steps.filter.outputs.frontend }}
+            cors-proxy: ${{ steps.filter.outputs.cors-proxy }}
+            scripts: ${{ steps.filter.outputs.scripts }}
+        steps:
+            - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+            - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3
+              id: filter
+              with:
+                  filters: |
+                      frontend:
+                        - 'src/**'
+                        - 'static/**'
+                        - 'package.json'
+                        - 'pnpm-lock.yaml'
+                        - 'svelte.config.js'
+                        - 'vite.config.ts'
+                        - 'tsconfig.json'
+                      cors-proxy:
+                        - 'cors-proxy/**'
+                      scripts:
+                        - 'scripts/**'
 
-  frontend:
-    name: Frontend
-    runs-on: ubuntu-latest
-    needs: changes
-    if: inputs.run_all || needs.changes.outputs.frontend == 'true'
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+    frontend:
+        name: Frontend
+        runs-on: ubuntu-latest
+        needs: changes
+        if: inputs.run_all || needs.changes.outputs.frontend == 'true'
+        steps:
+            - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
-      - uses: jdx/mise-action@c37c93293d6b742fc901e1406b8f764f6fb19dac # v2
+            - uses: jdx/mise-action@c37c93293d6b742fc901e1406b8f764f6fb19dac # v2
 
-      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
-        with:
-          path: ~/.local/share/pnpm/store/v3
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-
+            - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+              with:
+                  path: ~/.local/share/pnpm/store/v3
+                  key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+                  restore-keys: |
+                      ${{ runner.os }}-pnpm-
 
-      - run: pnpm install --frozen-lockfile
+            - run: pnpm install --frozen-lockfile
 
-      - name: Build check tool
-        run: go build -o check .
-        working-directory: scripts/check
+            - name: Build check tool
+              run: go build -o check .
+              working-directory: scripts/check
 
-      - run: ./scripts/check/check --check prettier --ci
-      - run: ./scripts/check/check --check eslint --ci
-      - run: ./scripts/check/check --check knip --ci
-      - run: ./scripts/check/check --check svelte-check --ci
-      - run: ./scripts/check/check --check vitest --ci
-      - run: ./scripts/check/check --check pnpm-audit --ci
+            - run: ./scripts/check/check --check prettier --ci
+            - run: ./scripts/check/check --check eslint --ci
+            - run: ./scripts/check/check --check knip --ci
+            - run: ./scripts/check/check --check svelte-check --ci
+            - run: ./scripts/check/check --check vitest --ci
+            - run: ./scripts/check/check --check pnpm-audit --ci
 
-  cors-proxy:
-    name: CORS proxy
-    runs-on: ubuntu-latest
-    needs: changes
-    if: inputs.run_all || needs.changes.outputs.cors-proxy == 'true'
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+    cors-proxy:
+        name: CORS proxy
+        runs-on: ubuntu-latest
+        needs: changes
+        if: inputs.run_all || needs.changes.outputs.cors-proxy == 'true'
+        steps:
+            - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
-      - uses: jdx/mise-action@c37c93293d6b742fc901e1406b8f764f6fb19dac # v2
+            - uses: jdx/mise-action@c37c93293d6b742fc901e1406b8f764f6fb19dac # v2
 
-      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
-        with:
-          path: ~/.local/share/pnpm/store/v3
-          key: ${{ runner.os }}-pnpm-cors-proxy-${{ hashFiles('cors-proxy/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-cors-proxy-
+            - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+              with:
+                  path: ~/.local/share/pnpm/store/v3
+                  key: ${{ runner.os }}-pnpm-cors-proxy-${{ hashFiles('cors-proxy/pnpm-lock.yaml') }}
+                  restore-keys: |
+                      ${{ runner.os }}-pnpm-cors-proxy-
 
-      - run: pnpm install --frozen-lockfile
-        working-directory: cors-proxy
+            - run: pnpm install --frozen-lockfile
+              working-directory: cors-proxy
 
-      - run: pnpm test
-        working-directory: cors-proxy
+            - run: pnpm test
+              working-directory: cors-proxy
 
-  scripts:
-    name: Scripts (Go)
-    runs-on: ubuntu-latest
-    needs: changes
-    if: inputs.run_all || needs.changes.outputs.scripts == 'true'
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+    scripts:
+        name: Scripts (Go)
+        runs-on: ubuntu-latest
+        needs: changes
+        if: inputs.run_all || needs.changes.outputs.scripts == 'true'
+        steps:
+            - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
-      - uses: jdx/mise-action@c37c93293d6b742fc901e1406b8f764f6fb19dac # v2
+            - uses: jdx/mise-action@c37c93293d6b742fc901e1406b8f764f6fb19dac # v2
 
-      - name: Build check tool
-        run: go build -o check .
-        working-directory: scripts/check
+            - name: Build check tool
+              run: go build -o check .
+              working-directory: scripts/check
 
-      - run: ./scripts/check/check --check gofmt --ci
-      - run: ./scripts/check/check --check go-vet --ci
-      - run: ./scripts/check/check --check staticcheck --ci
-      - run: ./scripts/check/check --check go-tests --ci
+            - run: ./scripts/check/check --check gofmt --ci
+            - run: ./scripts/check/check --check go-vet --ci
+            - run: ./scripts/check/check --check staticcheck --ci
+            - run: ./scripts/check/check --check go-tests --ci
 
-  ci-ok:
-    name: CI OK
-    runs-on: ubuntu-latest
-    needs: [frontend, cors-proxy, scripts]
-    if: always()
-    steps:
-      - name: Check results
-        run: |
-          if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" ]]; then
-            echo "Some jobs failed"
-            exit 1
-          fi
-          if [[ "${{ contains(needs.*.result, 'cancelled') }}" == "true" ]]; then
-            echo "Some jobs were cancelled"
-            exit 1
-          fi
-          echo "All jobs passed or were skipped"
+    ci-ok:
+        name: CI OK
+        runs-on: ubuntu-latest
+        needs: [frontend, cors-proxy, scripts]
+        if: always()
+        steps:
+            - name: Check results
+              run: |
+                  if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" ]]; then
+                    echo "Some jobs failed"
+                    exit 1
+                  fi
+                  if [[ "${{ contains(needs.*.result, 'cancelled') }}" == "true" ]]; then
+                    echo "Some jobs were cancelled"
+                    exit 1
+                  fi
+                  echo "All jobs passed or were skipped"
 
-  deploy-frontend:
-    name: Deploy frontend
-    runs-on: ubuntu-latest
-    needs: ci-ok
-    if: always() && needs.ci-ok.result == 'success' && github.ref == 'refs/heads/main' && github.event_name == 'push'
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+    deploy-frontend:
+        name: Deploy frontend
+        runs-on: ubuntu-latest
+        needs: ci-ok
+        if:
+            always() && needs.ci-ok.result == 'success' && github.ref == 'refs/heads/main' && github.event_name ==
+            'push'
+        steps:
+            - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
-      - uses: jdx/mise-action@c37c93293d6b742fc901e1406b8f764f6fb19dac # v2
+            - uses: jdx/mise-action@c37c93293d6b742fc901e1406b8f764f6fb19dac # v2
 
-      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
-        with:
-          path: ~/.local/share/pnpm/store/v3
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-
+            - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+              with:
+                  path: ~/.local/share/pnpm/store/v3
+                  key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+                  restore-keys: |
+                      ${{ runner.os }}-pnpm-
 
-      - run: pnpm install --frozen-lockfile
+            - run: pnpm install --frozen-lockfile
 
-      - run: pnpm build
-        env:
-          PUBLIC_CORS_PROXY_URL: https://proxy.gitstrata.com
-          PUBLIC_CACHE_WRITE_TOKEN: 1938d93de2ba8ed03f53069e4216a9ddd90af40b692a4d016b46ec28ecf3f19e
-          PUBLIC_ANALYTICS_URL: https://anal.veszelovszki.com
-          PUBLIC_ANALYTICS_ID: 9c082669-20f5-486f-85b8-13911ded8e14
+            - run: pnpm build
+              env:
+                  PUBLIC_CORS_PROXY_URL: https://proxy.gitstrata.com
+                  PUBLIC_CACHE_WRITE_TOKEN: 1938d93de2ba8ed03f53069e4216a9ddd90af40b692a4d016b46ec28ecf3f19e
+                  PUBLIC_ANALYTICS_URL: https://anal.veszelovszki.com
+                  PUBLIC_ANALYTICS_ID: 9c082669-20f5-486f-85b8-13911ded8e14
 
-      - run: npx wrangler pages deploy build/ --project-name=git-strata
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+            - run: npx wrangler pages deploy build/ --project-name=git-strata
+              env:
+                  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+                  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
-  deploy-cors-proxy:
-    name: Deploy CORS proxy
-    runs-on: ubuntu-latest
-    needs: ci-ok
-    if: always() && needs.ci-ok.result == 'success' && github.ref == 'refs/heads/main' && github.event_name == 'push'
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+    deploy-cors-proxy:
+        name: Deploy CORS proxy
+        runs-on: ubuntu-latest
+        needs: ci-ok
+        if:
+            always() && needs.ci-ok.result == 'success' && github.ref == 'refs/heads/main' && github.event_name ==
+            'push'
+        steps:
+            - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
-      - uses: jdx/mise-action@c37c93293d6b742fc901e1406b8f764f6fb19dac # v2
+            - uses: jdx/mise-action@c37c93293d6b742fc901e1406b8f764f6fb19dac # v2
 
-      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
-        with:
-          path: ~/.local/share/pnpm/store/v3
-          key: ${{ runner.os }}-pnpm-cors-proxy-${{ hashFiles('cors-proxy/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-cors-proxy-
+            - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+              with:
+                  path: ~/.local/share/pnpm/store/v3
+                  key: ${{ runner.os }}-pnpm-cors-proxy-${{ hashFiles('cors-proxy/pnpm-lock.yaml') }}
+                  restore-keys: |
+                      ${{ runner.os }}-pnpm-cors-proxy-
 
-      - run: pnpm install --frozen-lockfile
-        working-directory: cors-proxy
+            - run: pnpm install --frozen-lockfile
+              working-directory: cors-proxy
 
-      - run: pnpm run deploy
-        working-directory: cors-proxy
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+            - run: pnpm run deploy
+              working-directory: cors-proxy
+              env:
+                  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+                  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
