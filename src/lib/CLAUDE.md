@@ -31,6 +31,9 @@ a Web Worker.
   aggregate results sequentially. Supports diff-based incremental processing via `countLinesForCommitIncremental`, which
   uses custom tree traversal with `git.readTree` + an in-memory `treeCache` (`Map<treeOid, TreeEntry[]>`) to diff trees
   between consecutive commits. A shared `FileState` map tracks per-file OID, language, and line counts across commits.
+  Skip logic: `shouldSkip` filters individual files (lock files, minified output, protobuf/codegen, binary extensions)
+  and `shouldSkipDir` filters vendored directories (`vendor`, `node_modules`, `Pods`, `bower_components`, `__pycache__`)
+  at tree-walk time, avoiding recursion into entire subtrees. Both are exported for testing.
 - `worker/analyzer.worker.ts` — Web Worker entry point (Comlink), orchestrates full pipeline and incremental refresh
   (`analyzeIncremental` fetches only new commits, processes new days, merges)
 - `worker/analyzer.api.ts` — Comlink wrapper for main thread consumption

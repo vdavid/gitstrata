@@ -33,6 +33,44 @@ const skipPatterns: readonly string[] = [
     'yarn.lock',
     'Cargo.lock',
     'go.sum',
+    'Gemfile.lock',
+    'Pipfile.lock',
+    'poetry.lock',
+    'uv.lock',
+    'pdm.lock',
+    'composer.lock',
+    'pubspec.lock',
+    'Podfile.lock',
+    'mix.lock',
+    'flake.lock',
+    'packages.lock.json',
+    'paket.lock',
+    'conan.lock',
+    'gradle.lockfile',
+    'npm-shrinkwrap.json',
+    'Package.resolved',
+    // Minified output
+    '*.min.js',
+    '*.min.css',
+    '*.min.mjs',
+    // Source maps
+    '*.js.map',
+    '*.css.map',
+    '*.mjs.map',
+    // Protobuf codegen
+    '*.pb.go',
+    '*.pb.cc',
+    '*.pb.h',
+    '*.pb.swift',
+    '*_pb2.py',
+    '*_pb2_grpc.py',
+    // .NET codegen
+    '*.Designer.cs',
+    '*.g.cs',
+    '*.g.i.cs',
+    // Dart codegen
+    '*.g.dart',
+    '*.freezed.dart',
     // Binary extensions
     '*.png',
     '*.jpg',
@@ -70,7 +108,12 @@ const skipPatterns: readonly string[] = [
     '*.avif',
 ]
 
-const shouldSkip = (filename: string): boolean => {
+/** Vendored/generated directories to skip entirely during tree walks. */
+const skipDirs = new Set(['vendor', 'node_modules', 'Pods', 'bower_components', '__pycache__'])
+
+export const shouldSkipDir = (dirName: string): boolean => skipDirs.has(dirName)
+
+export const shouldSkip = (filename: string): boolean => {
     const base = filename.split('/').pop() ?? filename
     for (const pattern of skipPatterns) {
         if (pattern.startsWith('*')) {
@@ -186,7 +229,9 @@ const listFilesAtCommitCached = async (options: {
             if (entry.type === 'blob') {
                 files.push({ path: fullPath, oid: entry.oid })
             } else if (entry.type === 'tree') {
-                await walkTree(entry.oid, fullPath)
+                if (!shouldSkipDir(entry.path)) {
+                    await walkTree(entry.oid, fullPath)
+                }
             }
         }
     }
@@ -466,7 +511,9 @@ export const countLinesForCommitIncremental = async (
             if (entry.type === 'blob') {
                 deleted.push(fullPath)
             } else if (entry.type === 'tree') {
-                await collectDeletedBlobs(entry.oid, fullPath)
+                if (!shouldSkipDir(entry.path)) {
+                    await collectDeletedBlobs(entry.oid, fullPath)
+                }
             }
         }
     }
@@ -493,8 +540,10 @@ export const countLinesForCommitIncremental = async (
                     modified.push({ path: fullPath, oid: entry.oid })
                 }
             } else if (entry.type === 'tree') {
-                const prevSubOid = prev && prev.type === 'tree' ? prev.oid : undefined
-                await diffTrees(prevSubOid, entry.oid, fullPath)
+                if (!shouldSkipDir(entry.path)) {
+                    const prevSubOid = prev && prev.type === 'tree' ? prev.oid : undefined
+                    await diffTrees(prevSubOid, entry.oid, fullPath)
+                }
             }
         }
 
@@ -505,7 +554,9 @@ export const countLinesForCommitIncremental = async (
             if (entry.type === 'blob') {
                 deleted.push(fullPath)
             } else if (entry.type === 'tree') {
-                await collectDeletedBlobs(entry.oid, fullPath)
+                if (!shouldSkipDir(entry.path)) {
+                    await collectDeletedBlobs(entry.oid, fullPath)
+                }
             }
         }
     }
