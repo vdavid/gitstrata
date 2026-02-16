@@ -99,9 +99,6 @@
     let sizeWarningBytes = $state(0)
     let showSizeWarning = $state(false)
 
-    // Stale hint (shown when clone/fetch has no progress for a while)
-    let showStaleHint = $state(false)
-
     // Read ?repo= from URL on initial load
     const initialRepo = $derived.by(() => {
         if (!browser) return ''
@@ -171,7 +168,6 @@
         fromServerCache = false
         sizeWarningBytes = 0
         showSizeWarning = false
-        showStaleHint = false
         pendingRefresh = undefined
         stopTimer()
     }
@@ -189,10 +185,6 @@
                 clonePhase = event.phase
                 cloneLoaded = event.loaded
                 cloneTotal = event.total
-                showStaleHint = false
-                break
-            case 'stale-hint':
-                showStaleHint = true
                 break
             case 'process':
                 if (phase !== 'processing') {
@@ -510,7 +502,6 @@
                     {processTotal}
                     {processDate}
                     processElapsedMs={processElapsed}
-                    {showStaleHint}
                     oncancel={cancel}
                 />
             </div>

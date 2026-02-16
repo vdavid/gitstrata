@@ -11,7 +11,6 @@
         processTotal: number
         processDate: string
         processElapsedMs: number
-        showStaleHint: boolean
         oncancel: () => void
     }
 
@@ -25,7 +24,6 @@
         processTotal,
         processDate,
         processElapsedMs,
-        showStaleHint,
         oncancel,
     }: Props = $props()
 
@@ -55,7 +53,7 @@
     const getPhaseInfo = (phaseId: PhaseId): string => {
         switch (phaseId) {
             case 'detect':
-                return `<p>Every git repo has a default branch, but the name isn\u2019t standardized \u2014 it could be \u201cmain,\u201d \u201cmaster,\u201d or something custom. The app uses git\u2019s protocol v2 to ask the server for the branch list without downloading any repo data.</p>
+                return `<p>Every git repo has a default branch, but the name isn\u2019t standardized. It can be \u201cmain,\u201d \u201cmaster,\u201d or something custom. The app uses git\u2019s protocol v2 to ask the server for the branch list without downloading any repo data.</p>
 <p>GitHub switched from \u201cmaster\u201d to \u201cmain\u201d as the default in 2020, so older repos often still use the old name. This step figures out which one to clone.</p>`
 
             case 'count': {
@@ -96,6 +94,7 @@ ${statBlock}`
                 }
                 return `<p>This is the actual download \u2014 bytes flowing from the server through a CORS proxy into the browser. Everything runs in a Web Worker so the page stays responsive while data streams in.</p>
 <p>The pack file contains all the compressed objects from the previous step. Once it arrives, the objects still need to be unpacked and reconstructed.</p>
+<p>GitHub and other hosts often send data in bursts with long pauses between them \u2014 sometimes several minutes of silence. This is normal server behavior, not a connection problem.</p>
 ${statBlock}`
             }
 
@@ -126,6 +125,7 @@ ${statBlock}`
         Counting: 'count',
         Compressing: 'compress',
         Receiving: 'receive',
+        downloading: 'receive', // Lowercase — isomorphic-git's own label for HTTP byte transfer, unlike the capitalized git protocol phases
         Resolving: 'resolve',
         'Fetching new commits': 'detect',
     }
@@ -187,6 +187,7 @@ ${statBlock}`
         }
         if (activePhaseId && phase === 'cloning') {
             snapshots[activePhaseId] = { loaded: cloneLoaded, total: cloneTotal }
+            lastCloneProgressTime = Date.now()
         }
     })
 
@@ -258,9 +259,10 @@ ${statBlock}`
         }
     })
 
-    // Live-updating tick for the active phase timer
+    // Live-updating tick for active phase timer and silence counter.
+    // Also runs between clone sub-phases so the silence counter keeps ticking.
     $effect(() => {
-        if (activePhaseId) {
+        if (activePhaseId || phase === 'cloning') {
             const interval = setInterval(() => {
                 liveElapsedNow = Date.now()
             }, 250)
@@ -280,6 +282,24 @@ ${statBlock}`
         }
         return null
     }
+
+    // --- Silence / stale detection ---
+    // Tracked internally — no prop needed. Thresholds must match clone.ts.
+
+    const staleThresholdMs = 25_000
+    const silenceBaseTimeoutMs = 300_000 // 5 min
+    const silenceExtendedTimeoutMs = 1_200_000 // 20 min
+    const silenceExtensionThreshold = 10_485_760 // 10 MB
+
+    let lastCloneProgressTime = $state(Date.now())
+
+    const silenceMs = $derived(phase === 'cloning' ? Math.max(0, liveElapsedNow - lastCloneProgressTime) : 0)
+    const isStale = $derived(silenceMs > staleThresholdMs)
+    const silenceTimeoutMs = $derived(
+        (snapshots['receive']?.loaded ?? 0) > silenceExtensionThreshold
+            ? silenceExtendedTimeoutMs
+            : silenceBaseTimeoutMs,
+    )
 
     // --- Info popup state ---
 
@@ -536,16 +556,19 @@ ${statBlock}`
                             ~{formatTime(estimatedRemainingMs)} remaining
                         </span>
                     {/if}
+
+                    {#if isStale && phase === 'cloning' && state === 'active'}
+                        <p
+                            class="mt-1.5 text-xs text-foreground-secondary"
+                            style="font-family: var(--font-sans); font-variant-numeric: tabular-nums;"
+                        >
+                            No data for {formatTime(silenceMs)} &mdash; timeout: {Math.round(silenceTimeoutMs / 60_000)} min
+                        </p>
+                    {/if}
                 </div>
             </li>
         {/each}
     </ol>
-
-    {#if showStaleHint && phase === 'cloning'}
-        <p class="mt-3 text-xs text-foreground-secondary" style="font-family: var(--font-sans);">
-            This is taking a while. Big repo? Timeout for this is 3 minutes.
-        </p>
-    {/if}
 
     <!-- Footer: elapsed time + cancel -->
     <div class="mt-4 flex items-center justify-between" aria-live="polite" aria-atomic="true">

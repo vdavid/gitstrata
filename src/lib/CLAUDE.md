@@ -18,8 +18,8 @@ a Web Worker.
   propagate. Uses SHA-256 for repo URL hashing and CompressionStream for gzip upload.
 - `git/clone.ts` — Clone/fetch using isomorphic-git + lightning-fs, default branch detection via `listServerRefs`
   (protocol v2), abortable HTTP wrapper for signal support, size-warning emission for repos >1 GB. A `StalenessMonitor`
-  wraps the external abort signal and aborts after 3 minutes of silence. After 25 seconds it emits a `stale-hint`
-  progress event for the UI.
+  wraps the external abort signal with an adaptive timeout: 5 min base, extended to 20 min once 10+ MB of data has been
+  received (GitHub sends large packs in bursts). The UI detects silence internally via `PipelineProgress`.
 - `git/history.ts` — Commit log grouped by date, consecutive date generation, gap filling. `getCommitsByDate` fetches
   commits in batches (via `git.log` with `depth` parameter) to bound peak memory on large repos. A `seenOids` Set
   deduplicates commits across batches (merges can cause overlap). Supports `signal` for cancellation and `onProgress`

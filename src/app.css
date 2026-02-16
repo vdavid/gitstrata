@@ -685,7 +685,7 @@ body::before {
 /* Phase label group — wraps label, elapsed time, and info icon inline */
 .phase-label-group {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: 8px;
     flex-shrink: 1;
     min-width: 0;

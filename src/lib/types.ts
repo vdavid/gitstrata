@@ -50,7 +50,6 @@ export type ProgressEvent =
     | { type: 'done'; result: AnalysisResult }
     | { type: 'error'; message: string; kind: ErrorKind }
     | { type: 'size-warning'; estimatedBytes: number }
-    | { type: 'stale-hint' }
 
 export interface LanguageDefinition {
     id: string

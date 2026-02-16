@@ -120,58 +120,62 @@ interface CloneOptions {
 
 // --- Staleness monitor: detects stuck connections and aborts after timeout ---
 
-const stalenessTimeoutMs = 180_000 // 3 minutes
-const staleHintMs = 25_000
+// GitHub and other hosts send large pack files in bursts with long pauses between them.
+// Base timeout is generous; once significant data has been received, we extend further
+// since the connection is clearly working — just bursty.
+const baseTimeoutMs = 300_000 // 5 minutes
+const extendedTimeoutMs = 1_200_000 // 20 minutes
+const extensionThreshold = 10_485_760 // 10 MB — once this much data has been received, extend timeout
 
 interface StalenessMonitor {
     signal: AbortSignal
-    markProgress: () => void
+    markProgress: (loaded?: number) => void
     wasTimeout: () => boolean
+    effectiveTimeoutMs: () => number
     cleanup: () => void
 }
 
-const createStalenessMonitor = (
-    externalSignal: AbortSignal | undefined,
-    onProgress: ((event: ProgressEvent) => void) | undefined,
-    label: string,
-): StalenessMonitor => {
+const createStalenessMonitor = (externalSignal: AbortSignal | undefined, label: string): StalenessMonitor => {
     const controller = new AbortController()
     const forwardAbort = () => controller.abort()
     externalSignal?.addEventListener('abort', forwardAbort, { once: true })
 
     let lastProgressTime = Date.now()
-    let hintEmitted = false
+    let maxLoaded = 0
     let timedOut = false
+
+    const getEffectiveTimeout = () => (maxLoaded > extensionThreshold ? extendedTimeoutMs : baseTimeoutMs)
 
     const timer = setInterval(() => {
         const silentMs = Date.now() - lastProgressTime
-        if (silentMs > stalenessTimeoutMs) {
+        const timeout = getEffectiveTimeout()
+        if (silentMs > timeout) {
             timedOut = true
             controller.abort()
         } else if (silentMs > 60_000) {
-            cloneLogger.error('{label} stale: no progress for {seconds}s — connection may be stuck', {
+            cloneLogger.error('{label}: no data for {seconds}s — timeout at {timeoutMin} min', {
                 label,
                 seconds: Math.round(silentMs / 1000),
+                timeoutMin: Math.round(timeout / 60_000),
             })
         } else if (silentMs > 30_000) {
-            cloneLogger.warning('{label} slow: no progress for {seconds}s — server may be packing objects', {
+            cloneLogger.warning('{label}: no data for {seconds}s', {
                 label,
                 seconds: Math.round(silentMs / 1000),
             })
-        }
-        if (silentMs > staleHintMs && !hintEmitted) {
-            hintEmitted = true
-            onProgress?.({ type: 'stale-hint' })
         }
     }, 5_000)
 
     return {
         signal: controller.signal,
-        markProgress: () => {
+        markProgress: (loaded?: number) => {
             lastProgressTime = Date.now()
-            hintEmitted = false
+            if (loaded !== undefined && loaded > maxLoaded) {
+                maxLoaded = loaded
+            }
         },
         wasTimeout: () => timedOut,
+        effectiveTimeoutMs: getEffectiveTimeout,
         cleanup: () => {
             clearInterval(timer)
             externalSignal?.removeEventListener('abort', forwardAbort)
@@ -230,7 +234,7 @@ export const cloneRepo = async (options: CloneOptions & { defaultBranch: string 
         // Directory may already exist
     }
 
-    const monitor = createStalenessMonitor(signal, onProgress, 'Clone')
+    const monitor = createStalenessMonitor(signal, 'Clone')
     const abortableHttp = makeAbortableHttp(monitor.signal)
     let sizeWarningEmitted = false
 
@@ -251,7 +255,7 @@ export const cloneRepo = async (options: CloneOptions & { defaultBranch: string 
                 if (monitor.signal.aborted) return
                 const total = event.total ?? 0
 
-                monitor.markProgress()
+                monitor.markProgress(event.loaded)
 
                 // Sampled progress logging
                 if (event.phase !== prevPhase) {
@@ -288,7 +292,8 @@ export const cloneRepo = async (options: CloneOptions & { defaultBranch: string 
         })
     } catch (error) {
         if (monitor.wasTimeout()) {
-            throw new Error('Connection timed out — no progress for 3 minutes.', { cause: error })
+            const timeoutMin = Math.round(monitor.effectiveTimeoutMs() / 60_000)
+            throw new Error(`Connection timed out — no data received for ${timeoutMin} minutes.`, { cause: error })
         }
         throw error
     } finally {
@@ -299,7 +304,7 @@ export const cloneRepo = async (options: CloneOptions & { defaultBranch: string 
 export const fetchRepo = async (options: CloneOptions & { defaultBranch: string }): Promise<void> => {
     const { fs, dir, url, corsProxy, defaultBranch, onProgress, signal } = options
 
-    const monitor = createStalenessMonitor(signal, onProgress, 'Fetch')
+    const monitor = createStalenessMonitor(signal, 'Fetch')
     const abortableHttp = makeAbortableHttp(monitor.signal)
 
     // Progress logging state
@@ -319,7 +324,7 @@ export const fetchRepo = async (options: CloneOptions & { defaultBranch: string 
                 if (monitor.signal.aborted) return
                 const total = event.total ?? 0
 
-                monitor.markProgress()
+                monitor.markProgress(event.loaded)
 
                 // Sampled progress logging
                 if (event.phase !== prevPhase) {
@@ -352,7 +357,8 @@ export const fetchRepo = async (options: CloneOptions & { defaultBranch: string 
         })
     } catch (error) {
         if (monitor.wasTimeout()) {
-            throw new Error('Connection timed out — no progress for 3 minutes.', { cause: error })
+            const timeoutMin = Math.round(monitor.effectiveTimeoutMs() / 60_000)
+            throw new Error(`Connection timed out — no data received for ${timeoutMin} minutes.`, { cause: error })
         }
         throw error
     } finally {
