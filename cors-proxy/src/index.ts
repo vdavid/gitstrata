@@ -8,7 +8,10 @@ type Bindings = {
 
 const app = new Hono<{ Bindings: Bindings }>();
 
-function getCorsHeaders(c: { env: Bindings; req: { header: (name: string) => string | undefined } }) {
+function getCorsHeaders(c: {
+	env: Bindings;
+	req: { header: (name: string) => string | undefined };
+}) {
 	const allowed = c.env.ALLOWED_ORIGIN;
 	const origin = c.req.header('origin');
 	// When ALLOWED_ORIGIN is set, only reflect it if the request origin matches.
@@ -90,7 +93,6 @@ function isValidCacheEntry(data: unknown): data is {
 	if (typeof obj.result !== 'object' || obj.result === null) return false;
 	const result = obj.result as Record<string, unknown>;
 	return Array.isArray(result.days);
-
 }
 
 // --- Cache routes (only active when R2 binding RESULTS is present) ---
