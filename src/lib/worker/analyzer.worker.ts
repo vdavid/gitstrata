@@ -129,7 +129,21 @@ const analyzerApi = {
 			// Step 3: Get commit history grouped by date
 			onProgress({ type: 'process', current: 0, total: 0, date: 'Loading history...' });
 			const gitCache = {};
-			const dailyCommits = await getCommitsByDate({ fs, dir, ref: defaultBranch, gitCache });
+			const dailyCommits = await getCommitsByDate({
+				fs,
+				dir,
+				ref: defaultBranch,
+				gitCache,
+				signal,
+				onProgress: (processed) => {
+					onProgress({
+						type: 'process',
+						current: 0,
+						total: 0,
+						date: `Loading history... (${processed.toLocaleString()} commits)`
+					});
+				}
+			});
 
 			if (dailyCommits.length === 0) {
 				throw new Error('No commits found in repository');
@@ -282,7 +296,21 @@ const analyzerApi = {
 			// Step 2: Get full commit history
 			onProgress({ type: 'process', current: 0, total: 0, date: 'Loading history...' });
 			const gitCache = {};
-			const dailyCommits = await getCommitsByDate({ fs, dir, ref: defaultBranch, gitCache });
+			const dailyCommits = await getCommitsByDate({
+				fs,
+				dir,
+				ref: defaultBranch,
+				gitCache,
+				signal,
+				onProgress: (processed) => {
+					onProgress({
+						type: 'process',
+						current: 0,
+						total: 0,
+						date: `Loading history... (${processed.toLocaleString()} commits)`
+					});
+				}
+			});
 
 			if (dailyCommits.length === 0) {
 				throw new Error('No commits found in repository');

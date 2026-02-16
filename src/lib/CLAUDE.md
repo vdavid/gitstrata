@@ -21,7 +21,10 @@ run client-side in a Web Worker.
 - `git/clone.ts` — Clone/fetch using isomorphic-git + lightning-fs, default branch detection via
   `listServerRefs` (protocol v2), abortable HTTP wrapper for signal support, size-warning emission
   for repos >1 GB
-- `git/history.ts` — Commit log grouped by date, consecutive date generation, gap filling
+- `git/history.ts` — Commit log grouped by date, consecutive date generation, gap filling.
+  `getCommitsByDate` fetches commits in batches (via `git.log` with `depth` parameter) to bound peak
+  memory on large repos. A `seenOids` Set deduplicates commits across batches (merges can cause overlap).
+  Supports `signal` for cancellation and `onProgress` for reporting processed commit counts.
 - `git/count.ts` — Line counting per commit tree, prod/test classification, blob dedup caching.
   Files with unrecognized extensions are counted under the `'other'` bucket (with test-dir detection).
   Blob reads are parallelized with a concurrency limit of 8 using an inline `createLimiter` utility

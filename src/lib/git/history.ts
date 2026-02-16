@@ -7,37 +7,72 @@ export interface DailyCommit {
 	messages: string[];
 }
 
+const commitBatchSize = 5000;
+
 /**
  * Get the commit log for a branch and group by date.
  * Returns entries in chronological order (oldest first).
  * Keeps the latest commit hash per day but collects all messages.
+ *
+ * Fetches commits in batches to bound peak memory on large repos.
  */
 export const getCommitsByDate = async (options: {
 	fs: FsClient;
 	dir: string;
 	ref: string;
 	gitCache?: object;
+	signal?: AbortSignal;
+	onProgress?: (processedCommits: number) => void;
 }): Promise<DailyCommit[]> => {
-	const { fs, dir, ref, gitCache } = options;
+	const { fs, dir, ref, gitCache, signal, onProgress } = options;
 
-	const commits: ReadCommitResult[] = await git.log({ fs, dir, ref, cache: gitCache });
-
-	// git.log returns newest-first; group by date
 	const byDate = new Map<string, DailyCommit>();
+	const seenOids = new Set<string>();
+	let currentRef: string = ref;
+	let totalProcessed = 0;
 
-	for (const commit of commits) {
-		const date = formatDate(commit.commit.author.timestamp);
-		const existing = byDate.get(date);
-		if (!existing) {
-			// First commit for this date (latest chronologically since log is reverse order)
-			byDate.set(date, {
-				date,
-				hash: commit.oid,
-				messages: [commit.commit.message.trim()]
-			});
-		} else {
-			existing.messages.push(commit.commit.message.trim());
+	while (true) {
+		if (signal?.aborted) throw new Error('Cancelled');
+
+		const batch: ReadCommitResult[] = await git.log({
+			fs,
+			dir,
+			ref: currentRef,
+			depth: commitBatchSize,
+			cache: gitCache
+		});
+
+		if (batch.length === 0) break;
+
+		for (const commit of batch) {
+			if (seenOids.has(commit.oid)) continue;
+			seenOids.add(commit.oid);
+			totalProcessed++;
+
+			const date = formatDate(commit.commit.author.timestamp);
+			const existing = byDate.get(date);
+			if (!existing) {
+				byDate.set(date, {
+					date,
+					hash: commit.oid,
+					messages: [commit.commit.message.trim()]
+				});
+			} else {
+				existing.messages.push(commit.commit.message.trim());
+			}
 		}
+
+		onProgress?.(totalProcessed);
+
+		// Stop if this batch was smaller than requested (end of history)
+		if (batch.length < commitBatchSize) break;
+
+		// Stop if the oldest commit has no parents (root commit)
+		const oldest = batch[batch.length - 1];
+		if (oldest.commit.parent.length === 0) break;
+
+		// Continue from the first parent of the oldest commit
+		currentRef = oldest.commit.parent[0];
 	}
 
 	// Sort chronologically (oldest first)
