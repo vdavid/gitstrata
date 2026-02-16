@@ -1,5 +1,4 @@
 import git, { type FsClient, type HttpClient } from 'isomorphic-git';
-import http from 'isomorphic-git/http/web';
 import { getLogger } from '@logtape/logtape';
 import type { ProgressEvent } from '../types';
 
@@ -10,15 +9,72 @@ const httpLogger = getLogger(['git-strata', 'http']);
 const cloneLogger = getLogger(['git-strata', 'clone']);
 
 const makeAbortableHttp = (signal?: AbortSignal): HttpClient => ({
-	request: async (args) => {
+	request: async ({ url, method = 'GET', headers = {}, body, onProgress }) => {
 		if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
-		httpLogger.info('Request: {method} {url}', {
-			method: args.method ?? 'GET',
-			url: args.url
+		httpLogger.info('Request: {method} {url}', { method, url });
+
+		// Collect async iterable request body into a single buffer
+		let requestBody: Uint8Array | undefined;
+		if (body) {
+			const chunks: Uint8Array[] = [];
+			for await (const chunk of body) {
+				chunks.push(chunk);
+			}
+			const totalLength = chunks.reduce((sum, c) => sum + c.byteLength, 0);
+			requestBody = new Uint8Array(totalLength);
+			let offset = 0;
+			for (const chunk of chunks) {
+				requestBody.set(chunk, offset);
+				offset += chunk.byteLength;
+			}
+		}
+
+		const res = await fetch(url, {
+			method,
+			headers,
+			body: requestBody as BodyInit | undefined,
+			signal
 		});
-		const response = await http.request(args);
-		httpLogger.info('Response: {statusCode}', { statusCode: response.statusCode });
-		return response;
+		httpLogger.info('Response: {statusCode}', { statusCode: res.status });
+
+		const responseHeaders: Record<string, string> = {};
+		res.headers.forEach((value, key) => {
+			responseHeaders[key] = value;
+		});
+
+		// Stream response body as async iterable with progress tracking
+		async function* iterateBody(): AsyncGenerator<Uint8Array> {
+			if (!res.body) {
+				const buf = new Uint8Array(await res.arrayBuffer());
+				if (buf.byteLength > 0) {
+					onProgress?.({ phase: 'downloading', loaded: buf.byteLength, total: 0 });
+					yield buf;
+				}
+				return;
+			}
+			const reader = res.body.getReader();
+			let loaded = 0;
+			try {
+				while (true) {
+					const { done, value } = await reader.read();
+					if (done) return;
+					loaded += value.byteLength;
+					onProgress?.({ phase: 'downloading', loaded, total: 0 });
+					yield value;
+				}
+			} finally {
+				reader.releaseLock();
+			}
+		}
+
+		return {
+			url: res.url,
+			method,
+			statusCode: res.status,
+			statusMessage: res.statusText,
+			body: iterateBody(),
+			headers: responseHeaders
+		};
 	}
 });
 
@@ -34,10 +90,12 @@ interface CloneOptions {
 export const detectDefaultBranch = async (options: {
 	url: string;
 	corsProxy?: string;
+	signal?: AbortSignal;
 }): Promise<string> => {
 	cloneLogger.info('Detecting default branch...');
+	const abortableHttp = makeAbortableHttp(options.signal);
 	const refs = await git.listServerRefs({
-		http,
+		http: abortableHttp,
 		corsProxy: options.corsProxy ?? defaultCorsProxy,
 		url: options.url,
 		prefix: 'HEAD',
@@ -52,7 +110,7 @@ export const detectDefaultBranch = async (options: {
 	}
 	// Fallback: list all branches and try common names
 	const allRefs = await git.listServerRefs({
-		http,
+		http: abortableHttp,
 		corsProxy: options.corsProxy ?? defaultCorsProxy,
 		url: options.url,
 		prefix: 'refs/heads/',

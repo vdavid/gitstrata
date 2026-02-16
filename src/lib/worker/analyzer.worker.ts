@@ -70,11 +70,11 @@ const classifyError = (error: unknown): { message: string; kind: ErrorKind } => 
 	return { message: raw, kind: 'unknown' };
 };
 
-let cancelled = false;
+let abortController: AbortController | undefined;
 
 const analyzerApi = {
 	cancel() {
-		cancelled = true;
+		abortController?.abort();
 	},
 
 	async analyze(
@@ -82,7 +82,8 @@ const analyzerApi = {
 		corsProxy: string | undefined,
 		onProgress: ProgressCallback
 	): Promise<AnalysisResult> {
-		cancelled = false;
+		abortController = new AbortController();
+		const signal = abortController.signal;
 		const parsed = parseRepoUrl(repoInput);
 		const dir = repoToDir(parsed);
 
@@ -96,11 +97,12 @@ const analyzerApi = {
 			logger.info('Starting: detect default branch for {url}', { url: parsed.url });
 			const defaultBranch = await detectDefaultBranch({
 				url: parsed.url,
-				corsProxy
+				corsProxy,
+				signal
 			});
 			logger.info('Detected branch: {branch}', { branch: defaultBranch });
 
-			if (cancelled) throw new Error('Cancelled');
+			if (signal.aborted) throw new Error('Cancelled');
 
 			// Step 2: Clone — emit a transition so the UI advances past "Detect branch"
 			onProgress({ type: 'clone', phase: 'Counting objects', loaded: 0, total: 0 });
@@ -114,11 +116,12 @@ const analyzerApi = {
 				url: parsed.url,
 				corsProxy,
 				defaultBranch,
-				onProgress
+				onProgress,
+				signal
 			});
 			logger.info('Clone complete');
 
-			if (cancelled) throw new Error('Cancelled');
+			if (signal.aborted) throw new Error('Cancelled');
 
 			// Resolve HEAD OID for freshness checking
 			const headCommit = await git.resolveRef({ fs, dir, ref: defaultBranch });
@@ -151,7 +154,7 @@ const analyzerApi = {
 			let prevDay: DayStats | undefined;
 
 			for (let i = 0; i < allDays.length; i++) {
-				if (cancelled) throw new Error('Cancelled');
+				if (signal.aborted) throw new Error('Cancelled');
 
 				const { date, commit } = allDays[i];
 
@@ -170,7 +173,8 @@ const analyzerApi = {
 								blobCache,
 								contentCache,
 								treeCache,
-								gitCache
+								gitCache,
+								signal
 							},
 							fileStateMap,
 							allExtensions,
@@ -188,7 +192,8 @@ const analyzerApi = {
 								fileStateMap,
 								allExtensions,
 								treeCache,
-								gitCache
+								gitCache,
+								signal
 							},
 							date,
 							commit.messages
@@ -248,7 +253,8 @@ const analyzerApi = {
 		cachedResult: AnalysisResult,
 		onProgress: ProgressCallback
 	): Promise<AnalysisResult> {
-		cancelled = false;
+		abortController = new AbortController();
+		const signal = abortController.signal;
 		const parsed = parseRepoUrl(repoInput);
 		const dir = repoToDir(parsed);
 		const fsName = `git-strata-${parsed.host}-${parsed.owner}-${parsed.repo}`;
@@ -263,10 +269,10 @@ const analyzerApi = {
 				url: parsed.url,
 				branch: defaultBranch
 			});
-			await fetchRepo({ fs, dir, url: parsed.url, corsProxy, defaultBranch, onProgress });
+			await fetchRepo({ fs, dir, url: parsed.url, corsProxy, defaultBranch, onProgress, signal });
 			logger.info('Fetch complete');
 
-			if (cancelled) throw new Error('Cancelled');
+			if (signal.aborted) throw new Error('Cancelled');
 
 			// Resolve HEAD OID for freshness checking
 			const headCommit = await git.resolveRef({ fs, dir, ref: defaultBranch });
@@ -331,7 +337,8 @@ const analyzerApi = {
 						fileStateMap,
 						allExtensions,
 						treeCache,
-						gitCache
+						gitCache,
+						signal
 					},
 					lastCachedCommitEntry.date,
 					[]
@@ -346,7 +353,7 @@ const analyzerApi = {
 			const totalDays = newDayEntries.length;
 
 			for (let i = 0; i < newDayEntries.length; i++) {
-				if (cancelled) throw new Error('Cancelled');
+				if (signal.aborted) throw new Error('Cancelled');
 
 				const { date, commit } = newDayEntries[i];
 				onProgress({ type: 'process', current: i + 1, total: totalDays, date });
@@ -364,7 +371,8 @@ const analyzerApi = {
 								blobCache,
 								contentCache,
 								treeCache,
-								gitCache
+								gitCache,
+								signal
 							},
 							fileStateMap,
 							allExtensions,
@@ -382,7 +390,8 @@ const analyzerApi = {
 								fileStateMap,
 								allExtensions,
 								treeCache,
-								gitCache
+								gitCache,
+								signal
 							},
 							date,
 							commit.messages
