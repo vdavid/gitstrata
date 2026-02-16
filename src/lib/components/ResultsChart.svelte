@@ -4,6 +4,7 @@
     import type { DayStats } from '$lib/types'
     import type { Chart as ChartType, ChartConfiguration, ChartDataset } from 'chart.js'
     import { areaLabelsPlugin } from './chart-area-labels-plugin'
+    import { crosshairPlugin } from './chart-crosshair-plugin'
 
     interface Props {
         days: DayStats[]
@@ -27,6 +28,105 @@
     let canvasEl: HTMLCanvasElement | undefined = $state()
     let chart: ChartType | undefined = $state()
     let chartReady = $state(false)
+
+    // --- Detail strip (replaces floating tooltip) ---
+    interface StripItem {
+        label: string
+        value: number
+        color: string
+        pct: number
+    }
+    let hoverStripItems = $state<StripItem[]>([])
+    let hoverStripDate = $state('')
+    let hoverStripTotal = $state(0)
+    let isHovering = $state(false)
+    let idleStripItems = $state<StripItem[]>([])
+    let idleStripDate = $state('')
+    let idleStripTotal = $state(0)
+    let touchTimeout: ReturnType<typeof setTimeout> | undefined
+
+    /** Format a number with thin-space thousands separator */
+    const formatStripNumber = (n: number): string => n.toLocaleString('en').replace(/,/g, '\u2009')
+
+    /** Abbreviate dataset labels for mobile (shorten prod/test suffix) */
+    const abbreviateLabel = (label: string): string =>
+        label.replace(/\s*\(prod\)$/, ' (p)').replace(/\s*\(test\)$/, ' (t)')
+
+    const computeStripFromDatasets = (datasets: ChartDataset<'line'>[], dataIndex: number) => {
+        const items: StripItem[] = []
+        let total = 0
+        for (const ds of datasets) {
+            const raw = ds.data[dataIndex]
+            const val = typeof raw === 'number' ? raw : 0
+            total += val
+            items.push({
+                label: ds.label ?? '',
+                value: val,
+                color: typeof ds.borderColor === 'string' ? ds.borderColor : '',
+                pct: 0,
+            })
+        }
+        for (const item of items) {
+            item.pct = total > 0 ? Math.round((item.value / total) * 100) : 0
+        }
+        return { items, total }
+    }
+
+    const activeStrip = $derived.by(() => {
+        if (isHovering && hoverStripItems.length > 0) {
+            return { items: hoverStripItems, total: hoverStripTotal, date: hoverStripDate, hovering: true }
+        }
+        if (idleStripItems.length > 0) {
+            return { items: idleStripItems, total: idleStripTotal, date: idleStripDate, hovering: false }
+        }
+        return null
+    })
+
+    const handleExternalTooltip = (context: {
+        tooltip: {
+            opacity: number
+            title?: string[]
+            dataPoints: { dataset: ChartDataset<'line'>; dataIndex: number }[]
+        }
+    }) => {
+        const { tooltip } = context
+        if (tooltip.opacity === 0) {
+            isHovering = false
+            return
+        }
+        isHovering = true
+        hoverStripDate = tooltip.title?.[0] ?? ''
+
+        const items: StripItem[] = []
+        let total = 0
+        for (const dp of tooltip.dataPoints) {
+            const raw = dp.dataset.data[dp.dataIndex]
+            const val = typeof raw === 'number' ? raw : 0
+            total += val
+            items.push({
+                label: dp.dataset.label ?? '',
+                value: val,
+                color: typeof dp.dataset.borderColor === 'string' ? dp.dataset.borderColor : '',
+                pct: 0,
+            })
+        }
+        for (const item of items) {
+            item.pct = total > 0 ? Math.round((item.value / total) * 100) : 0
+        }
+        hoverStripItems = items
+        hoverStripTotal = total
+    }
+
+    const handleTouchEnd = () => {
+        if (touchTimeout) clearTimeout(touchTimeout)
+        touchTimeout = setTimeout(() => {
+            isHovering = false
+            if (chart) {
+                ;(chart as unknown as Record<string, unknown>).__crosshairX = undefined
+                chart.draw()
+            }
+        }, 1500)
+    }
 
     // Track theme so the chart re-reads CSS variables on light/dark switch
     let isDark = $state(browser && document.documentElement.classList.contains('dark'))
@@ -69,6 +169,7 @@
             Tooltip,
             Legend,
             zoomModule.default,
+            crosshairPlugin,
             areaLabelsPlugin,
         )
 
@@ -382,53 +483,8 @@
                 },
                 plugins: {
                     tooltip: {
-                        animation: reducedMotion ? false : { duration: 200 },
-                        backgroundColor: getCssVar('--color-surface-raised') + 'c6',
-                        titleColor: getCssVar('--color-text'),
-                        bodyColor: getCssVar('--color-text-secondary'),
-                        borderColor: getCssVar('--color-border'),
-                        borderWidth: 1,
-                        padding: 12,
-                        boxPadding: 6,
-                        titleFont: {
-                            family: getCssVar('--font-mono').split(',')[0].replace(/'/g, ''),
-                            size: 12,
-                        },
-                        bodyFont: {
-                            family: getCssVar('--font-mono').split(',')[0].replace(/'/g, ''),
-                            size: 12,
-                        },
-                        footerColor: getCssVar('--color-text'),
-                        footerFont: {
-                            family: getCssVar('--font-mono').split(',')[0].replace(/'/g, ''),
-                            size: 12,
-                            weight: 'bold' as const,
-                        },
-                        cornerRadius: 6,
-                        callbacks: {
-                            label: (ctx) => {
-                                // Use raw dataset value, not stacked cumulative parsed.y
-                                const raw = ctx.dataset.data[ctx.dataIndex]
-                                const val = typeof raw === 'number' ? raw : 0
-                                const total = ctx.chart.data.datasets.reduce((sum, ds, i) => {
-                                    const meta = ctx.chart.getDatasetMeta(i)
-                                    if (meta.hidden) return sum
-                                    const v = ds.data[ctx.dataIndex]
-                                    return sum + (typeof v === 'number' ? v : 0)
-                                }, 0)
-                                const pct = total > 0 ? Math.round((val / total) * 100) : 0
-                                const formatted = val.toLocaleString('en').replace(/,/g, '\u2009')
-                                return `${ctx.dataset.label}: ${formatted} lines (${pct}%)`
-                            },
-                            footer: (items) => {
-                                const total = items.reduce((sum, item) => {
-                                    const raw = item.dataset.data[item.dataIndex]
-                                    return sum + (typeof raw === 'number' ? raw : 0)
-                                }, 0)
-                                const formatted = total.toLocaleString('en').replace(/,/g, '\u2009')
-                                return `Total: ${formatted} lines`
-                            },
-                        },
+                        enabled: false,
+                        external: handleExternalTooltip,
                     },
                     legend: {
                         position: 'bottom',
@@ -451,6 +507,7 @@
                             mode: 'x',
                         },
                     },
+                    crosshair: { enabled: true },
                     areaLabels: { enabled: true },
                 },
             },
@@ -494,6 +551,15 @@
         } else {
             chart = new ChartConstructor(canvasEl, config)
         }
+
+        // Compute idle strip from the plain datasets array (not the proxied chart)
+        const lastIdx = days.length - 1
+        if (lastIdx >= 0) {
+            const { items, total } = computeStripFromDatasets(datasets, lastIdx)
+            idleStripItems = items
+            idleStripDate = days[lastIdx].date
+            idleStripTotal = total
+        }
     })
 
     // Clean up on component destroy
@@ -533,8 +599,49 @@
         <button onclick={resetZoom} class="btn-ghost"> Reset zoom </button>
     </div>
 
+    <!-- Detail strip (updates on hover, shows latest when idle) -->
+    {#if activeStrip}
+        <div
+            class="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-[var(--color-border)] px-4 py-2"
+            role="status"
+            aria-live="polite"
+            aria-label="Chart data for {activeStrip.date}"
+            style="font-family: var(--font-mono); font-size: 0.75rem; font-variant-numeric: tabular-nums; letter-spacing: 0.02em;"
+        >
+            <span
+                class="whitespace-nowrap font-medium"
+                style="color: var({activeStrip.hovering ? '--color-text' : '--color-text-secondary'});"
+            >
+                {activeStrip.date}
+            </span>
+
+            {#each activeStrip.items as item (item.label)}
+                <span class="inline-flex items-center gap-1 whitespace-nowrap text-[var(--color-text-secondary)]">
+                    <span
+                        class="inline-block h-2 w-2 shrink-0 rounded-full"
+                        style="background-color: {item.color};"
+                        aria-hidden="true"
+                    ></span>
+                    <span class="hidden sm:inline">{item.label}:</span>
+                    <span class="sm:hidden">{abbreviateLabel(item.label)}:</span>
+                    <span class="text-[var(--color-text)]">{formatStripNumber(item.value)}</span>
+                    <span class="hidden sm:inline text-[var(--color-text-tertiary)]">({item.pct}%)</span>
+                </span>
+            {/each}
+
+            <span class="ml-auto whitespace-nowrap font-medium text-[var(--color-text)]">
+                Total: {formatStripNumber(activeStrip.total)}
+            </span>
+        </div>
+    {/if}
+
     <!-- Chart canvas -->
-    <div class="relative h-64 w-full p-4 sm:h-80 md:h-96 lg:h-[28rem] xl:h-[32rem]" role="img" aria-label={ariaLabel}>
+    <div
+        class="relative h-64 w-full p-4 sm:h-80 md:h-96 lg:h-[28rem] xl:h-[32rem]"
+        role="img"
+        aria-label={ariaLabel}
+        ontouchend={handleTouchEnd}
+    >
         <canvas bind:this={canvasEl}></canvas>
     </div>
 
