@@ -215,7 +215,7 @@ describe('PUT /cache/v1/:repoHash', () => {
 				{
 					method: 'PUT',
 					body: compressed,
-					headers: { 'x-forwarded-for': '10.0.0.99' }
+					headers: { 'cf-connecting-ip': '10.0.0.99' }
 				},
 				{ RESULTS: bucket }
 			);

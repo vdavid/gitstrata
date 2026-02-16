@@ -109,7 +109,7 @@ app.get('/cache/v1/:repoHash', async (c) => {
 		return c.text('Not found', 404, getCorsHeaders(c));
 	}
 
-	const ip = c.req.header('cf-connecting-ip') ?? c.req.header('x-forwarded-for') ?? 'unknown';
+	const ip = c.req.header('cf-connecting-ip') ?? 'unknown';
 	if (isRateLimited(ip)) {
 		return c.text('Rate limit exceeded. Max 100 requests per minute.', 429, getCorsHeaders(c));
 	}
@@ -143,7 +143,7 @@ app.put('/cache/v1/:repoHash', async (c) => {
 		}
 	}
 
-	const ip = c.req.header('cf-connecting-ip') ?? c.req.header('x-forwarded-for') ?? 'unknown';
+	const ip = c.req.header('cf-connecting-ip') ?? 'unknown';
 
 	if (isRateLimited(ip)) {
 		return c.text('Rate limit exceeded. Max 100 requests per minute.', 429, getCorsHeaders(c));
@@ -213,7 +213,7 @@ app.options('*', (c) => {
 });
 
 app.all('*', async (c) => {
-	const ip = c.req.header('cf-connecting-ip') ?? c.req.header('x-forwarded-for') ?? 'unknown';
+	const ip = c.req.header('cf-connecting-ip') ?? 'unknown';
 
 	if (isRateLimited(ip)) {
 		return c.text('Rate limit exceeded. Max 100 requests per minute.', 429, getCorsHeaders(c));
