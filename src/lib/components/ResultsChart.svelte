@@ -439,6 +439,17 @@
         return datasets
     }
 
+    /** Scales chart top padding with canvas width so the overlay strip rarely covers data. */
+    const responsivePaddingPlugin = {
+        id: 'responsivePadding',
+        beforeLayout(chart: ChartType) {
+            const w = chart.width
+            // 56px at 768px+, linearly increasing to ~100px at 320px
+            const top = w >= 768 ? 56 : Math.round(56 + ((768 - w) / (768 - 320)) * 44)
+            chart.options.layout = { padding: { top } }
+        },
+    }
+
     const buildConfig = (daysList: DayStats[], datasets: ChartDataset<'line'>[]): ChartConfiguration<'line'> => {
         const labels = daysList.map((d) => d.date)
         const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -446,9 +457,11 @@
         return {
             type: 'line',
             data: { labels, datasets },
+            plugins: [responsivePaddingPlugin],
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                layout: { padding: { top: 56 } }, // overridden by responsivePadding plugin
                 animation: reducedMotion ? false : { duration: 400 },
                 interaction: {
                     mode: 'index',
@@ -632,49 +645,47 @@
         <button onclick={resetZoom} class="btn-ghost"> Reset zoom </button>
     </div>
 
-    <!-- Detail strip (updates on hover, shows latest when idle) -->
-    {#if activeStrip}
-        <div
-            class="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-border px-4 py-2"
-            role="status"
-            aria-live="polite"
-            aria-label="Chart data for {activeStrip.date}"
-            style="font-family: var(--font-mono); font-size: 0.75rem; font-variant-numeric: tabular-nums; letter-spacing: 0.02em;"
-        >
-            <span
-                class="whitespace-nowrap font-medium"
-                style="color: var({activeStrip.hovering ? '--color-foreground' : '--color-foreground-secondary'});"
-            >
-                {activeStrip.date}
-            </span>
-
-            {#each activeStrip.items as item (item.label)}
-                <span class="inline-flex items-center gap-1 whitespace-nowrap text-foreground-secondary">
-                    <span
-                        class="inline-block h-2 w-2 shrink-0 rounded-full"
-                        style="background-color: {item.color};"
-                        aria-hidden="true"
-                    ></span>
-                    <span class="hidden sm:inline">{item.label}:</span>
-                    <span class="sm:hidden">{abbreviateLabel(item.label)}:</span>
-                    <span class="text-foreground">{formatStripNumber(item.value)}</span>
-                    <span class="hidden sm:inline text-foreground-tertiary">({item.pct}%)</span>
-                </span>
-            {/each}
-
-            <span class="ml-auto whitespace-nowrap font-medium text-foreground">
-                Total: {formatStripNumber(activeStrip.total)}
-            </span>
-        </div>
-    {/if}
-
-    <!-- Chart canvas -->
+    <!-- Chart canvas + overlay strip -->
     <div
-        class="relative h-64 w-full p-4 sm:h-80 md:h-96 lg:h-[28rem] xl:h-[32rem]"
+        class="relative h-[22rem] w-full p-4 sm:h-[24rem] md:h-96 lg:h-[28rem] xl:h-[32rem]"
         role="img"
         aria-label={ariaLabel}
         ontouchend={handleTouchEnd}
     >
+        {#if activeStrip}
+            <div
+                class="pointer-events-none absolute inset-x-0 top-0 z-10 flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2"
+                role="status"
+                aria-live="polite"
+                aria-label="Chart data for {activeStrip.date}"
+                style="font-family: var(--font-mono); font-size: 0.75rem; font-variant-numeric: tabular-nums; letter-spacing: 0.02em; background: color-mix(in srgb, var(--color-bg) 85%, transparent);"
+            >
+                <span
+                    class="whitespace-nowrap font-medium"
+                    style="color: var({activeStrip.hovering ? '--color-foreground' : '--color-foreground-secondary'});"
+                >
+                    {activeStrip.date}
+                </span>
+
+                {#each activeStrip.items as item (item.label)}
+                    <span class="inline-flex items-center gap-1 whitespace-nowrap text-foreground-secondary">
+                        <span
+                            class="inline-block h-2 w-2 shrink-0 rounded-full"
+                            style="background-color: {item.color};"
+                            aria-hidden="true"
+                        ></span>
+                        <span class="hidden sm:inline">{item.label}:</span>
+                        <span class="sm:hidden">{abbreviateLabel(item.label)}:</span>
+                        <span class="text-foreground">{formatStripNumber(item.value)}</span>
+                        <span class="hidden sm:inline text-foreground-tertiary">({item.pct}%)</span>
+                    </span>
+                {/each}
+
+                <span class="ml-auto whitespace-nowrap font-medium text-foreground">
+                    Total: {formatStripNumber(activeStrip.total)}
+                </span>
+            </div>
+        {/if}
         <canvas bind:this={canvasEl}></canvas>
     </div>
 
