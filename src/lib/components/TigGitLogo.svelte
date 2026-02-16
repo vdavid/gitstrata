@@ -192,12 +192,16 @@
         </p>
         <hr class="strat-tooltip-divider" />
         <p>
-            <strong>Stra<span class="text-accent">git</span>raphy</strong> is the science of how your repo's layers
-            (<em>strata</em>) went from <code>git init</code> to whatever it is now. It's a whole bunch faster than real
-            stratigraphy.
+            <strong>Stra<span class="text-accent">git</span>raphy</strong> is the science of how your repo's layers (<em
+                >strata</em
+            >) went from <code>git init</code> to whatever it is now. It's a whole bunch faster than real stratigraphy.
         </p>
         <p class="strat-tooltip-source">
-            proudly made up by <a href="https://www.linkedin.com/in/veszelovszki/" target="_blank" rel="noopener noreferrer">@vdavid</a>
+            proudly made up by <a
+                href="https://www.linkedin.com/in/veszelovszki/"
+                target="_blank"
+                rel="noopener noreferrer">@vdavid</a
+            >
         </p>
     </div>
 {/if}
