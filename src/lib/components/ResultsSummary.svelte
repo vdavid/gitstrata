@@ -276,12 +276,15 @@
         </p>
         <p
             class="mt-2 text-[var(--color-text)]"
-            style="font-family: var(--font-mono); font-size: 1.125rem; font-weight: 500; letter-spacing: -0.01em;"
+            style="font-family: var(--font-mono); font-size: 1.125rem; font-weight: 500; letter-spacing: -0.01em; white-space: nowrap;"
         >
-            Ever: {avgDailyGrowth >= 0 ? '+' : ''}{formatNumber(avgDailyGrowth)}/d
+            {avgDailyGrowth >= 0 ? '+' : ''}{formatNumber(avgDailyGrowth)}/day
         </p>
         <div class="mt-1 flex items-center gap-1">
-            <p class="text-[var(--color-text-secondary)]" style="font-family: var(--font-mono); font-size: 0.75rem;">
+            <p
+                class="text-[var(--color-text-secondary)]"
+                style="font-family: var(--font-mono); font-size: 0.75rem; white-space: nowrap;"
+            >
                 Last 90d: {avgGrowthLast90 >= 0 ? '+' : ''}{formatNumber(avgGrowthLast90)}/day
             </p>
             {#if growthTrend !== 'neutral'}
