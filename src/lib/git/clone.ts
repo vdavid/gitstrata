@@ -4,6 +4,16 @@ import type { ProgressEvent } from '../types';
 
 const sizeWarningThreshold = 1_073_741_824; // 1 GB
 
+// Collects body cancellation promises so callers can await full HTTP cleanup.
+const pendingBodyCleanups: Promise<void>[] = [];
+
+/** Wait for all in-flight response body cancellations to complete, then clear the list. */
+export const waitForBodyCleanups = (): Promise<void> => {
+	const result = Promise.all(pendingBodyCleanups).then(() => {});
+	pendingBodyCleanups.length = 0;
+	return result;
+};
+
 const httpLogger = getLogger(['git-strata', 'http']);
 const cloneLogger = getLogger(['git-strata', 'clone']);
 
@@ -41,6 +51,19 @@ const makeAbortableHttp = (signal?: AbortSignal): HttpClient => ({
 			responseHeaders[key] = value;
 		});
 
+		// Cancel the response body on abort even if the generator was never iterated.
+		// Without this, unconsumed response bodies hold TCP connections open indefinitely.
+		// The cancel promise is tracked in pendingBodyCleanups so callers can await full cleanup.
+		signal?.addEventListener(
+			'abort',
+			() => {
+				const p = res.body?.cancel().catch(() => {});
+				if (p) pendingBodyCleanups.push(p);
+				httpLogger.debug('Abort: cancelled response body for {method} {url}', { method, url });
+			},
+			{ once: true }
+		);
+
 		// Stream response body as async iterable with progress tracking
 		async function* iterateBody(): AsyncGenerator<Uint8Array> {
 			if (!res.body) {
@@ -62,7 +85,16 @@ const makeAbortableHttp = (signal?: AbortSignal): HttpClient => ({
 					yield value;
 				}
 			} finally {
-				reader.releaseLock();
+				reader.cancel().catch((error: unknown) => {
+					// AbortError is expected — means the abort listener already cleaned up
+					if (error instanceof DOMException && error.name === 'AbortError') return;
+					httpLogger.warning('Failed to cancel body reader for {method} {url}: {error}', {
+						method,
+						url,
+						error
+					});
+				});
+				httpLogger.debug('Closed response body for {method} {url}', { method, url });
 			}
 		}
 

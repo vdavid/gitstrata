@@ -7,7 +7,7 @@ import git from 'isomorphic-git';
 import LightningFS from '@isomorphic-git/lightning-fs';
 import { configureSync, getConsoleSink, getLogger } from '@logtape/logtape';
 import type { AnalysisResult, DayStats, ErrorKind, ProgressEvent } from '../types';
-import { cloneRepo, detectDefaultBranch, fetchRepo } from '../git/clone';
+import { cloneRepo, detectDefaultBranch, fetchRepo, waitForBodyCleanups } from '../git/clone';
 import { fillDateGaps, getCommitsByDate } from '../git/history';
 import { countLinesForCommit, countLinesForCommitIncremental } from '../git/count';
 import type { FileState } from '../git/count';
@@ -73,8 +73,9 @@ const classifyError = (error: unknown): { message: string; kind: ErrorKind } => 
 let abortController: AbortController | undefined;
 
 const analyzerApi = {
-	cancel() {
+	async cancel() {
 		abortController?.abort();
+		await waitForBodyCleanups();
 	},
 
 	async analyze(

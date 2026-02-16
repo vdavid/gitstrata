@@ -316,7 +316,8 @@ app.all('*', async (c) => {
 			method: c.req.method,
 			headers,
 			body: c.req.method !== 'GET' && c.req.method !== 'HEAD' ? c.req.raw.body : undefined,
-			redirect: 'follow'
+			redirect: 'follow',
+			signal: c.req.raw.signal
 		});
 
 		const responseHeaders = new Headers(getCorsHeaders(c));

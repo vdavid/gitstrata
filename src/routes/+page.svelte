@@ -54,11 +54,16 @@
 	// Worker handle
 	let analyzer = $state<AnalyzerHandle | undefined>();
 
+	/** Cancel the worker, await HTTP cleanup, then terminate. */
+	const cancelAndTerminate = async (handle: AnalyzerHandle) => {
+		await handle.cancel();
+		handle.terminate();
+	};
+
 	// Terminate the worker on component unmount to prevent zombie workers
 	$effect(() => {
 		return () => {
-			analyzer?.cancel();
-			analyzer?.terminate();
+			if (analyzer) cancelAndTerminate(analyzer);
 		};
 	});
 
@@ -424,6 +429,12 @@
 				return;
 			}
 
+			// Wait for any previous worker's HTTP cleanup before opening new connections
+			if (cancelCleanup) {
+				await cancelCleanup;
+				cancelCleanup = undefined;
+			}
+
 			phase = 'cloning';
 			startTimer('clone');
 
@@ -445,11 +456,12 @@
 		}
 	};
 
+	let cancelCleanup: Promise<void> | undefined;
+
 	const cancel = () => {
 		stopTimer();
 		if (analyzer) {
-			analyzer.cancel();
-			analyzer.terminate();
+			cancelCleanup = cancelAndTerminate(analyzer);
 			analyzer = undefined;
 		}
 		phase = 'idle';
@@ -483,7 +495,7 @@
 		startTimer('clone');
 
 		try {
-			analyzer?.terminate();
+			if (analyzer) await cancelAndTerminate(analyzer);
 			analyzer = createAnalyzer();
 			await analyzer.analyzeIncremental(repoUrl, corsProxy, previousResult, handleProgress);
 			pendingRefresh = undefined;

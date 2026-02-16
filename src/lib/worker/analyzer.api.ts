@@ -14,7 +14,7 @@ export interface AnalyzerHandle {
 		cachedResult: AnalysisResult,
 		onProgress: (event: ProgressEvent) => void
 	) => Promise<AnalysisResult>;
-	cancel: () => void;
+	cancel: () => Promise<void>;
 	terminate: () => void;
 }
 
@@ -33,9 +33,7 @@ export const createAnalyzer = (): AnalyzerHandle => {
 		analyzeIncremental: async (repoInput, corsProxy, cachedResult, onProgress) => {
 			return api.analyzeIncremental(repoInput, corsProxy, cachedResult, Comlink.proxy(onProgress));
 		},
-		cancel: () => {
-			api.cancel();
-		},
+		cancel: () => api.cancel(),
 		terminate: () => {
 			worker.terminate();
 		}
