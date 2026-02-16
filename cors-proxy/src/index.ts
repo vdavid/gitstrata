@@ -25,20 +25,45 @@ function getCorsHeaders(c: {
 	};
 }
 
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+type RateLimitEntry = { count: number; resetAt: number };
+const rateLimitMap = new Map<string, RateLimitEntry>();
 const maxRequestsPerMinute = 100;
+const writeRateLimitMap = new Map<string, RateLimitEntry>();
+const maxWritesPerMinute = 10;
+const maxRateLimitEntries = 10_000;
 
-function isRateLimited(ip: string): boolean {
+/** Remove expired entries from a rate limit map to prevent unbounded growth. */
+function evictExpired(map: Map<string, RateLimitEntry>, now: number): void {
+	if (map.size <= maxRateLimitEntries) return;
+	for (const [key, entry] of map) {
+		if (now >= entry.resetAt) map.delete(key);
+	}
+}
+
+function checkRateLimit(
+	map: Map<string, RateLimitEntry>,
+	ip: string,
+	limit: number
+): boolean {
 	const now = Date.now();
-	const entry = rateLimitMap.get(ip);
+	const entry = map.get(ip);
 
 	if (!entry || now >= entry.resetAt) {
-		rateLimitMap.set(ip, { count: 1, resetAt: now + 60_000 });
+		map.set(ip, { count: 1, resetAt: now + 60_000 });
+		evictExpired(map, now);
 		return false;
 	}
 
 	entry.count++;
-	return entry.count > maxRequestsPerMinute;
+	return entry.count > limit;
+}
+
+function isRateLimited(ip: string): boolean {
+	return checkRateLimit(rateLimitMap, ip, maxRequestsPerMinute);
+}
+
+function isWriteRateLimited(ip: string): boolean {
+	return checkRateLimit(writeRateLimitMap, ip, maxWritesPerMinute);
 }
 
 const allowedHosts = new Set(['github.com', 'gitlab.com', 'bitbucket.org']);
@@ -51,22 +76,6 @@ function isAllowedTarget(url: string): boolean {
 	} catch {
 		return false;
 	}
-}
-
-const writeRateLimitMap = new Map<string, { count: number; resetAt: number }>();
-const maxWritesPerMinute = 10;
-
-function isWriteRateLimited(ip: string): boolean {
-	const now = Date.now();
-	const entry = writeRateLimitMap.get(ip);
-
-	if (!entry || now >= entry.resetAt) {
-		writeRateLimitMap.set(ip, { count: 1, resetAt: now + 60_000 });
-		return false;
-	}
-
-	entry.count++;
-	return entry.count > maxWritesPerMinute;
 }
 
 async function sha256Hex(input: string): Promise<string> {
