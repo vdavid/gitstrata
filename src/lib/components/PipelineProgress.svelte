@@ -11,6 +11,7 @@
 		processTotal: number;
 		processDate: string;
 		processElapsedMs: number;
+		showStaleHint: boolean;
 		oncancel: () => void;
 	}
 
@@ -24,6 +25,7 @@
 		processTotal,
 		processDate,
 		processElapsedMs,
+		showStaleHint,
 		oncancel
 	}: Props = $props();
 
@@ -543,6 +545,15 @@ ${statBlock}`;
 			</li>
 		{/each}
 	</ol>
+
+	{#if showStaleHint && phase === 'cloning'}
+		<p
+			class="mt-3 text-xs text-[var(--color-text-secondary)]"
+			style="font-family: var(--font-sans);"
+		>
+			This is taking a while. Big repo? Timeout for this is 3 minutes.
+		</p>
+	{/if}
 
 	<!-- Footer: elapsed time + cancel -->
 	<div class="mt-4 flex items-center justify-between" aria-live="polite" aria-atomic="true">

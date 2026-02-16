@@ -86,6 +86,67 @@ interface CloneOptions {
 	signal?: AbortSignal;
 }
 
+// --- Staleness monitor: detects stuck connections and aborts after timeout ---
+
+const stalenessTimeoutMs = 180_000; // 3 minutes
+const staleHintMs = 25_000;
+
+interface StalenessMonitor {
+	signal: AbortSignal;
+	markProgress: () => void;
+	wasTimeout: () => boolean;
+	cleanup: () => void;
+}
+
+const createStalenessMonitor = (
+	externalSignal: AbortSignal | undefined,
+	onProgress: ((event: ProgressEvent) => void) | undefined,
+	label: string
+): StalenessMonitor => {
+	const controller = new AbortController();
+	const forwardAbort = () => controller.abort();
+	externalSignal?.addEventListener('abort', forwardAbort, { once: true });
+
+	let lastProgressTime = Date.now();
+	let hintEmitted = false;
+	let timedOut = false;
+
+	const timer = setInterval(() => {
+		const silentMs = Date.now() - lastProgressTime;
+		if (silentMs > stalenessTimeoutMs) {
+			timedOut = true;
+			controller.abort();
+		} else if (silentMs > 60_000) {
+			cloneLogger.error('{label} stale: no progress for {seconds}s — connection may be stuck', {
+				label,
+				seconds: Math.round(silentMs / 1000)
+			});
+		} else if (silentMs > 30_000) {
+			cloneLogger.warning(
+				'{label} slow: no progress for {seconds}s — server may be packing objects',
+				{ label, seconds: Math.round(silentMs / 1000) }
+			);
+		}
+		if (silentMs > staleHintMs && !hintEmitted) {
+			hintEmitted = true;
+			onProgress?.({ type: 'stale-hint' });
+		}
+	}, 5_000);
+
+	return {
+		signal: controller.signal,
+		markProgress: () => {
+			lastProgressTime = Date.now();
+			hintEmitted = false;
+		},
+		wasTimeout: () => timedOut,
+		cleanup: () => {
+			clearInterval(timer);
+			externalSignal?.removeEventListener('abort', forwardAbort);
+		}
+	};
+};
+
 export const detectDefaultBranch = async (options: {
 	url: string;
 	corsProxy: string;
@@ -139,28 +200,13 @@ export const cloneRepo = async (
 		// Directory may already exist
 	}
 
-	const abortableHttp = makeAbortableHttp(signal);
+	const monitor = createStalenessMonitor(signal, onProgress, 'Clone');
+	const abortableHttp = makeAbortableHttp(monitor.signal);
 	let sizeWarningEmitted = false;
 
 	// Progress logging state
 	let prevPhase = '';
 	let phaseTickCount = 0;
-
-	// Staleness health check
-	let lastProgressTime = Date.now();
-	const stalenessTimer = setInterval(() => {
-		const silentMs = Date.now() - lastProgressTime;
-		if (silentMs > 60_000) {
-			cloneLogger.error('Clone stale: no progress for {seconds}s — connection may be stuck', {
-				seconds: Math.round(silentMs / 1000)
-			});
-		} else if (silentMs > 30_000) {
-			cloneLogger.warning(
-				'Clone slow: no progress for {seconds}s — server may be packing objects',
-				{ seconds: Math.round(silentMs / 1000) }
-			);
-		}
-	}, 10_000);
 
 	try {
 		await git.clone({
@@ -172,11 +218,10 @@ export const cloneRepo = async (
 			singleBranch: true,
 			ref: defaultBranch,
 			onProgress: (event) => {
-				if (signal?.aborted) return;
+				if (monitor.signal.aborted) return;
 				const total = event.total ?? 0;
 
-				// Reset staleness timer
-				lastProgressTime = Date.now();
+				monitor.markProgress();
 
 				// Sampled progress logging
 				if (event.phase !== prevPhase) {
@@ -211,8 +256,13 @@ export const cloneRepo = async (
 			},
 			onAuth: () => ({ cancel: true })
 		});
+	} catch (error) {
+		if (monitor.wasTimeout()) {
+			throw new Error('Connection timed out — no progress for 3 minutes.', { cause: error });
+		}
+		throw error;
 	} finally {
-		clearInterval(stalenessTimer);
+		monitor.cleanup();
 	}
 };
 
@@ -221,27 +271,12 @@ export const fetchRepo = async (
 ): Promise<void> => {
 	const { fs, dir, url, corsProxy, defaultBranch, onProgress, signal } = options;
 
-	const abortableHttp = makeAbortableHttp(signal);
+	const monitor = createStalenessMonitor(signal, onProgress, 'Fetch');
+	const abortableHttp = makeAbortableHttp(monitor.signal);
 
 	// Progress logging state
 	let prevPhase = '';
 	let phaseTickCount = 0;
-
-	// Staleness health check
-	let lastProgressTime = Date.now();
-	const stalenessTimer = setInterval(() => {
-		const silentMs = Date.now() - lastProgressTime;
-		if (silentMs > 60_000) {
-			cloneLogger.error('Fetch stale: no progress for {seconds}s — connection may be stuck', {
-				seconds: Math.round(silentMs / 1000)
-			});
-		} else if (silentMs > 30_000) {
-			cloneLogger.warning(
-				'Fetch slow: no progress for {seconds}s — server may be packing objects',
-				{ seconds: Math.round(silentMs / 1000) }
-			);
-		}
-	}, 10_000);
 
 	try {
 		await git.fetch({
@@ -253,11 +288,10 @@ export const fetchRepo = async (
 			singleBranch: true,
 			ref: defaultBranch,
 			onProgress: (event) => {
-				if (signal?.aborted) return;
+				if (monitor.signal.aborted) return;
 				const total = event.total ?? 0;
 
-				// Reset staleness timer
-				lastProgressTime = Date.now();
+				monitor.markProgress();
 
 				// Sampled progress logging
 				if (event.phase !== prevPhase) {
@@ -288,7 +322,12 @@ export const fetchRepo = async (
 			},
 			onAuth: () => ({ cancel: true })
 		});
+	} catch (error) {
+		if (monitor.wasTimeout()) {
+			throw new Error('Connection timed out — no progress for 3 minutes.', { cause: error });
+		}
+		throw error;
 	} finally {
-		clearInterval(stalenessTimer);
+		monitor.cleanup();
 	}
 };
