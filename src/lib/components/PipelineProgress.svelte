@@ -99,18 +99,9 @@ ${statBlock}`;
 ${statBlock}`;
 			}
 
-			case 'resolve': {
-				const snap = snapshots['resolve'];
-				const statBlock =
-					snap && snap.total > 0
-						? `<span class="phase-info-stat"><span class="phase-info-stat-value">${formatNumber(snap.loaded)} / ${formatNumber(snap.total)}</span> deltas resolved</span>`
-						: snap && snap.loaded > 0
-							? `<span class="phase-info-stat"><span class="phase-info-stat-value">${formatNumber(snap.loaded)}</span> deltas resolved</span>`
-							: '';
+			case 'resolve':
 				return `<p>The compressed delta objects need to be reconstructed back into full objects \u2014 like decompressing a zip file, but more clever. Git\u2019s delta encoding works with object similarities, not file boundaries.</p>
-<p>Each delta references a base object and describes how to transform it. The resolver chains these deltas together to rebuild every object in full.</p>
-${statBlock}`;
-			}
+<p>Each delta references a base object and describes how to transform it. The resolver chains these deltas together to rebuild every object in full.</p>`;
 
 			case 'analyze': {
 				const snap = snapshots['analyze'];
