@@ -8,7 +8,7 @@ import LightningFS from '@isomorphic-git/lightning-fs'
 import { configureSync, getConsoleSink, getLogger } from '@logtape/logtape'
 import type { AnalysisResult, DayStats, ErrorKind, ProgressEvent } from '../types'
 import { cloneRepo, detectDefaultBranch, fetchRepo, waitForBodyCleanups } from '../git/clone'
-import { fillDateGaps, getCommitsByDate } from '../git/history'
+import { fillDateGaps, getCommitsByDate, type DailyCommit } from '../git/history'
 import { countLinesForCommit, countLinesForCommitIncremental } from '../git/count'
 import type { FileState } from '../git/count'
 import { parseRepoUrl, repoToDir } from '../url'
@@ -66,6 +66,105 @@ const classifyError = (error: unknown): { message: string; kind: ErrorKind } => 
         return { message: 'Analysis cancelled.', kind: 'cancelled' }
 
     return { message: raw, kind: 'unknown' }
+}
+
+const processDays = async (params: {
+    fs: LightningFS
+    dir: string
+    dayEntries: Array<{ date: string; commit: DailyCommit | undefined }>
+    blobCache: Map<string, { lines: number; testLines: number; languageId: string | undefined }>
+    contentCache: Map<string, string>
+    treeCache: Map<string, { path: string; oid: string; type: string }[]>
+    gitCache: object
+    signal: AbortSignal
+    onProgress: ProgressCallback
+    prevCommitOid: string | undefined
+    prevDay: DayStats | undefined
+    fileStateMap: Map<string, FileState>
+    allExtensions: Set<string>
+}): Promise<DayStats[]> => {
+    const {
+        fs,
+        dir,
+        dayEntries,
+        blobCache,
+        contentCache,
+        treeCache,
+        gitCache,
+        signal,
+        onProgress,
+        fileStateMap,
+        allExtensions,
+    } = params
+    let { prevCommitOid, prevDay } = params
+    const totalDays = dayEntries.length
+    const days: DayStats[] = []
+
+    for (let i = 0; i < dayEntries.length; i++) {
+        if (signal.aborted) throw new Error('Cancelled')
+
+        const { date, commit } = dayEntries[i]
+
+        onProgress({ type: 'process', current: i + 1, total: totalDays, date })
+
+        let dayStats: DayStats
+
+        if (commit) {
+            if (prevCommitOid) {
+                dayStats = await countLinesForCommitIncremental(
+                    {
+                        fs,
+                        dir,
+                        commitOid: commit.hash,
+                        prevCommitOid,
+                        blobCache,
+                        contentCache,
+                        treeCache,
+                        gitCache,
+                        signal,
+                    },
+                    fileStateMap,
+                    allExtensions,
+                    date,
+                    commit.messages,
+                )
+            } else {
+                dayStats = await countLinesForCommit(
+                    {
+                        fs,
+                        dir,
+                        commitOid: commit.hash,
+                        blobCache,
+                        contentCache,
+                        fileStateMap,
+                        allExtensions,
+                        treeCache,
+                        gitCache,
+                        signal,
+                    },
+                    date,
+                    commit.messages,
+                )
+            }
+            prevCommitOid = commit.hash
+            prevDay = dayStats
+        } else if (prevDay) {
+            // Gap day: carry forward previous stats
+            dayStats = {
+                date,
+                total: prevDay.total,
+                languages: Object.fromEntries(Object.entries(prevDay.languages).map(([k, v]) => [k, { ...v }])),
+                comments: ['-'],
+            }
+        } else {
+            continue
+        }
+
+        days.push(dayStats)
+        onProgress({ type: 'day-result', day: dayStats })
+    }
+
+    return days
 }
 
 let abortController: AbortController | undefined
@@ -155,73 +254,22 @@ const analyzerApi = {
             const treeCache = new Map<string, { path: string; oid: string; type: string }[]>()
             const fileStateMap = new Map<string, FileState>()
             const allExtensions = new Set<string>()
-            let prevCommitOid: string | undefined
-            const days: DayStats[] = []
-            let prevDay: DayStats | undefined
 
-            for (let i = 0; i < allDays.length; i++) {
-                if (signal.aborted) throw new Error('Cancelled')
-
-                const { date, commit } = allDays[i]
-
-                onProgress({ type: 'process', current: i + 1, total: totalDays, date })
-
-                let dayStats: DayStats
-
-                if (commit) {
-                    if (prevCommitOid) {
-                        dayStats = await countLinesForCommitIncremental(
-                            {
-                                fs,
-                                dir,
-                                commitOid: commit.hash,
-                                prevCommitOid,
-                                blobCache,
-                                contentCache,
-                                treeCache,
-                                gitCache,
-                                signal,
-                            },
-                            fileStateMap,
-                            allExtensions,
-                            date,
-                            commit.messages,
-                        )
-                    } else {
-                        dayStats = await countLinesForCommit(
-                            {
-                                fs,
-                                dir,
-                                commitOid: commit.hash,
-                                blobCache,
-                                contentCache,
-                                fileStateMap,
-                                allExtensions,
-                                treeCache,
-                                gitCache,
-                                signal,
-                            },
-                            date,
-                            commit.messages,
-                        )
-                    }
-                    prevCommitOid = commit.hash
-                    prevDay = dayStats
-                } else if (prevDay) {
-                    // Gap day: carry forward previous stats
-                    dayStats = {
-                        date,
-                        total: prevDay.total,
-                        languages: Object.fromEntries(Object.entries(prevDay.languages).map(([k, v]) => [k, { ...v }])),
-                        comments: ['-'],
-                    }
-                } else {
-                    continue
-                }
-
-                days.push(dayStats)
-                onProgress({ type: 'day-result', day: dayStats })
-            }
+            const days = await processDays({
+                fs,
+                dir,
+                dayEntries: allDays,
+                blobCache,
+                contentCache,
+                treeCache,
+                gitCache,
+                signal,
+                onProgress,
+                prevCommitOid: undefined,
+                prevDay: undefined,
+                fileStateMap,
+                allExtensions,
+            })
 
             logger.info('Analysis complete ({count} days)', { count: days.length })
 
@@ -361,73 +409,25 @@ const analyzerApi = {
                 prevCommitOid = lastCachedCommitEntry.commit.hash
             }
 
-            const newDays: DayStats[] = []
             // Use last cached day as prevDay for gap-filling
-            let prevDay: DayStats | undefined =
+            const prevDay: DayStats | undefined =
                 cachedResult.days.length > 0 ? cachedResult.days[cachedResult.days.length - 1] : undefined
-            const totalDays = newDayEntries.length
 
-            for (let i = 0; i < newDayEntries.length; i++) {
-                if (signal.aborted) throw new Error('Cancelled')
-
-                const { date, commit } = newDayEntries[i]
-                onProgress({ type: 'process', current: i + 1, total: totalDays, date })
-
-                let dayStats: DayStats
-
-                if (commit) {
-                    if (prevCommitOid) {
-                        dayStats = await countLinesForCommitIncremental(
-                            {
-                                fs,
-                                dir,
-                                commitOid: commit.hash,
-                                prevCommitOid,
-                                blobCache,
-                                contentCache,
-                                treeCache,
-                                gitCache,
-                                signal,
-                            },
-                            fileStateMap,
-                            allExtensions,
-                            date,
-                            commit.messages,
-                        )
-                    } else {
-                        dayStats = await countLinesForCommit(
-                            {
-                                fs,
-                                dir,
-                                commitOid: commit.hash,
-                                blobCache,
-                                contentCache,
-                                fileStateMap,
-                                allExtensions,
-                                treeCache,
-                                gitCache,
-                                signal,
-                            },
-                            date,
-                            commit.messages,
-                        )
-                    }
-                    prevCommitOid = commit.hash
-                    prevDay = dayStats
-                } else if (prevDay) {
-                    dayStats = {
-                        date,
-                        total: prevDay.total,
-                        languages: Object.fromEntries(Object.entries(prevDay.languages).map(([k, v]) => [k, { ...v }])),
-                        comments: ['-'],
-                    }
-                } else {
-                    continue
-                }
-
-                newDays.push(dayStats)
-                onProgress({ type: 'day-result', day: dayStats })
-            }
+            const newDays = await processDays({
+                fs,
+                dir,
+                dayEntries: newDayEntries,
+                blobCache,
+                contentCache,
+                treeCache,
+                gitCache,
+                signal,
+                onProgress,
+                prevCommitOid,
+                prevDay,
+                fileStateMap,
+                allExtensions,
+            })
 
             logger.info('Analysis complete ({count} days)', { count: newDays.length })
 
