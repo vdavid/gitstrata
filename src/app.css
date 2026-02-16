@@ -2,6 +2,32 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Register design tokens so Tailwind v4 utilities (text-accent, bg-canvas, border-border, etc.)
+   resolve to our CSS custom properties. The @theme block defines the light-mode defaults;
+   .dark overrides them for dark mode. */
+@theme {
+    --color-canvas: #faf8f5;
+    --color-canvas-secondary: #f2efe9;
+    --color-canvas-tertiary: #e8e4dc;
+    --color-foreground: #1a1510;
+    --color-foreground-secondary: #4a4238;
+    --color-foreground-tertiary: #6b6358;
+    --color-border: #ddd8cf;
+    --color-border-strong: #c4bdb2;
+    --color-accent: #b86e1a;
+    --color-accent-hover: #a05e12;
+    --color-accent-light: #f5e8d4;
+    --color-accent-muted: #dab87e;
+    --color-success: #4a8c5c;
+    --color-error: #b83a2a;
+    --color-error-light: #fdf0ee;
+    --color-warning: #9e8b3e;
+    --color-surface-raised: #ffffff;
+    --color-surface-overlay: rgba(26, 21, 16, 0.03);
+    --font-sans: 'DM Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
+    --font-mono: 'DM Mono', ui-monospace, 'Cascadia Code', monospace;
+}
+
 /*
  * git strata — geological stratigraphy design system
  *
@@ -37,32 +63,6 @@
     --chart-12-tint: #a8d6e6;
     --chart-other: #c4bab0; /* limestone */
     --chart-other-tint: #dedad4;
-
-    /* ui tokens (light mode) — warm stone */
-    --color-bg: #faf8f5;
-    --color-bg-secondary: #f2efe9;
-    --color-bg-tertiary: #e8e4dc;
-    --color-text: #1a1510;
-    --color-text-secondary: #4a4238; /* 4.8:1 ratio on --color-bg -- WCAG AA pass */
-    --color-text-tertiary: #6b6358; /* 5.2:1 ratio on --color-bg -- WCAG AA pass */
-    --color-border: #ddd8cf;
-    --color-border-strong: #c4bdb2;
-    --color-accent: #b86e1a;
-    --color-accent-hover: #a05e12;
-    --color-accent-light: #f5e8d4;
-    --color-accent-muted: #dab87e;
-    --color-success: #4a8c5c;
-    --color-error: #b83a2a;
-    --color-error-light: #fdf0ee;
-    --color-warning: #9e8b3e;
-
-    /* surfaces */
-    --color-surface-raised: #ffffff;
-    --color-surface-overlay: rgba(26, 21, 16, 0.03);
-
-    /* type */
-    --font-sans: 'DM Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
-    --font-mono: 'DM Mono', ui-monospace, 'Cascadia Code', monospace;
 
     /* motion */
     --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
@@ -101,12 +101,12 @@
     --chart-other-tint: #3a342c;
 
     /* ui tokens (dark mode) — deep cavern stone */
-    --color-bg: #12100c;
-    --color-bg-secondary: #1e1a14;
-    --color-bg-tertiary: #2c261e;
-    --color-text: #e8e2d8;
-    --color-text-secondary: #9c9488;
-    --color-text-tertiary: #b8ada1; /* 5.1:1 ratio on --color-bg -- WCAG AA pass */
+    --color-canvas: #12100c;
+    --color-canvas-secondary: #1e1a14;
+    --color-canvas-tertiary: #2c261e;
+    --color-foreground: #e8e2d8;
+    --color-foreground-secondary: #9c9488;
+    --color-foreground-tertiary: #b8ada1; /* 5.1:1 ratio on --color-canvas -- WCAG AA pass */
     --color-border: #2c261e;
     --color-border-strong: #3e362c;
     --color-accent: #daa04e;
@@ -150,14 +150,14 @@ html {
         outline: 3px solid var(--color-accent);
         outline-offset: 2px;
         box-shadow:
-            0 0 0 2px var(--color-bg),
+            0 0 0 2px var(--color-canvas),
             0 0 0 5px rgba(184, 110, 26, 0.3);
     }
 
     .dark :focus-visible {
         outline-color: var(--color-accent);
         box-shadow:
-            0 0 0 2px var(--color-bg),
+            0 0 0 2px var(--color-canvas),
             0 0 0 5px rgba(218, 160, 78, 0.4);
     }
 
@@ -170,8 +170,8 @@ html {
 
 /* Base body styling */
 body {
-    background-color: var(--color-bg);
-    color: var(--color-text);
+    background-color: var(--color-canvas);
+    color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -234,8 +234,8 @@ body::before {
     border-radius: 999px;
     font-size: 0.75rem;
     font-family: var(--font-mono);
-    color: var(--color-text-secondary);
-    background-color: var(--color-bg-secondary);
+    color: var(--color-foreground-secondary);
+    background-color: var(--color-canvas-secondary);
     letter-spacing: 0.02em;
 }
 
@@ -280,7 +280,7 @@ body::before {
     gap: 8px;
     min-height: 44px;
     padding: 8px 16px;
-    color: var(--color-text-secondary);
+    color: var(--color-foreground-secondary);
     font-family: var(--font-sans);
     font-weight: 400;
     font-size: 0.875rem;
@@ -292,8 +292,8 @@ body::before {
 }
 
 .btn-ghost:hover {
-    background-color: var(--color-bg-tertiary);
-    color: var(--color-text);
+    background-color: var(--color-canvas-tertiary);
+    color: var(--color-foreground);
     border-color: var(--color-border-strong);
 }
 
@@ -332,7 +332,7 @@ body::before {
     width: 100%;
     overflow: hidden;
     border-radius: 3px;
-    background-color: var(--color-bg-tertiary);
+    background-color: var(--color-canvas-tertiary);
     border: 1px solid var(--color-border);
 }
 
@@ -409,7 +409,7 @@ body::before {
     letter-spacing: 0.02em;
     border-radius: 999px;
     border: 1px solid var(--color-border);
-    color: var(--color-text-secondary);
+    color: var(--color-foreground-secondary);
     background: transparent;
     cursor: pointer;
     transition: all var(--duration-fast) var(--ease-out-expo);
@@ -417,7 +417,7 @@ body::before {
 
 .strata-chip:hover {
     border-color: var(--color-border-strong);
-    color: var(--color-text);
+    color: var(--color-foreground);
 }
 
 .strata-chip[aria-pressed='true'] {
@@ -434,7 +434,7 @@ body::before {
 }
 
 .strata-table thead {
-    background-color: var(--color-bg-secondary);
+    background-color: var(--color-canvas-secondary);
     position: sticky;
     top: 0;
     z-index: 1;
@@ -447,7 +447,7 @@ body::before {
     font-size: 0.75rem;
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    color: var(--color-text-tertiary);
+    color: var(--color-foreground-tertiary);
     border-bottom: 1px solid var(--color-border);
     white-space: nowrap;
 }
@@ -457,7 +457,7 @@ body::before {
     font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
     border-bottom: 1px solid var(--color-border);
-    color: var(--color-text);
+    color: var(--color-foreground);
 }
 
 .strata-table tbody tr {
@@ -489,8 +489,8 @@ body::before {
     opacity: 0.06;
     background-image: repeating-linear-gradient(
         0deg,
-        var(--color-text) 0px,
-        var(--color-text) 1px,
+        var(--color-foreground) 0px,
+        var(--color-foreground) 1px,
         transparent 1px,
         transparent 8px
     );
@@ -548,7 +548,7 @@ body::before {
 }
 
 .strata-scroll::-webkit-scrollbar-track {
-    background: var(--color-bg-tertiary);
+    background: var(--color-canvas-tertiary);
     border-radius: 3px;
 }
 
@@ -558,7 +558,7 @@ body::before {
 }
 
 .strata-scroll::-webkit-scrollbar-thumb:hover {
-    background: var(--color-text-tertiary);
+    background: var(--color-foreground-tertiary);
 }
 
 /* Phase log — vertical step indicator */
@@ -655,12 +655,12 @@ body::before {
 
 /*noinspection CssUnusedSymbol*/
 .phase-label--active {
-    color: var(--color-text);
+    color: var(--color-foreground);
 }
 
 /*noinspection CssUnusedSymbol*/
 .phase-label--pending {
-    color: var(--color-text-tertiary);
+    color: var(--color-foreground-tertiary);
 }
 
 .phase-detail {
@@ -668,7 +668,7 @@ body::before {
     font-size: 0.75rem;
     font-variant-numeric: tabular-nums;
     letter-spacing: 0.02em;
-    color: var(--color-text-tertiary);
+    color: var(--color-foreground-tertiary);
     white-space: nowrap;
 }
 
@@ -679,7 +679,7 @@ body::before {
     font-size: 0.75rem;
     font-variant-numeric: tabular-nums;
     letter-spacing: 0.02em;
-    color: var(--color-text-tertiary);
+    color: var(--color-foreground-tertiary);
 }
 
 /* Phase label group — wraps label, elapsed time, and info icon inline */
@@ -708,7 +708,7 @@ body::before {
 
 /*noinspection CssUnusedSymbol*/
 .phase-elapsed--done {
-    color: var(--color-text-tertiary);
+    color: var(--color-foreground-tertiary);
 }
 
 /* Info icon button */
@@ -728,7 +728,7 @@ body::before {
     padding: 0;
     border: none;
     background: none;
-    color: var(--color-text-tertiary);
+    color: var(--color-foreground-tertiary);
     cursor: pointer;
     border-radius: 50%;
     transition: color var(--duration-fast) var(--ease-out-expo);
@@ -772,7 +772,7 @@ body::before {
     font-family: var(--font-sans);
     font-size: 0.75rem;
     line-height: 1.5;
-    color: var(--color-text-secondary);
+    color: var(--color-foreground-secondary);
 }
 
 .phase-info-popup p:last-child {
@@ -780,7 +780,7 @@ body::before {
 }
 
 .phase-info-popup strong {
-    color: var(--color-text);
+    color: var(--color-foreground);
     font-weight: 600;
 }
 
@@ -794,8 +794,8 @@ body::before {
     font-size: 0.75rem;
     font-variant-numeric: tabular-nums;
     letter-spacing: 0.02em;
-    color: var(--color-text-secondary);
-    background-color: var(--color-bg-secondary);
+    color: var(--color-foreground-secondary);
+    background-color: var(--color-canvas-secondary);
     border: 1px solid var(--color-border);
     border-radius: 999px;
 }
@@ -812,7 +812,7 @@ body::before {
     gap: 4px;
     font-size: 0.75rem;
     letter-spacing: 0.02em;
-    color: var(--color-text-tertiary);
+    color: var(--color-foreground-tertiary);
 }
 
 .phase-footer-label {
@@ -866,12 +866,12 @@ body::before {
     font-family: var(--font-sans);
     font-size: 0.875rem;
     line-height: 1.6;
-    color: var(--color-text-secondary);
+    color: var(--color-foreground-secondary);
     font-weight: 400;
 }
 
 .strat-tooltip strong {
-    color: var(--color-text);
+    color: var(--color-foreground);
     font-weight: 600;
 }
 
@@ -879,20 +879,20 @@ body::before {
     font-family: var(--font-mono);
     font-size: 0.875rem;
     padding: 1px 5px;
-    background-color: var(--color-bg-secondary);
+    background-color: var(--color-canvas-secondary);
     border: 1px solid var(--color-border);
     border-radius: 3px;
 }
 
 .strat-tooltip-ref {
     font-size: 0.75rem;
-    color: var(--color-text-tertiary);
+    color: var(--color-foreground-tertiary);
 }
 
 .strat-tooltip .strat-tooltip-source {
     margin-top: 4px;
     font-size: 0.75rem;
-    color: var(--color-text-tertiary);
+    color: var(--color-foreground-tertiary);
     font-style: italic;
 }
 

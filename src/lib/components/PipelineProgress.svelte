@@ -542,7 +542,7 @@ ${statBlock}`
     </ol>
 
     {#if showStaleHint && phase === 'cloning'}
-        <p class="mt-3 text-xs text-[var(--color-text-secondary)]" style="font-family: var(--font-sans);">
+        <p class="mt-3 text-xs text-foreground-secondary" style="font-family: var(--font-sans);">
             This is taking a while. Big repo? Timeout for this is 3 minutes.
         </p>
     {/if}

@@ -165,7 +165,7 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <!-- prettier-ignore -->
 <h1
-	class="text-3xl font-bold tracking-tight text-[var(--color-text)] sm:text-4xl lg:text-5xl"
+	class="text-3xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl"
 	style="font-family: var(--font-sans); letter-spacing: -0.025em;"
 ><button
 	class="strat-trigger"
@@ -177,7 +177,7 @@
 	bind:this={tigGroupEl}
 	onmouseenter={handleTigMouseEnter}
 	onmouseleave={handleTigMouseLeave}
-><span class="tig-char tig-t text-[var(--color-accent)]" bind:this={tigTEl}>t</span><span class="tig-char tig-i text-[var(--color-accent)]" bind:this={tigIEl}>i</span><span class="tig-char tig-g text-[var(--color-accent)]" bind:this={tigGEl}>g</span></span>raphy</span></button> for your code</h1>
+><span class="tig-char tig-t text-accent" bind:this={tigTEl}>t</span><span class="tig-char tig-i text-accent" bind:this={tigIEl}>i</span><span class="tig-char tig-g text-accent" bind:this={tigGEl}>g</span></span>raphy</span></button> for your code</h1>
 {#if showStratTooltip}
     <div class="strat-tooltip strata-fade-in" bind:this={stratTooltipEl}>
         <p>
@@ -192,9 +192,12 @@
         </p>
         <hr class="strat-tooltip-divider" />
         <p>
-            <strong>Stra<span class="text-[var(--color-accent)]">git</span>raphy</strong> is the study of how your
-            repo's layers (<em>strati</em>) went from <code>git init</code> to whatever it is now. Unlike real stratigraphy,
-            it takes seconds instead of millennia.
+            <strong>Stra<span class="text-accent">git</span>raphy</strong> is the science of how your repo's layers
+            (<em>strata</em>) went from <code>git init</code> to whatever it is now. It's a whole bunch faster than real
+            stratigraphy.
+        </p>
+        <p class="strat-tooltip-source">
+            proudly made up by <a href="https://www.linkedin.com/in/veszelovszki/" target="_blank" rel="noopener noreferrer">@vdavid</a>
         </p>
     </div>
 {/if}

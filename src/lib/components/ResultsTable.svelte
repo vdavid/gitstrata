@@ -207,7 +207,7 @@
                     <tr>
                         <th class="text-left" scope="col" aria-sort={ariaSort('date')}>
                             <button
-                                class="hover:text-[var(--color-text)] transition-colors"
+                                class="hover:text-foreground transition-colors"
                                 style="transition-duration: var(--duration-fast);"
                                 onclick={() => toggleSort('date')}
                                 aria-label={`Sort by date${ariaSort('date') !== 'none' ? ` (${ariaSort('date')})` : ''}`}
@@ -218,7 +218,7 @@
                         {#each visibleLanguages as langId (langId)}
                             <th class="text-right" scope="col" aria-sort={ariaSort(langId)}>
                                 <button
-                                    class="hover:text-[var(--color-text)] transition-colors"
+                                    class="hover:text-foreground transition-colors"
                                     style="transition-duration: var(--duration-fast);"
                                     onclick={() => toggleSort(langId)}
                                     aria-label={`Sort by ${langName(langId)}${ariaSort(langId) !== 'none' ? ` (${ariaSort(langId)})` : ''}`}
@@ -230,7 +230,7 @@
                         {#if hasOther}
                             <th class="text-right" scope="col" aria-sort={ariaSort('other')}>
                                 <button
-                                    class="hover:text-[var(--color-text)] transition-colors"
+                                    class="hover:text-foreground transition-colors"
                                     style="transition-duration: var(--duration-fast);"
                                     onclick={() => toggleSort('other')}
                                     aria-label={`Sort by other${ariaSort('other') !== 'none' ? ` (${ariaSort('other')})` : ''}`}
@@ -241,7 +241,7 @@
                         {/if}
                         <th class="text-right" scope="col" aria-sort={ariaSort('total')}>
                             <button
-                                class="hover:text-[var(--color-text)] transition-colors"
+                                class="hover:text-foreground transition-colors"
                                 style="transition-duration: var(--duration-fast);"
                                 onclick={() => toggleSort('total')}
                                 aria-label={`Sort by total${ariaSort('total') !== 'none' ? ` (${ariaSort('total')})` : ''}`}
@@ -254,14 +254,14 @@
                 <tbody>
                     {#each sortedDays as day (day.date)}
                         <tr>
-                            <td class="text-[var(--color-text-secondary)]">{day.date}</td>
+                            <td class="text-foreground-secondary">{day.date}</td>
                             {#each visibleLanguages as langId (langId)}
                                 <td class="text-right">
                                     {formatNumber(day.languages[langId]?.total ?? 0)}
                                 </td>
                             {/each}
                             {#if hasOther}
-                                <td class="text-right text-[var(--color-text-secondary)]">
+                                <td class="text-right text-foreground-secondary">
                                     {formatNumber(otherValue(day))}
                                 </td>
                             {/if}

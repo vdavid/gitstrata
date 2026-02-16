@@ -244,7 +244,7 @@
         ctx.fillRect(0, 0, size, size)
 
         // Draw pattern overlay in a darker version
-        ctx.strokeStyle = getCssVar('--color-text')
+        ctx.strokeStyle = getCssVar('--color-foreground')
         ctx.globalAlpha = 0.3
         ctx.lineWidth = 1.5
 
@@ -266,7 +266,7 @@
             case 'dots':
                 ctx.beginPath()
                 ctx.arc(size / 2, size / 2, 2, 0, Math.PI * 2)
-                ctx.fillStyle = getCssVar('--color-text')
+                ctx.fillStyle = getCssVar('--color-foreground')
                 ctx.globalAlpha = 0.3
                 ctx.fill()
                 break
@@ -460,7 +460,7 @@
                         time: { unit: 'month', tooltipFormat: 'yyyy-MM-dd' },
                         grid: { color: getCssVar('--color-border') + '30' },
                         ticks: {
-                            color: getCssVar('--color-text-tertiary'),
+                            color: getCssVar('--color-foreground-tertiary'),
                             maxTicksLimit: 12,
                             font: { family: getCssVar('--font-mono').split(',')[0].replace(/'/g, ''), size: 12 },
                         },
@@ -471,7 +471,7 @@
                         beginAtZero: true,
                         grid: { color: getCssVar('--color-border') + '30' },
                         ticks: {
-                            color: getCssVar('--color-text-tertiary'),
+                            color: getCssVar('--color-foreground-tertiary'),
                             font: { family: getCssVar('--font-mono').split(',')[0].replace(/'/g, ''), size: 12 },
                             callback: (value) => {
                                 const v = value as number
@@ -491,7 +491,7 @@
                     legend: {
                         position: 'bottom',
                         labels: {
-                            color: getCssVar('--color-text-secondary'),
+                            color: getCssVar('--color-foreground-secondary'),
                             padding: 16,
                             usePointStyle: true,
                             pointStyle: 'rectRounded',
@@ -607,7 +607,7 @@
 <div class="strata-card overflow-hidden">
     <!-- View toggles + reset zoom -->
     <div
-        class="flex flex-wrap items-center gap-2 border-b border-[var(--color-border)] px-4 py-3"
+        class="flex flex-wrap items-center gap-2 border-b border-border px-4 py-3"
         role="group"
         aria-label="Chart view mode"
     >
@@ -635,7 +635,7 @@
     <!-- Detail strip (updates on hover, shows latest when idle) -->
     {#if activeStrip}
         <div
-            class="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-[var(--color-border)] px-4 py-2"
+            class="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-border px-4 py-2"
             role="status"
             aria-live="polite"
             aria-label="Chart data for {activeStrip.date}"
@@ -643,13 +643,13 @@
         >
             <span
                 class="whitespace-nowrap font-medium"
-                style="color: var({activeStrip.hovering ? '--color-text' : '--color-text-secondary'});"
+                style="color: var({activeStrip.hovering ? '--color-foreground' : '--color-foreground-secondary'});"
             >
                 {activeStrip.date}
             </span>
 
             {#each activeStrip.items as item (item.label)}
-                <span class="inline-flex items-center gap-1 whitespace-nowrap text-[var(--color-text-secondary)]">
+                <span class="inline-flex items-center gap-1 whitespace-nowrap text-foreground-secondary">
                     <span
                         class="inline-block h-2 w-2 shrink-0 rounded-full"
                         style="background-color: {item.color};"
@@ -657,12 +657,12 @@
                     ></span>
                     <span class="hidden sm:inline">{item.label}:</span>
                     <span class="sm:hidden">{abbreviateLabel(item.label)}:</span>
-                    <span class="text-[var(--color-text)]">{formatStripNumber(item.value)}</span>
-                    <span class="hidden sm:inline text-[var(--color-text-tertiary)]">({item.pct}%)</span>
+                    <span class="text-foreground">{formatStripNumber(item.value)}</span>
+                    <span class="hidden sm:inline text-foreground-tertiary">({item.pct}%)</span>
                 </span>
             {/each}
 
-            <span class="ml-auto whitespace-nowrap font-medium text-[var(--color-text)]">
+            <span class="ml-auto whitespace-nowrap font-medium text-foreground">
                 Total: {formatStripNumber(activeStrip.total)}
             </span>
         </div>
@@ -679,9 +679,9 @@
     </div>
 
     {#if live}
-        <div class="border-t border-[var(--color-border)] px-4 py-2">
+        <div class="border-t border-border px-4 py-2">
             <p
-                class="text-center text-[var(--color-text-tertiary)]"
+                class="text-center text-foreground-tertiary"
                 style="font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.02em;"
             >
                 Chart updates as data streams in...

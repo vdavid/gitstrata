@@ -418,7 +418,7 @@
         <div class="relative">
             <TigGitLogo />
             <p
-                class="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-[var(--color-text-secondary)] sm:text-base"
+                class="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-foreground-secondary sm:text-base"
                 style="font-family: var(--font-sans);"
             >
                 Visualize how any public git repo grew over time, broken down by language. Runs in your browser.
@@ -437,7 +437,7 @@
 
     <!-- Error -->
     {#if phase === 'error'}
-        <div class="strata-card strata-fade-in mx-auto max-w-2xl border-[var(--color-error)] p-4" role="alert">
+        <div class="strata-card strata-fade-in mx-auto max-w-2xl border-error p-4" role="alert">
             <div class="flex items-start gap-3">
                 <svg
                     width="18"
@@ -456,7 +456,7 @@
                     <line x1="9" y1="9" x2="15" y2="15" />
                 </svg>
                 <div class="min-w-0 flex-1">
-                    <p class="text-sm text-[var(--color-error)]">{errorMessage}</p>
+                    <p class="text-sm text-error">{errorMessage}</p>
                     <div class="mt-3 flex items-center gap-3">
                         {#if retryable}
                             <button onclick={retry} class="btn-primary text-sm">
@@ -518,10 +518,7 @@
 
         <!-- Size warning -->
         {#if showSizeWarning && phase === 'cloning'}
-            <div
-                class="strata-card strata-fade-in mx-auto max-w-2xl border-[var(--color-warning)] p-4 mt-4"
-                role="alert"
-            >
+            <div class="strata-card strata-fade-in mx-auto max-w-2xl border-warning p-4 mt-4" role="alert">
                 <div class="flex items-start gap-3">
                     <svg
                         width="18"
@@ -542,7 +539,7 @@
                         <line x1="12" y1="17" x2="12.01" y2="17" />
                     </svg>
                     <div class="min-w-0 flex-1">
-                        <p class="text-sm text-[var(--color-text)]">
+                        <p class="text-sm text-foreground">
                             This repository is large (~{formatBytes(sizeWarningBytes)}). Downloading may take a while
                             and use significant storage.
                         </p>
@@ -660,7 +657,7 @@
             {#if result}
                 <details class="group">
                     <summary
-                        class="cursor-pointer select-none py-2 text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text)] transition-colors"
+                        class="cursor-pointer select-none py-2 text-sm text-foreground-secondary hover:text-foreground transition-colors"
                         style="font-family: var(--font-mono); font-size: 0.875rem; letter-spacing: 0.02em; transition-duration: var(--duration-fast);"
                     >
                         Data table ({commitDays.length}

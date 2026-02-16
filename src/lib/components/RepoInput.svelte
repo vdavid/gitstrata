@@ -86,9 +86,9 @@
                 oninput={handleInput}
                 placeholder="Example: https://github.com/sveltejs/svelte"
                 {disabled}
-                class="w-full border bg-[var(--color-surface-raised)] px-4 py-3
-					text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-tertiary)]
-					{error ? 'border-[var(--color-error)]' : 'border-[var(--color-border)] focus:border-[var(--color-accent)]'}
+                class="w-full border bg-surface-raised px-4 py-3
+					text-sm text-foreground placeholder:text-foreground-tertiary
+					{error ? 'border-error' : 'border-border focus:border-accent'}
 					disabled:cursor-not-allowed disabled:opacity-50"
                 style="
 					font-family: var(--font-mono);
@@ -104,7 +104,7 @@
             {#if error}
                 <p
                     id="repo-input-error"
-                    class="mt-2 text-xs text-[var(--color-error)]"
+                    class="mt-2 text-xs text-error"
                     style="font-family: var(--font-sans);"
                     role="alert"
                 >
@@ -116,19 +116,19 @@
     </div>
 
     <div
-        class="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[var(--color-text-tertiary)]"
+        class="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-foreground-tertiary"
         style="font-family: var(--font-mono); letter-spacing: 0.02em;"
     >
         <span>try:</span>
         {#each quickExamples as example, i (example.value)}
             {#if i > 0}
-                <span class="text-[var(--color-border-strong)]">/</span>
+                <span class="text-border-strong">/</span>
             {/if}
             <button
                 onclick={() => handleExample(example.value)}
                 {disabled}
-                class="cursor-pointer text-[var(--color-text-secondary)] transition-colors
-					hover:text-[var(--color-accent)]
+                class="cursor-pointer text-foreground-secondary transition-colors
+					hover:text-accent
 					disabled:cursor-not-allowed disabled:opacity-50"
                 style="transition-duration: var(--duration-fast);"
             >

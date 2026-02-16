@@ -32,8 +32,8 @@
 <button
     onclick={toggle}
     class="group relative flex h-11 w-11 cursor-pointer items-center justify-center rounded-md
-		text-[var(--color-text-tertiary)] transition-all
-		hover:text-[var(--color-accent)]"
+		text-foreground-tertiary transition-all
+		hover:text-accent"
     style="transition-duration: var(--duration-fast); transition-timing-function: var(--ease-out-expo);"
     aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
 >

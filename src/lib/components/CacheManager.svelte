@@ -60,8 +60,8 @@
         <button
             onclick={() => (expanded = !expanded)}
             aria-expanded={expanded}
-            class="flex cursor-pointer items-center gap-2 text-[var(--color-text-tertiary)] transition-colors
-				hover:text-[var(--color-text-secondary)]"
+            class="flex cursor-pointer items-center gap-2 text-foreground-tertiary transition-colors
+				hover:text-foreground-secondary"
             style="font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.02em; transition-duration: var(--duration-fast);"
         >
             <svg
@@ -86,12 +86,12 @@
             <div class="strata-card strata-fade-in mt-3 p-4 text-left">
                 <div class="mb-3 flex items-center justify-between">
                     <p
-                        class="text-[var(--color-text)]"
+                        class="text-foreground"
                         style="font-family: var(--font-sans); font-size: 0.875rem; font-weight: 500;"
                     >
                         Cached repos
                         <span
-                            class="font-normal text-[var(--color-text-tertiary)]"
+                            class="font-normal text-foreground-tertiary"
                             style="font-family: var(--font-mono); font-size: 0.75rem;"
                         >
                             ({formatBytes(totalSize)})
@@ -99,7 +99,7 @@
                     </p>
                     <button
                         onclick={handleClearAll}
-                        class="text-xs text-[var(--color-error)] transition-colors hover:underline"
+                        class="text-xs text-error transition-colors hover:underline"
                         style="font-family: var(--font-mono); letter-spacing: 0.02em; transition-duration: var(--duration-fast);"
                     >
                         clear all
@@ -111,13 +111,13 @@
                             <div class="min-w-0 flex-1">
                                 <a
                                     href="{resolve('/')}?repo={shortName(repo.repoUrl)}"
-                                    class="block truncate text-[var(--color-text)] hover:text-[var(--color-accent)] hover:underline transition-colors"
+                                    class="block truncate text-foreground hover:text-accent hover:underline transition-colors"
                                     style="font-family: var(--font-mono); font-size: 0.875rem; text-decoration: none; transition-duration: var(--duration-fast);"
                                 >
                                     {shortName(repo.repoUrl)}
                                 </a>
                                 <p
-                                    class="text-[var(--color-text-tertiary)]"
+                                    class="text-foreground-tertiary"
                                     style="font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.02em;"
                                 >
                                     {formatDate(repo.analyzedAt)} / {formatBytes(repo.sizeBytes)}

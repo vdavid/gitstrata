@@ -41,7 +41,7 @@
 
 <button
     onclick={() => (open = true)}
-    class="text-[var(--color-text-tertiary)] transition-colors hover:text-[var(--color-text-secondary)]"
+    class="text-foreground-tertiary transition-colors hover:text-foreground-secondary"
     style="font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.02em;"
     aria-label="Show keyboard shortcuts"
 >
@@ -51,19 +51,17 @@
 <dialog
     bind:this={dialogEl}
     onclose={close}
-    class="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-raised)]
-		p-6 text-[var(--color-text)] shadow-lg backdrop:bg-black/50"
+    class="rounded-lg border border-border bg-surface-raised
+		p-6 text-foreground shadow-lg backdrop:bg-black/50"
     style="max-width: 380px; width: 90vw;"
     aria-label="Keyboard shortcuts"
 >
     <div class="flex items-center justify-between mb-4">
-        <h2 class="text-sm font-semibold text-[var(--color-text)]" style="font-family: var(--font-sans);">
-            Keyboard shortcuts
-        </h2>
+        <h2 class="text-sm font-semibold text-foreground" style="font-family: var(--font-sans);">Keyboard shortcuts</h2>
         <button
             onclick={close}
             class="flex h-8 w-8 items-center justify-center rounded-md
-				text-[var(--color-text-tertiary)] transition-colors hover:text-[var(--color-text)]"
+				text-foreground-tertiary transition-colors hover:text-foreground"
             aria-label="Close keyboard shortcuts"
         >
             <svg
@@ -85,12 +83,12 @@
     <ul class="space-y-2">
         {#each shortcuts as shortcut (shortcut.key)}
             <li class="flex items-center justify-between gap-4">
-                <span class="text-xs text-[var(--color-text-secondary)]" style="font-family: var(--font-sans);">
+                <span class="text-xs text-foreground-secondary" style="font-family: var(--font-sans);">
                     {shortcut.description}
                 </span>
                 <kbd
-                    class="shrink-0 rounded border border-[var(--color-border)] bg-[var(--color-bg-secondary)]
-						px-2 py-1 text-xs text-[var(--color-text-secondary)]"
+                    class="shrink-0 rounded border border-border bg-canvas-secondary
+						px-2 py-1 text-xs text-foreground-secondary"
                     style="font-family: var(--font-mono);"
                 >
                     {shortcut.key}

@@ -30,7 +30,7 @@ export const crosshairPlugin: Plugin<'line', CrosshairOptions> = {
         ctx.moveTo(xPixel, top)
         ctx.lineTo(xPixel, bottom)
         ctx.lineWidth = 1
-        ctx.strokeStyle = getCssVar('--color-text-tertiary') + '66'
+        ctx.strokeStyle = getCssVar('--color-foreground-tertiary') + '66'
         ctx.setLineDash([4, 3])
         ctx.stroke()
         ctx.restore()

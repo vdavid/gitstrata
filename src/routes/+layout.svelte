@@ -18,18 +18,18 @@
     {/if}
 </svelte:head>
 
-<div class="flex min-h-screen flex-col bg-[var(--color-bg)] text-[var(--color-text)]">
+<div class="flex min-h-screen flex-col bg-canvas text-foreground">
     <a
         href="#main-content"
         class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50
-			focus:rounded-md focus:bg-[var(--color-accent)] focus:px-4 focus:py-2 focus:text-white"
+			focus:rounded-md focus:bg-accent focus:px-4 focus:py-2 focus:text-white"
     >
         Skip to main content
     </a>
 
     <header class="relative px-4 py-4 sm:px-6">
         <div class="mx-auto flex max-w-5xl items-center justify-between 2xl:max-w-7xl">
-            <a href={resolve('/')} class="group flex items-center gap-3 text-[var(--color-text)]">
+            <a href={resolve('/')} class="group flex items-center gap-3 text-foreground">
                 <!-- Strata icon: layered horizontal lines -->
                 <svg
                     width="24"
@@ -41,13 +41,26 @@
                 >
                     <rect x="2" y="4" width="20" height="3" rx="1" fill="var(--color-accent)" opacity="0.9" />
                     <rect x="2" y="9" width="20" height="3" rx="1" fill="var(--color-accent-muted)" opacity="0.6" />
-                    <rect x="2" y="14" width="20" height="3" rx="1" fill="var(--color-text-tertiary)" opacity="0.4" />
-                    <rect x="2" y="19" width="20" height="3" rx="1" fill="var(--color-text-tertiary)" opacity="0.2" />
+                    <rect
+                        x="2"
+                        y="14"
+                        width="20"
+                        height="3"
+                        rx="1"
+                        fill="var(--color-foreground-tertiary)"
+                        opacity="0.4"
+                    />
+                    <rect
+                        x="2"
+                        y="19"
+                        width="20"
+                        height="3"
+                        rx="1"
+                        fill="var(--color-foreground-tertiary)"
+                        opacity="0.2"
+                    />
                 </svg>
-                <span
-                    class="font-[var(--font-mono)] text-sm font-medium tracking-wide"
-                    style="font-family: var(--font-mono);"
-                >
+                <span class="font-mono text-sm font-medium tracking-wide" style="font-family: var(--font-mono);">
                     git strata
                 </span>
             </a>
@@ -57,8 +70,8 @@
                     target="_blank"
                     rel="noopener noreferrer"
                     class="group relative flex h-11 w-11 items-center justify-center rounded-md
-						text-[var(--color-text-tertiary)] transition-all
-						hover:text-[var(--color-accent)]"
+						text-foreground-tertiary transition-all
+						hover:text-accent"
                     style="transition-duration: var(--duration-fast); transition-timing-function: var(--ease-out-expo);"
                     aria-label="View source on GitHub"
                 >
@@ -85,7 +98,7 @@
                 <CacheManager id="cache-manager" />
                 <div class="flex items-center gap-4">
                     <p
-                        class="text-center text-xs tracking-wide text-[var(--color-text-tertiary)]"
+                        class="text-center text-xs tracking-wide text-foreground-tertiary"
                         style="font-family: var(--font-mono);"
                     >
                         All processing happens in your browser. No code leaves your machine.

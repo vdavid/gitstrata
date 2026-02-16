@@ -256,7 +256,7 @@ export const areaLabelsPlugin: Plugin<'line', AreaLabelsOptions> = {
         if (!ctx || !chartArea) return
 
         // Detect dark/light mode from background color luminance
-        const bgColor = getCssVar('--color-bg')
+        const bgColor = getCssVar('--color-canvas')
         const bgRgb = parseHex(bgColor)
         const isDark = bgRgb ? (bgRgb[0] * 299 + bgRgb[1] * 587 + bgRgb[2] * 114) / 1000 < 128 : false
 
@@ -303,7 +303,7 @@ export const areaLabelsPlugin: Plugin<'line', AreaLabelsOptions> = {
             if (checkCollision(candidate, placed)) continue
 
             const rawBorderColor =
-                typeof dataset.borderColor === 'string' ? dataset.borderColor : getCssVar('--color-text')
+                typeof dataset.borderColor === 'string' ? dataset.borderColor : getCssVar('--color-foreground')
             const textColor = deriveReadableColor(rawBorderColor, isDark)
 
             drawLabel(ctx, label, p.x, p.midY, angle, fontSize, textColor, bgColor)
