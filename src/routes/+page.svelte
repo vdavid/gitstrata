@@ -54,6 +54,14 @@
 	// Worker handle
 	let analyzer = $state<AnalyzerHandle | undefined>();
 
+	// Terminate the worker on component unmount to prevent zombie workers
+	$effect(() => {
+		return () => {
+			analyzer?.cancel();
+			analyzer?.terminate();
+		};
+	});
+
 	// Share link feedback
 	let shareCopied = $state(false);
 
@@ -467,6 +475,7 @@
 		startTimer('clone');
 
 		try {
+			analyzer?.terminate();
 			analyzer = createAnalyzer();
 			await analyzer.analyzeIncremental(repoUrl, corsProxy, previousResult, handleProgress);
 			pendingRefresh = undefined;
