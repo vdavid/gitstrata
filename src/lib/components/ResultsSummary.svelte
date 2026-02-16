@@ -289,7 +289,7 @@
             </p>
             {#if growthTrend !== 'neutral'}
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" style="flex-shrink: 0;">
-                    <title>{growthTrend === 'up' ? 'Growth is accelerating' : 'Growth is decelerating'}</title>
+                    <title>{growthTrend === 'up' ? 'Recent growth is higher than the average' : 'Recent growth is lower than the average'}</title>
                     {#if growthTrend === 'up'}
                         <path
                             d="M8 3 L8 13 M4 7 L8 3 L12 7"
