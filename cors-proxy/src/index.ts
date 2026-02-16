@@ -40,11 +40,7 @@ function evictExpired(map: Map<string, RateLimitEntry>, now: number): void {
 	}
 }
 
-function checkRateLimit(
-	map: Map<string, RateLimitEntry>,
-	ip: string,
-	limit: number
-): boolean {
+function checkRateLimit(map: Map<string, RateLimitEntry>, ip: string, limit: number): boolean {
 	const now = Date.now();
 	const entry = map.get(ip);
 
