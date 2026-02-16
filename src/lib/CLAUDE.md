@@ -20,7 +20,8 @@ run client-side in a Web Worker.
   for repo URL hashing and CompressionStream for gzip upload.
 - `git/clone.ts` — Clone/fetch using isomorphic-git + lightning-fs, default branch detection via
   `listServerRefs` (protocol v2), abortable HTTP wrapper for signal support, size-warning emission
-  for repos >1 GB
+  for repos >1 GB. A `StalenessMonitor` wraps the external abort signal and aborts after 3 minutes
+  of silence. After 25 seconds it emits a `stale-hint` progress event for the UI.
 - `git/history.ts` — Commit log grouped by date, consecutive date generation, gap filling.
   `getCommitsByDate` fetches commits in batches (via `git.log` with `depth` parameter) to bound peak
   memory on large repos. A `seenOids` Set deduplicates commits across batches (merges can cause overlap).
@@ -47,9 +48,11 @@ run client-side in a Web Worker.
   The `gitCache` operates at the low level (raw git object reads), while our custom `treeCache` and
   `blobCache`/`contentCache` operate at higher levels (parsed tree entries, line counts). All layers
   are complementary.
-- Blob dedup: `contentCache` (OID -> content) avoids redundant reads; `blobCache` (OID+path -> result)
-  avoids redundant classification. These Maps are safe for concurrent async access because JavaScript
-  is single-threaded (Map operations are atomic between await points).
+- Blob dedup: `contentCache` (OID -> decoded UTF-8 content) avoids redundant reads; `blobCache`
+  (OID+path -> result) avoids redundant classification. These Maps are safe for concurrent async
+  access because JavaScript is single-threaded (Map operations are atomic between await points).
+- Non-UTF-8 handling: `processFile` uses `TextDecoder('utf-8', { fatal: true })`. On decode failure,
+  line counts are computed from raw bytes (0x0A counting) and inline test detection is skipped.
 - Diff-based processing: After the first commit (full tree walk via `listFilesAtCommitCached`),
   subsequent commits use custom `diffTrees` recursive traversal with `git.readTree` to diff against
   the previous commit. An in-memory `treeCache` (`Map<treeOid, TreeEntry[]>`) shared across all
