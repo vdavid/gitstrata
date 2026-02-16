@@ -713,6 +713,7 @@ body::before {
     position: relative;
     display: inline-flex;
     align-items: center;
+    align-self: center;
 }
 
 .phase-info-btn {
