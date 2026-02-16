@@ -96,6 +96,17 @@ const isBinary = (content: Uint8Array): boolean => {
 	return false;
 };
 
+/** Count newline bytes (0x0A) directly from raw bytes — encoding-independent. */
+const countLinesFromBytes = (bytes: Uint8Array): number => {
+	if (bytes.length === 0) return 0;
+	let lines = 0;
+	for (let i = 0; i < bytes.length; i++) {
+		if (bytes[i] === 0x0a) lines++;
+	}
+	if (bytes[bytes.length - 1] !== 0x0a) lines++;
+	return lines;
+};
+
 export const countLines = (content: string): number => {
 	if (content.length === 0) return 0;
 	let lines = 0;
@@ -387,22 +398,36 @@ const processFile = async (
 		return { oid, languageId: cached.languageId, lines: cached.lines, testLines: cached.testLines };
 	}
 
-	let content = contentCache.get(oid);
-	if (content === undefined) {
+	let content: string | undefined = contentCache.get(oid);
+	let lines: number;
+
+	if (content !== undefined) {
+		lines = countLines(content);
+	} else {
+		let blob: Uint8Array;
 		try {
-			const { blob } = await git.readBlob({ fs, dir, oid, cache: gitCache });
-			if (isBinary(blob)) {
-				blobCache.set(cacheKey, { lines: 0, testLines: 0, languageId: undefined });
-				return { oid, languageId: undefined, lines: 0, testLines: 0 };
-			}
-			content = new TextDecoder().decode(blob);
-			contentCache.set(oid, content);
+			const result = await git.readBlob({ fs, dir, oid, cache: gitCache });
+			blob = result.blob;
 		} catch {
 			return { oid, languageId: undefined, lines: 0, testLines: 0 };
 		}
+
+		if (isBinary(blob)) {
+			blobCache.set(cacheKey, { lines: 0, testLines: 0, languageId: undefined });
+			return { oid, languageId: undefined, lines: 0, testLines: 0 };
+		}
+
+		try {
+			content = new TextDecoder('utf-8', { fatal: true }).decode(blob);
+			contentCache.set(oid, content);
+			lines = countLines(content);
+		} catch {
+			// Non-UTF-8: count newline bytes directly, skip inline test detection
+			lines = countLinesFromBytes(blob);
+			content = undefined;
+		}
 	}
 
-	const lines = countLines(content);
 	const basename = getBasename(filePath);
 
 	if (!lang) {
@@ -554,7 +579,7 @@ interface Classification {
 const classifyFile = (
 	filePath: string,
 	basename: string,
-	content: string,
+	content: string | undefined,
 	lines: number,
 	lang: LanguageDefinition
 ): Classification => {
@@ -575,7 +600,8 @@ const classifyFile = (
 	}
 
 	// 3. Inline test detection (e.g., Rust #[cfg(test)], Zig test blocks)
-	if (lang.countInlineTestLines) {
+	// Skipped when content is unavailable (non-UTF-8 files)
+	if (content && lang.countInlineTestLines) {
 		const testLines = lang.countInlineTestLines(content);
 		return { lines, testLines, hasSplit: true };
 	}
