@@ -2,7 +2,6 @@ import git, { type FsClient, type HttpClient } from 'isomorphic-git';
 import { getLogger } from '@logtape/logtape';
 import type { ProgressEvent } from '../types';
 
-const defaultCorsProxy = 'https://cors.isomorphic-git.org';
 const sizeWarningThreshold = 1_073_741_824; // 1 GB
 
 const httpLogger = getLogger(['git-strata', 'http']);
@@ -82,21 +81,21 @@ interface CloneOptions {
 	fs: FsClient;
 	dir: string;
 	url: string;
-	corsProxy?: string;
+	corsProxy: string;
 	onProgress?: (event: ProgressEvent) => void;
 	signal?: AbortSignal;
 }
 
 export const detectDefaultBranch = async (options: {
 	url: string;
-	corsProxy?: string;
+	corsProxy: string;
 	signal?: AbortSignal;
 }): Promise<string> => {
 	cloneLogger.info('Detecting default branch...');
 	const abortableHttp = makeAbortableHttp(options.signal);
 	const refs = await git.listServerRefs({
 		http: abortableHttp,
-		corsProxy: options.corsProxy ?? defaultCorsProxy,
+		corsProxy: options.corsProxy,
 		url: options.url,
 		prefix: 'HEAD',
 		symrefs: true,
@@ -111,7 +110,7 @@ export const detectDefaultBranch = async (options: {
 	// Fallback: list all branches and try common names
 	const allRefs = await git.listServerRefs({
 		http: abortableHttp,
-		corsProxy: options.corsProxy ?? defaultCorsProxy,
+		corsProxy: options.corsProxy,
 		url: options.url,
 		prefix: 'refs/heads/',
 		protocolVersion: 2
@@ -169,7 +168,7 @@ export const cloneRepo = async (
 			http: abortableHttp,
 			dir,
 			url,
-			corsProxy: corsProxy ?? defaultCorsProxy,
+			corsProxy,
 			singleBranch: true,
 			ref: defaultBranch,
 			onProgress: (event) => {
@@ -250,7 +249,7 @@ export const fetchRepo = async (
 			http: abortableHttp,
 			dir,
 			url,
-			corsProxy: corsProxy ?? defaultCorsProxy,
+			corsProxy,
 			singleBranch: true,
 			ref: defaultBranch,
 			onProgress: (event) => {

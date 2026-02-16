@@ -79,7 +79,7 @@ const analyzerApi = {
 
 	async analyze(
 		repoInput: string,
-		corsProxy: string | undefined,
+		corsProxy: string,
 		onProgress: ProgressCallback
 	): Promise<AnalysisResult> {
 		abortController = new AbortController();
@@ -251,7 +251,7 @@ const analyzerApi = {
 
 	async analyzeIncremental(
 		repoInput: string,
-		corsProxy: string | undefined,
+		corsProxy: string,
 		cachedResult: AnalysisResult,
 		onProgress: ProgressCallback
 	): Promise<AnalysisResult> {

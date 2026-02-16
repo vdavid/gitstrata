@@ -5,12 +5,12 @@ import type { AnalysisResult, ProgressEvent } from '../types';
 export interface AnalyzerHandle {
 	analyze: (
 		repoInput: string,
-		corsProxy: string | undefined,
+		corsProxy: string,
 		onProgress: (event: ProgressEvent) => void
 	) => Promise<AnalysisResult>;
 	analyzeIncremental: (
 		repoInput: string,
-		corsProxy: string | undefined,
+		corsProxy: string,
 		cachedResult: AnalysisResult,
 		onProgress: (event: ProgressEvent) => void
 	) => Promise<AnalysisResult>;

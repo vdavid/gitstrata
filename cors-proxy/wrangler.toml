@@ -13,4 +13,4 @@ ALLOWED_ORIGIN = "https://gitstrata.com"
 
 # Cache write auth: set via `wrangler secret put CACHE_WRITE_TOKEN`
 # The frontend sends this as a Bearer token on cache PUT requests.
-# When unset, cache writes are open (existing behavior).
+# Required in prod — cache writes are rejected (403) when ALLOWED_ORIGIN is set but this token is missing.
