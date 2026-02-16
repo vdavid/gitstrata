@@ -5,6 +5,12 @@ import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
     plugins: [tailwindcss(), sveltekit(), devtoolsJson()],
-    server: { port: 5233, strictPort: true },
+    server: {
+        port: 5233,
+        strictPort: true,
+        watch: {
+            ignored: ['**/*.md', '**/todo.md', '**/.claude/**'],
+        },
+    },
     test: { include: ['tests/**/*.test.ts'] },
 })
