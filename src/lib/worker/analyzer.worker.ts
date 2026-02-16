@@ -313,7 +313,32 @@ const analyzerApi = {
 			const treeCache = new Map<string, { path: string; oid: string; type: string }[]>();
 			const fileStateMap = new Map<string, FileState>();
 			const allExtensions = new Set<string>();
+
+			// Initialize from last cached commit so the first new commit
+			// uses incremental tree diffing instead of a full tree walk
+			const lastCachedCommitEntry = allDays
+				.filter((d) => d.date <= lastCachedDate && d.commit)
+				.at(-1);
 			let prevCommitOid: string | undefined;
+			if (lastCachedCommitEntry?.commit) {
+				await countLinesForCommit(
+					{
+						fs,
+						dir,
+						commitOid: lastCachedCommitEntry.commit.hash,
+						blobCache,
+						contentCache,
+						fileStateMap,
+						allExtensions,
+						treeCache,
+						gitCache
+					},
+					lastCachedCommitEntry.date,
+					[]
+				);
+				prevCommitOid = lastCachedCommitEntry.commit.hash;
+			}
+
 			const newDays: DayStats[] = [];
 			// Use last cached day as prevDay for gap-filling
 			let prevDay: DayStats | undefined =
