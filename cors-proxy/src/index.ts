@@ -288,6 +288,11 @@ app.all('*', async (c) => {
 		}
 	}
 
+	const contentLength = parseInt(c.req.header('content-length') ?? '0', 10);
+	if (contentLength > maxBodySize) {
+		return c.text('Request body too large. Max 10 MB.', 413, getCorsHeaders(c));
+	}
+
 	try {
 		const response = await fetch(targetUrl, {
 			method: c.req.method,
