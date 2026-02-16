@@ -262,7 +262,6 @@ app.all('*', async (c) => {
 			method: c.req.method,
 			headers,
 			body: c.req.method !== 'GET' && c.req.method !== 'HEAD' ? c.req.raw.body : undefined,
-			// @ts-expect-error Cloudflare-specific option to disable following redirects
 			redirect: 'follow'
 		});
 
