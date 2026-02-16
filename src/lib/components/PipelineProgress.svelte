@@ -148,8 +148,21 @@ ${statBlock}`;
 	let previousPhaseId: PhaseId | null = $state(null);
 	let seenFetching = $state(false);
 
+	// Track which clonePhase string was already acknowledged as complete.
+	// Because effects run after render, a new phase arriving already at loaded >= total
+	// gets at least one render cycle as 'active' before being marked complete.
+	let completedClonePhase = $state('');
+	$effect(() => {
+		if (phase === 'cloning' && cloneTotal > 0 && cloneLoaded >= cloneTotal) {
+			completedClonePhase = clonePhase;
+		}
+	});
+
 	const cloneSubPhaseComplete = $derived(
-		phase === 'cloning' && cloneTotal > 0 && cloneLoaded >= cloneTotal
+		phase === 'cloning' &&
+			cloneTotal > 0 &&
+			cloneLoaded >= cloneTotal &&
+			clonePhase === completedClonePhase
 	);
 
 	const activePhaseId = $derived.by((): PhaseId | null => {
@@ -211,8 +224,9 @@ ${statBlock}`;
 			if (index === activeIndex) return 'active';
 			return 'pending';
 		}
-		// No active phase (between sub-phases)
+		// No active phase (between sub-phases): auto-advance display to next phase
 		if (index <= highestReachedIndex) return 'done';
+		if (index === highestReachedIndex + 1 && phase === 'cloning') return 'active';
 		return 'pending';
 	};
 
@@ -344,6 +358,7 @@ ${statBlock}`;
 
 			case 'analyze': {
 				if (state !== 'active') return '';
+				if (processTotal === 0) return processDate;
 				const dayLabel = processTotal === 1 ? 'day' : 'days';
 				const dateStr = processDate ? ` \u00b7 ${processDate}` : '';
 				return `${formatNumber(processCurrent)} / ${formatNumber(processTotal)} ${dayLabel}${dateStr}`;
