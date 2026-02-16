@@ -71,6 +71,21 @@
     // Share link feedback
     let shareCopied = $state(false)
 
+    const hostToForgeNameMap: Record<string, string> = {
+        'github.com': 'GitHub',
+        'gitlab.com': 'GitLab',
+        'bitbucket.org': 'Bitbucket',
+    }
+
+    const forgeName = (repoUrl: string): string => {
+        try {
+            const host = new URL(repoUrl).hostname.toLowerCase()
+            return hostToForgeNameMap[host] ?? host
+        } catch {
+            return 'repo'
+        }
+    }
+
     // Focus management: reference to progress area
     let progressAreaEl: HTMLDivElement | undefined = $state()
 
@@ -572,29 +587,57 @@
                             Refresh
                         </button>
                     {/if}
-                    <button
-                        onclick={copyShareLink}
-                        aria-label={shareCopied
-                            ? 'Repository link copied to clipboard'
-                            : 'Copy repository link to clipboard'}
-                        class="btn-ghost"
-                    >
-                        <svg
-                            width="14"
-                            height="14"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="2"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            aria-hidden="true"
+                    <div class="flex items-center gap-3">
+                        <button
+                            onclick={copyShareLink}
+                            aria-label={shareCopied
+                                ? 'Repository link copied to clipboard'
+                                : 'Copy repository link to clipboard'}
+                            class="btn-ghost"
                         >
-                            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-                            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-                        </svg>
-                        {shareCopied ? 'Copied!' : 'Copy link'}
-                    </button>
+                            <svg
+                                width="14"
+                                height="14"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                aria-hidden="true"
+                            >
+                                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                            </svg>
+                            {shareCopied ? 'Copied!' : 'Copy link'}
+                        </button>
+                        <!-- eslint-disable svelte/no-navigation-without-resolve -- external URL, not a SvelteKit route -->
+                        <a
+                            href={result.repoUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="btn-ghost"
+                            aria-label="Open repository on {forgeName(result.repoUrl)}"
+                        >
+                            <svg
+                                width="14"
+                                height="14"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                aria-hidden="true"
+                            >
+                                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                                <polyline points="15 3 21 3 21 9" />
+                                <line x1="10" y1="14" x2="21" y2="3" />
+                            </svg>
+                            Open on {forgeName(result.repoUrl)}
+                        </a>
+                        <!-- eslint-enable svelte/no-navigation-without-resolve -->
+                    </div>
                 </div>
             {/if}
 
