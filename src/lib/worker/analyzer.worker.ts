@@ -206,7 +206,9 @@ const analyzerApi = {
 					dayStats = {
 						date,
 						total: prevDay.total,
-						languages: { ...prevDay.languages },
+						languages: Object.fromEntries(
+							Object.entries(prevDay.languages).map(([k, v]) => [k, { ...v }])
+						),
 						comments: ['-']
 					};
 				} else {
@@ -403,7 +405,9 @@ const analyzerApi = {
 					dayStats = {
 						date,
 						total: prevDay.total,
-						languages: { ...prevDay.languages },
+						languages: Object.fromEntries(
+							Object.entries(prevDay.languages).map(([k, v]) => [k, { ...v }])
+						),
 						comments: ['-']
 					};
 				} else {
