@@ -10,6 +10,8 @@ responses; otherwise just a pass-through proxy.
 
 ## Key decisions
 
+- **CORS origin**: `ALLOWED_ORIGIN` in `wrangler.toml` restricts `Access-Control-Allow-Origin` to the
+  production frontend. Override in `.dev.vars` for local dev. When unset, falls back to `*`.
 - **Host allowlist**: Only proxies to `github.com`, `gitlab.com`, and `bitbucket.org`. Rejects all other hosts.
 - Only allows git protocol paths (`/info/refs`, `/git-upload-pack`) — validated against `pathname`, not the full URL.
 - **Header allowlist**: Only forwards `content-type`, `content-length`, `accept`, `accept-encoding`, and `git-protocol`

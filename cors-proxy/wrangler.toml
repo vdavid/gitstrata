@@ -7,6 +7,10 @@ compatibility_date = "2025-01-01"
 # binding = "RESULTS"
 # bucket_name = "git-strata-results"
 
+# CORS origin restriction: rejects cross-origin requests from other websites.
+# Override locally via .dev.vars.
+ALLOWED_ORIGIN = "https://gitstrata.com"
+
 # Cache write auth: set via `wrangler secret put CACHE_WRITE_TOKEN`
 # The frontend sends this as a Bearer token on cache PUT requests.
 # When unset, cache writes are open (existing behavior).

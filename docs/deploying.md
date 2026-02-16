@@ -140,6 +140,7 @@ Once these are set, every push to `main` that passes CI will auto-deploy both th
 | `PUBLIC_CORS_PROXY_URL`    | Frontend (`.env`)            | `https://cors.isomorphic-git.org` | URL of your deployed CORS proxy                                 |
 | `PUBLIC_SHARED_CACHE_URL`  | Frontend (`.env`)            | _(none)_                          | URL of shared cache API (same as CORS proxy when R2 is enabled) |
 | `PUBLIC_CACHE_WRITE_TOKEN` | Frontend (`.env` / `ci.yml`) | _(none)_                          | Bearer token for cache writes (must match worker secret below)  |
+| `ALLOWED_ORIGIN`           | Worker (`wrangler.toml`)     | `https://gitstrata.com`           | CORS origin restriction — override in `.dev.vars` for local dev |
 | `CACHE_WRITE_TOKEN`        | Worker secret / `.dev.vars`  | _(none)_                          | Server-side token that cache PUT requests are checked against   |
 | `PUBLIC_ANALYTICS_URL`     | Frontend (`.env`)            | _(none)_                          | Umami server URL (for example, `https://umami.yourdomain.com`)  |
 | `PUBLIC_ANALYTICS_ID`      | Frontend (`.env`)            | _(none)_                          | Umami website ID (UUID from your Umami dashboard)               |

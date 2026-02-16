@@ -3,16 +3,24 @@ import { Hono } from 'hono';
 type Bindings = {
 	RESULTS?: R2Bucket;
 	CACHE_WRITE_TOKEN?: string;
+	ALLOWED_ORIGIN?: string;
 };
 
 const app = new Hono<{ Bindings: Bindings }>();
 
-const corsHeaders = {
-	'Access-Control-Allow-Origin': '*',
-	'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
-	'Access-Control-Allow-Headers': 'Content-Type, Git-Protocol, Authorization',
-	'Access-Control-Expose-Headers': 'Content-Type, Content-Length'
-};
+function getCorsHeaders(c: { env: Bindings; req: { header: (name: string) => string | undefined } }) {
+	const allowed = c.env.ALLOWED_ORIGIN;
+	const origin = c.req.header('origin');
+	// When ALLOWED_ORIGIN is set, only reflect it if the request origin matches.
+	// When unset (local dev), allow any origin.
+	const allowOrigin = !allowed ? '*' : origin === allowed ? allowed : 'null';
+	return {
+		'Access-Control-Allow-Origin': allowOrigin,
+		'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
+		'Access-Control-Allow-Headers': 'Content-Type, Git-Protocol, Authorization',
+		'Access-Control-Expose-Headers': 'Content-Type, Content-Length'
+	};
+}
 
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const maxRequestsPerMinute = 100;
@@ -81,8 +89,8 @@ function isValidCacheEntry(data: unknown): data is {
 	if (typeof obj.updatedAt !== 'string') return false;
 	if (typeof obj.result !== 'object' || obj.result === null) return false;
 	const result = obj.result as Record<string, unknown>;
-	if (!Array.isArray(result.days)) return false;
-	return true;
+	return Array.isArray(result.days);
+
 }
 
 // --- Cache routes (only active when R2 binding RESULTS is present) ---
@@ -90,22 +98,22 @@ function isValidCacheEntry(data: unknown): data is {
 app.get('/cache/v1/:repoHash', async (c) => {
 	const bucket = c.env.RESULTS;
 	if (!bucket) {
-		return c.text('Not found', 404, corsHeaders);
+		return c.text('Not found', 404, getCorsHeaders(c));
 	}
 
 	const ip = c.req.header('cf-connecting-ip') ?? c.req.header('x-forwarded-for') ?? 'unknown';
 	if (isRateLimited(ip)) {
-		return c.text('Rate limit exceeded. Max 100 requests per minute.', 429, corsHeaders);
+		return c.text('Rate limit exceeded. Max 100 requests per minute.', 429, getCorsHeaders(c));
 	}
 
 	const repoHash = c.req.param('repoHash');
 	const object = await bucket.get(`results/v1/${repoHash}.json.gz`);
 
 	if (!object) {
-		return c.text('Not found', 404, corsHeaders);
+		return c.text('Not found', 404, getCorsHeaders(c));
 	}
 
-	const headers = new Headers(corsHeaders);
+	const headers = new Headers(getCorsHeaders(c));
 	headers.set('Content-Type', 'application/json');
 	headers.set('Content-Encoding', 'gzip');
 	headers.set('Cache-Control', 'public, max-age=300');
@@ -116,29 +124,29 @@ app.get('/cache/v1/:repoHash', async (c) => {
 app.put('/cache/v1/:repoHash', async (c) => {
 	const bucket = c.env.RESULTS;
 	if (!bucket) {
-		return c.text('Not found', 404, corsHeaders);
+		return c.text('Not found', 404, getCorsHeaders(c));
 	}
 
 	const writeToken = c.env.CACHE_WRITE_TOKEN;
 	if (writeToken) {
 		const auth = c.req.header('authorization');
 		if (auth !== `Bearer ${writeToken}`) {
-			return c.text('Unauthorized', 401, corsHeaders);
+			return c.text('Unauthorized', 401, getCorsHeaders(c));
 		}
 	}
 
 	const ip = c.req.header('cf-connecting-ip') ?? c.req.header('x-forwarded-for') ?? 'unknown';
 
 	if (isRateLimited(ip)) {
-		return c.text('Rate limit exceeded. Max 100 requests per minute.', 429, corsHeaders);
+		return c.text('Rate limit exceeded. Max 100 requests per minute.', 429, getCorsHeaders(c));
 	}
 	if (isWriteRateLimited(ip)) {
-		return c.text('Write rate limit exceeded. Max 10 writes per minute.', 429, corsHeaders);
+		return c.text('Write rate limit exceeded. Max 10 writes per minute.', 429, getCorsHeaders(c));
 	}
 
 	const body = await c.req.arrayBuffer();
 	if (body.byteLength > maxBodySize) {
-		return c.text('Request body too large. Max 10 MB.', 413, corsHeaders);
+		return c.text('Request body too large. Max 10 MB.', 413, getCorsHeaders(c));
 	}
 
 	// Decompress gzip to validate JSON
@@ -149,35 +157,35 @@ app.put('/cache/v1/:repoHash', async (c) => {
 	try {
 		parsed = await decompressed.json();
 	} catch {
-		return c.text('Invalid gzip or JSON payload.', 400, corsHeaders);
+		return c.text('Invalid gzip or JSON payload.', 400, getCorsHeaders(c));
 	}
 
 	if (!isValidCacheEntry(parsed)) {
-		return c.text('Invalid cache entry shape.', 400, corsHeaders);
+		return c.text('Invalid cache entry shape.', 400, getCorsHeaders(c));
 	}
 
 	const repoHash = c.req.param('repoHash');
 	const expectedHash = await sha256Hex(parsed.repoUrl);
 	if (expectedHash !== repoHash) {
-		return c.text('repoUrl hash does not match path.', 400, corsHeaders);
+		return c.text('repoUrl hash does not match path.', 400, getCorsHeaders(c));
 	}
 
 	await bucket.put(`results/v1/${repoHash}.json.gz`, body, {
 		httpMetadata: { contentType: 'application/json', contentEncoding: 'gzip' }
 	});
 
-	return c.text('Stored', 200, corsHeaders);
+	return c.text('Stored', 200, getCorsHeaders(c));
 });
 
 app.options('*', (c) => {
-	return c.body(null, 204, corsHeaders);
+	return c.body(null, 204, getCorsHeaders(c));
 });
 
 app.all('*', async (c) => {
 	const ip = c.req.header('cf-connecting-ip') ?? c.req.header('x-forwarded-for') ?? 'unknown';
 
 	if (isRateLimited(ip)) {
-		return c.text('Rate limit exceeded. Max 100 requests per minute.', 429, corsHeaders);
+		return c.text('Rate limit exceeded. Max 100 requests per minute.', 429, getCorsHeaders(c));
 	}
 
 	// The target URL is everything after the proxy host's `/`.
@@ -188,14 +196,14 @@ app.all('*', async (c) => {
 	const targetUrl = rawPath.startsWith('http') ? rawPath : `https://${rawPath}`;
 
 	if (!rawPath) {
-		return c.text('Missing target URL. Pass the full URL as the path.', 400, corsHeaders);
+		return c.text('Missing target URL. Pass the full URL as the path.', 400, getCorsHeaders(c));
 	}
 
 	if (!isAllowedTarget(targetUrl)) {
 		return c.text(
 			'Forbidden. Only git protocol paths on allowed hosts are permitted.',
 			403,
-			corsHeaders
+			getCorsHeaders(c)
 		);
 	}
 
@@ -212,7 +220,7 @@ app.all('*', async (c) => {
 		const cachedResponse = await cache.match(cacheKey);
 
 		if (cachedResponse) {
-			const responseHeaders = new Headers(corsHeaders);
+			const responseHeaders = new Headers(getCorsHeaders(c));
 			for (const [key, value] of cachedResponse.headers.entries()) {
 				const lower = key.toLowerCase();
 				if (
@@ -258,7 +266,7 @@ app.all('*', async (c) => {
 			redirect: 'follow'
 		});
 
-		const responseHeaders = new Headers(corsHeaders);
+		const responseHeaders = new Headers(getCorsHeaders(c));
 		for (const [key, value] of response.headers.entries()) {
 			const lower = key.toLowerCase();
 			// Pass through content headers (but not cache-control — see below)
@@ -295,7 +303,7 @@ app.all('*', async (c) => {
 		});
 	} catch (error) {
 		const message = error instanceof Error ? error.message : 'Unknown error';
-		return c.text(`Failed to fetch target URL: ${message}`, 502, corsHeaders);
+		return c.text(`Failed to fetch target URL: ${message}`, 502, getCorsHeaders(c));
 	}
 });
 
