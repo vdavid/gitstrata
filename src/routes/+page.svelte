@@ -200,6 +200,7 @@
                 if (dayFlushTimeout) clearTimeout(dayFlushTimeout)
                 flushDayBuffer()
                 result = event.result
+                cachedResult = event.result
                 phase = 'done'
                 void saveResult(event.result)
                 void uploadServerResult(event.result)
