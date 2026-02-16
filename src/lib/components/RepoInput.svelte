@@ -127,7 +127,7 @@
             <button
                 onclick={() => handleExample(example.value)}
                 {disabled}
-                class="text-[var(--color-text-secondary)] transition-colors
+                class="cursor-pointer text-[var(--color-text-secondary)] transition-colors
 					hover:text-[var(--color-accent)]
 					disabled:cursor-not-allowed disabled:opacity-50"
                 style="transition-duration: var(--duration-fast);"
