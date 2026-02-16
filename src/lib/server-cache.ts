@@ -19,6 +19,18 @@ const gzipCompress = async (input: string): Promise<Blob> => {
 	return new Response(stream).blob();
 };
 
+const isValidCacheEntry = (data: unknown): data is SharedCacheEntry => {
+	if (typeof data !== 'object' || data === null) return false;
+	const obj = data as Record<string, unknown>;
+	if (obj.version !== 1) return false;
+	if (typeof obj.repoUrl !== 'string') return false;
+	if (typeof obj.headCommit !== 'string') return false;
+	if (typeof obj.updatedAt !== 'string') return false;
+	if (typeof obj.result !== 'object' || obj.result === null) return false;
+	const result = obj.result as Record<string, unknown>;
+	return Array.isArray(result.days);
+};
+
 /**
  * Fetch a cached result from the shared server cache.
  * Returns undefined on miss, error, or when the cache is disabled.
@@ -31,7 +43,9 @@ export const fetchServerResult = async (repoUrl: string): Promise<SharedCacheEnt
 		const repoHash = await sha256(repoUrl);
 		const response = await fetch(`${baseUrl}/cache/v1/${repoHash}`);
 		if (!response.ok) return undefined;
-		return (await response.json()) as SharedCacheEntry;
+		const data: unknown = await response.json();
+		if (!isValidCacheEntry(data)) return undefined;
+		return data;
 	} catch {
 		return undefined;
 	}
