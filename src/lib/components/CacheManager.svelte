@@ -21,16 +21,16 @@
 
     $effect(() => {
         load()
+        window.addEventListener('cache-changed', load)
+        return () => window.removeEventListener('cache-changed', load)
     })
 
     const handleDelete = async (repoUrl: string) => {
         await deleteRepo(repoUrl)
-        await load()
     }
 
     const handleClearAll = async () => {
         await clearAll()
-        await load()
     }
 
     const formatDate = (iso: string): string => {

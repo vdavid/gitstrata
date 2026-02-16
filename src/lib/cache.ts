@@ -32,6 +32,12 @@ const getDb = async (): Promise<IDBPDatabase> => {
     })
 }
 
+const notifyCacheChange = () => {
+    if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('cache-changed'))
+    }
+}
+
 const estimateSize = (value: unknown): number => {
     try {
         return new Blob([JSON.stringify(value)]).size
@@ -61,6 +67,7 @@ export const saveResult = async (result: AnalysisResult): Promise<void> => {
     await evictIfNeeded(db, sizeBytes, result.repoUrl)
 
     await db.put(storeName, entry)
+    notifyCacheChange()
 }
 
 export const getResult = async (repoUrl: string): Promise<AnalysisResult | undefined> => {
@@ -89,11 +96,13 @@ export const listCachedRepos = async (): Promise<CachedRepoInfo[]> => {
 export const deleteRepo = async (repoUrl: string): Promise<void> => {
     const db = await getDb()
     await db.delete(storeName, repoUrl)
+    notifyCacheChange()
 }
 
 export const clearAll = async (): Promise<void> => {
     const db = await getDb()
     await db.clear(storeName)
+    notifyCacheChange()
 }
 
 export const getTotalSize = async (): Promise<number> => {
