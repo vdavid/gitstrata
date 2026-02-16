@@ -197,7 +197,7 @@
     </div>
 
     <div class="strata-card overflow-hidden">
-        <div class="strata-scroll overflow-x-auto">
+        <div class="strata-scroll overflow-x-auto overflow-y-auto" style="max-height: 222px;">
             <table class="strata-table" aria-label="Lines of code by date and language">
                 <caption class="sr-only">
                     Lines of code over time, sorted by {sortKey} ({sortDir === 'asc' ? 'ascending' : 'descending'}). Use
