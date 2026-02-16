@@ -64,7 +64,7 @@
     // Terminate the worker on component unmount to prevent zombie workers
     $effect(() => {
         return () => {
-            if (analyzer) cancelAndTerminate(analyzer)
+            if (analyzer) void cancelAndTerminate(analyzer)
         }
     })
 
@@ -98,7 +98,7 @@
     $effect(() => {
         if (browser && initialRepo && !hasAutoStarted) {
             hasAutoStarted = true
-            startAnalysis(initialRepo)
+            void startAnalysis(initialRepo)
         }
     })
 
@@ -201,8 +201,8 @@
                 flushDayBuffer()
                 result = event.result
                 phase = 'done'
-                saveResult(event.result)
-                uploadServerResult(event.result)
+                void saveResult(event.result)
+                void uploadServerResult(event.result)
                 break
             case 'error':
                 stopTimer()
@@ -263,7 +263,7 @@
                 result = serverEntry.result
                 fromServerCache = true
                 phase = 'done'
-                saveResult(serverEntry.result)
+                void saveResult(serverEntry.result)
                 return
             }
 
@@ -310,7 +310,7 @@
             // Re-attempt the failed refresh
             result = pendingRefresh
             pendingRefresh = undefined
-            refresh()
+            void refresh()
         } else if (lastRepoInput) {
             startAnalysis(lastRepoInput)
         }

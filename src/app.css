@@ -350,7 +350,7 @@ body::before {
     background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.15) 50%, transparent 100%);
 }
 
-/* Pulse dot for active states */
+/* Pulse animation for active states */
 @keyframes strata-pulse {
     0%,
     100% {
@@ -359,13 +359,6 @@ body::before {
     50% {
         opacity: 0.4;
     }
-}
-
-.strata-pulse-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    animation: strata-pulse 2s ease-in-out infinite;
 }
 
 /* Fade-in animation */
@@ -595,16 +588,19 @@ body::before {
     transition: all var(--duration-fast) var(--ease-out-expo);
 }
 
+/*noinspection CssUnusedSymbol*/
 .phase-dot--done {
     background-color: var(--color-success);
     color: #fff;
 }
 
+/*noinspection CssUnusedSymbol*/
 .phase-dot--active {
     background-color: var(--color-accent);
     animation: strata-pulse 2s ease-in-out infinite;
 }
 
+/*noinspection CssUnusedSymbol*/
 .phase-dot--pending {
     background-color: transparent;
     border: 1.5px solid var(--color-border);
@@ -617,6 +613,7 @@ body::before {
     transition: background-color var(--duration-fast) var(--ease-out-expo);
 }
 
+/*noinspection CssUnusedSymbol*/
 .phase-connector--done {
     background-color: var(--color-success);
 }
@@ -626,6 +623,7 @@ body::before {
     min-height: 28px;
 }
 
+/*noinspection CssUnusedSymbol*/
 .phase-content--last {
     padding-bottom: 0;
 }
@@ -641,19 +639,23 @@ body::before {
 .phase-label {
     font-family: var(--font-sans);
     font-size: 0.75rem;
+    line-height: 16px;
     font-weight: 500;
     letter-spacing: 0.01em;
     white-space: nowrap;
 }
 
+/*noinspection CssUnusedSymbol*/
 .phase-label--done {
     color: var(--color-success);
 }
 
+/*noinspection CssUnusedSymbol*/
 .phase-label--active {
     color: var(--color-text);
 }
 
+/*noinspection CssUnusedSymbol*/
 .phase-label--pending {
     color: var(--color-text-tertiary);
 }
@@ -690,15 +692,18 @@ body::before {
 .phase-elapsed {
     font-family: var(--font-mono);
     font-size: 0.75rem;
+    line-height: 16px;
     font-variant-numeric: tabular-nums;
     letter-spacing: 0.02em;
     white-space: nowrap;
 }
 
+/*noinspection CssUnusedSymbol*/
 .phase-elapsed--active {
     color: var(--color-accent);
 }
 
+/*noinspection CssUnusedSymbol*/
 .phase-elapsed--done {
     color: var(--color-text-tertiary);
 }
@@ -739,6 +744,7 @@ body::before {
     }
 }
 
+/*noinspection CssUnusedSymbol*/
 .phase-info-fade-in {
     animation: phase-info-appear var(--duration-slow) var(--ease-out-expo) both;
 }

@@ -137,14 +137,3 @@ func ValidateCheckNames() error {
 	}
 	return nil
 }
-
-// GetChecksByApp returns all checks for a specific app.
-func GetChecksByApp(app App) []CheckDefinition {
-	var result []CheckDefinition
-	for _, check := range AllChecks {
-		if check.App == app {
-			result = append(result, check)
-		}
-	}
-	return result
-}

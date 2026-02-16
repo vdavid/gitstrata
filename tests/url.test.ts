@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parseRepoUrl, repoToDir } from '../src/lib/url'
+import { parseRepoUrl, repoToDir } from '$lib/url'
 
 describe('parseRepoUrl', () => {
     it('parses full GitHub HTTPS URL', () => {

@@ -55,11 +55,6 @@ func SuccessWithChanges(message string) CheckResult {
 	return CheckResult{Code: ResultSuccess, Message: message, MadeChanges: true}
 }
 
-// Skipped creates a skipped result with the given reason.
-func Skipped(reason string) CheckResult {
-	return CheckResult{Code: ResultSkipped, Message: reason}
-}
-
 // CheckContext holds the context for running checks.
 type CheckContext struct {
 	CI      bool

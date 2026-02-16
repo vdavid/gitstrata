@@ -189,7 +189,7 @@ app.put('/cache/v1/:repoHash', async (c) => {
             if (done) break
             totalDecompressedSize += value.byteLength
             if (totalDecompressedSize > maxDecompressedSize) {
-                reader.cancel()
+                void reader.cancel()
                 return c.text('Decompressed payload too large. Max 50 MB.', 413, getCorsHeaders(c))
             }
             chunks.push(value)

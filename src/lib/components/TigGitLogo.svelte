@@ -181,23 +181,20 @@
 {#if showStratTooltip}
     <div class="strat-tooltip strata-fade-in" bind:this={stratTooltipEl}>
         <p>
-            <strong>Stratigraphy</strong> is a branch of geology concerned with the study of rock layers (<em
-                >strata</em
+            <strong>Stratigraphy</strong> is a branch of geology concerned with the study of rock layers (<em>strata</em
             >) and layering (<em>stratification</em>).<sup class="strat-tooltip-ref">[1]</sup>
             It is primarily used in the study of sedimentary and layered volcanic rocks.
         </p>
         <p class="strat-tooltip-source">
-            from <a
-                href="https://en.wikipedia.org/wiki/Stratigraphy"
-                target="_blank"
-                rel="noopener noreferrer">Wikipedia, the free encyclopedia</a
+            from <a href="https://en.wikipedia.org/wiki/Stratigraphy" target="_blank" rel="noopener noreferrer"
+                >Wikipedia, the free encyclopedia</a
             >
         </p>
         <hr class="strat-tooltip-divider" />
         <p>
-            <strong>Stra<span class="text-[var(--color-accent)]">git</span>raphy</strong> is the study of
-            how your repo's layers (<em>strati</em>) went from <code>git init</code> to whatever it is now. Unlike
-            real stratigraphy, it takes seconds instead of millennia.
+            <strong>Stra<span class="text-[var(--color-accent)]">git</span>raphy</strong> is the study of how your
+            repo's layers (<em>strati</em>) went from <code>git init</code> to whatever it is now. Unlike real stratigraphy,
+            it takes seconds instead of millennia.
         </p>
     </div>
 {/if}

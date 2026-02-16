@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { countLines } from '../src/lib/git/count'
+import { countLines } from '$lib/git/count'
 
 describe('countLines', () => {
     it('counts lines ending with newline', () => {

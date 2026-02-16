@@ -8,4 +8,5 @@ const config: KnipConfig = {
     ignoreDependencies: ['@vitest/coverage-v8', 'buffer', 'tailwindcss'],
 }
 
+// noinspection JSUnusedGlobalSymbols
 export default config

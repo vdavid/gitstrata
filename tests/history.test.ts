@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { generateConsecutiveDates, fillDateGaps, type DailyCommit } from '../src/lib/git/history'
+import { generateConsecutiveDates, fillDateGaps, type DailyCommit } from '$lib/git/history'
 
 describe('generateConsecutiveDates', () => {
     it('generates dates between start and end inclusive', () => {

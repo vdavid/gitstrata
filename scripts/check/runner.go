@@ -228,6 +228,7 @@ func (r *Runner) printResult(state *CheckState) {
 	prefix := fmt.Sprintf("%s: %s / %s", checks.AppDisplayName(def.App), def.Tech, def.DisplayName)
 	paddedPrefix := r.padPrefix(prefix)
 
+	//goland:noinspection GoSwitchMissingCasesForIotaConsts
 	switch state.Status {
 	case StatusCompleted:
 		msg := state.Result.Message

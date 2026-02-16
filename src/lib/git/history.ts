@@ -76,8 +76,7 @@ export const getCommitsByDate = async (options: {
     }
 
     // Sort chronologically (oldest first)
-    const sorted = [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date))
-    return sorted
+    return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date))
 }
 
 /** Format a unix timestamp (seconds) to YYYY-MM-DD */

@@ -196,7 +196,10 @@ const analyzerApi = {
             })
             logger.info('Detected branch: {branch}', { branch: defaultBranch })
 
-            if (signal.aborted) throw new Error('Cancelled')
+            if (signal.aborted) {
+                // noinspection ExceptionCaughtLocallyJS
+                throw new Error('Cancelled')
+            }
 
             // Step 2: Clone — emit a transition so the UI advances past "Detect branch"
             onProgress({ type: 'clone', phase: 'Counting objects', loaded: 0, total: 0 })
@@ -215,7 +218,10 @@ const analyzerApi = {
             })
             logger.info('Clone complete')
 
-            if (signal.aborted) throw new Error('Cancelled')
+            if (signal.aborted) {
+                // noinspection ExceptionCaughtLocallyJS
+                throw new Error('Cancelled')
+            }
 
             // Resolve HEAD OID for freshness checking
             const headCommit = await git.resolveRef({ fs, dir, ref: defaultBranch })
@@ -240,6 +246,7 @@ const analyzerApi = {
             })
 
             if (dailyCommits.length === 0) {
+                // noinspection ExceptionCaughtLocallyJS
                 throw new Error('No commits found in repository')
             }
 
@@ -326,7 +333,10 @@ const analyzerApi = {
             await fetchRepo({ fs, dir, url: parsed.url, corsProxy, defaultBranch, onProgress, signal })
             logger.info('Fetch complete')
 
-            if (signal.aborted) throw new Error('Cancelled')
+            if (signal.aborted) {
+                // noinspection ExceptionCaughtLocallyJS
+                throw new Error('Cancelled')
+            }
 
             // Resolve HEAD OID for freshness checking
             const headCommit = await git.resolveRef({ fs, dir, ref: defaultBranch })
@@ -351,6 +361,7 @@ const analyzerApi = {
             })
 
             if (dailyCommits.length === 0) {
+                // noinspection ExceptionCaughtLocallyJS
                 throw new Error('No commits found in repository')
             }
 
