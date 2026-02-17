@@ -73,20 +73,6 @@ function isAllowedTarget(url: string): boolean {
     }
 }
 
-/** Constant-time string comparison to prevent timing side-channel attacks on tokens. */
-function timingSafeEqual(a: string, b: string): boolean {
-    const encoder = new TextEncoder()
-    const bufA = encoder.encode(a)
-    const bufB = encoder.encode(b)
-    if (bufA.byteLength !== bufB.byteLength) return false
-    let result = 0
-    for (let i = 0; i < bufA.byteLength; i++) {
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- bounds checked by loop condition
-        result |= bufA[i]! ^ bufB[i]!
-    }
-    return result === 0
-}
-
 async function sha256Hex(input: string): Promise<string> {
     const encoded = new TextEncoder().encode(input)
     const hashBuffer = await crypto.subtle.digest('SHA-256', encoded)
@@ -136,8 +122,10 @@ app.put('/cache/v1/:repoHash', async (c) => {
             return c.text('Cache writes are disabled (missing server config).', 403, getCorsHeaders(c))
         }
     } else {
+        // Plain equality is fine — the token is public (shipped in client-side env vars),
+        // so there's no secret to protect via constant-time comparison.
         const auth = c.req.header('authorization') ?? ''
-        if (!timingSafeEqual(auth, `Bearer ${writeToken}`)) {
+        if (auth !== `Bearer ${writeToken}`) {
             return c.text('Unauthorized', 401, getCorsHeaders(c))
         }
     }
