@@ -184,6 +184,10 @@
     }
 
     const handleProgress = (event: ProgressEvent) => {
+        // Ignore stale events that arrive after cancel (the worker may still send
+        // an abort-triggered error before terminate() kills it)
+        if (!analyzer) return
+
         switch (event.type) {
             case 'clone':
                 phase = 'cloning'
