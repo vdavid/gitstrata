@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { generateConsecutiveDates, fillDateGaps, type DailyCommit } from '$lib/git/history'
+import { generateConsecutiveDates, fillDateGaps, CompactOidSet, type DailyCommit } from '$lib/git/history'
 
 describe('generateConsecutiveDates', () => {
     it('generates dates between start and end inclusive', () => {
@@ -63,5 +63,61 @@ describe('fillDateGaps', () => {
         const result = fillDateGaps(commits)
         expect(result).toHaveLength(1)
         expect(result[0].commit?.hash).toBe('abc')
+    })
+})
+
+describe('CompactOidSet', () => {
+    const makeOid = (n: number): string => n.toString(16).padStart(40, '0')
+
+    it('adds and checks membership', () => {
+        const set = new CompactOidSet()
+        const oid = makeOid(0xdeadbeef)
+        expect(set.has(oid)).toBe(false)
+        expect(set.add(oid)).toBe(true)
+        expect(set.has(oid)).toBe(true)
+        expect(set.size).toBe(1)
+    })
+
+    it('returns false when adding a duplicate', () => {
+        const set = new CompactOidSet()
+        const oid = makeOid(42)
+        set.add(oid)
+        expect(set.add(oid)).toBe(false)
+        expect(set.size).toBe(1)
+    })
+
+    it('handles many entries with automatic growth', () => {
+        const set = new CompactOidSet(16) // small initial capacity to force growth
+        const count = 5000
+        for (let i = 0; i < count; i++) {
+            expect(set.add(makeOid(i))).toBe(true)
+        }
+        expect(set.size).toBe(count)
+        for (let i = 0; i < count; i++) {
+            expect(set.has(makeOid(i))).toBe(true)
+        }
+        // Verify no false positives for OIDs not in the set
+        for (let i = count; i < count + 1000; i++) {
+            expect(set.has(makeOid(i))).toBe(false)
+        }
+    })
+
+    it('handles realistic 40-char hex OIDs', () => {
+        const set = new CompactOidSet()
+        const oids = [
+            'a'.repeat(40),
+            'b'.repeat(40),
+            '0123456789abcdef0123456789abcdef01234567',
+            'deadbeefcafebabedeadbeefcafebabedeadbeef',
+        ]
+        for (const oid of oids) set.add(oid)
+        expect(set.size).toBe(4)
+        for (const oid of oids) expect(set.has(oid)).toBe(true)
+    })
+
+    it('handles uppercase hex', () => {
+        const set = new CompactOidSet()
+        set.add('AABBCCDD00112233445566778899AABBCCDDEEFF')
+        expect(set.has('aabbccdd00112233445566778899aabbccddeeff')).toBe(true)
     })
 })
