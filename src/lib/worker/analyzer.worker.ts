@@ -11,7 +11,7 @@ import { cloneRepo, detectDefaultBranch, fetchRepo, waitForBodyCleanups } from '
 import { fillDateGaps, getCommitsByDate, type DailyCommit } from '../git/history'
 import { countLinesForCommit, countLinesForCommitIncremental, LruMap } from '../git/count'
 import type { FileState } from '../git/count'
-import { parseRepoUrl, repoToDir } from '../url'
+import { parseRepoUrl, repoToDir, repoToFsName } from '../url'
 
 // Configure LogTape for the worker context
 configureSync({
@@ -47,7 +47,7 @@ const classifyError = (error: unknown): { message: string; kind: ErrorKind } => 
     ) {
         if (lower.includes('network') || lower.includes('offline') || lower.includes('lost'))
             return {
-                message: 'Network connection lost. Your partial download is saved — reconnect and try again.',
+                message: 'Network connection lost. Reconnect and try again.',
                 kind: 'network-lost',
             }
         return {
@@ -191,7 +191,7 @@ const analyzerApi = {
         const dir = repoToDir(parsed)
 
         // Initialize lightning-fs with a unique name for persistence
-        const fsName = `git-strata-${parsed.host}-${parsed.owner}-${parsed.repo}`
+        const fsName = repoToFsName(parsed)
         const fs = new LightningFS(fsName)
 
         try {
@@ -216,15 +216,24 @@ const analyzerApi = {
                 url: parsed.url,
                 branch: defaultBranch,
             })
-            await cloneRepo({
-                fs,
-                dir,
-                url: parsed.url,
-                corsProxy,
-                defaultBranch,
-                onProgress,
-                signal,
-            })
+            try {
+                await cloneRepo({
+                    fs,
+                    dir,
+                    url: parsed.url,
+                    corsProxy,
+                    defaultBranch,
+                    onProgress,
+                    signal,
+                })
+            } catch (cloneError) {
+                // Wipe partially-written git objects so the next retry starts clean.
+                // Without this, a failed clone leaves corrupt data in IndexedDB and
+                // subsequent attempts read half-written pack files.
+                logger.warning('Clone failed, wiping LightningFS database "{fsName}"', { fsName })
+                new LightningFS(fsName, { wipe: true })
+                throw cloneError
+            }
             logger.info('Clone complete')
 
             if (signal.aborted) {
@@ -329,7 +338,7 @@ const analyzerApi = {
         const signal = abortController.signal
         const parsed = parseRepoUrl(repoInput)
         const dir = repoToDir(parsed)
-        const fsName = `git-strata-${parsed.host}-${parsed.owner}-${parsed.repo}`
+        const fsName = repoToFsName(parsed)
         const fs = new LightningFS(fsName)
         const defaultBranch = cachedResult.defaultBranch
 

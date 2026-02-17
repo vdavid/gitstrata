@@ -1,5 +1,6 @@
 import { openDB, type IDBPDatabase } from 'idb'
 import type { AnalysisResult } from './types'
+import { repoUrlToFsName } from './url'
 
 const dbName = 'git-strata'
 const dbVersion = 2
@@ -54,6 +55,15 @@ const getDb = async (): Promise<IDBPDatabase> => {
 const notifyCacheChange = () => {
     if (typeof window !== 'undefined') {
         window.dispatchEvent(new Event('cache-changed'))
+    }
+}
+
+/** Delete the LightningFS IndexedDB database for a repo. Fire-and-forget. */
+const deleteLfsDatabase = (repoUrl: string): void => {
+    try {
+        indexedDB.deleteDatabase(repoUrlToFsName(repoUrl))
+    } catch {
+        // Invalid URL or indexedDB unavailable — nothing to clean up
     }
 }
 
@@ -144,15 +154,19 @@ export const deleteRepo = async (repoUrl: string): Promise<void> => {
     tx.objectStore(storeName).delete(repoUrl)
     tx.objectStore(metaStoreName).delete(repoUrl)
     await tx.done
+    deleteLfsDatabase(repoUrl)
     notifyCacheChange()
 }
 
 export const clearAll = async (): Promise<void> => {
     const db = await getDb()
+    // Read all repo URLs before clearing so we can delete their LightningFS databases
+    const metas = (await db.getAll(metaStoreName)) as CachedRepoInfo[]
     const tx = db.transaction([storeName, metaStoreName], 'readwrite')
     tx.objectStore(storeName).clear()
     tx.objectStore(metaStoreName).clear()
     await tx.done
+    for (const meta of metas) deleteLfsDatabase(meta.repoUrl)
     notifyCacheChange()
 }
 
@@ -187,5 +201,6 @@ const evictIfNeeded = async (db: IDBPDatabase, neededBytes: number, excludeUrl: 
             tx.objectStore(metaStoreName).delete(url)
         }
         await tx.done
+        for (const url of toDelete) deleteLfsDatabase(url)
     }
 }

@@ -69,3 +69,13 @@ export const parseRepoUrl = (input: string): ParsedRepo => {
 export const repoToDir = (parsed: ParsedRepo): string => {
     return `/${parsed.host}/${parsed.owner}/${parsed.repo}`
 }
+
+/** LightningFS IndexedDB database name for a parsed repo. */
+export const repoToFsName = (parsed: ParsedRepo): string => {
+    return `git-strata-${parsed.host}-${parsed.owner}-${parsed.repo}`
+}
+
+/** LightningFS IndexedDB database name from a normalized repo URL (like https://github.com/owner/repo). */
+export const repoUrlToFsName = (repoUrl: string): string => {
+    return repoToFsName(parseRepoUrl(repoUrl))
+}
