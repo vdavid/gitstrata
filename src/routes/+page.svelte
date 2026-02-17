@@ -103,6 +103,9 @@
     const sizeGateThresholdBytes = 500 * 1024 * 1024
     let sizeGateBytes = $state(0)
 
+    // Repo size for display in summary (from forge API, null if unavailable)
+    let repoSizeBytes: number | null = $state(null)
+
     // Read ?repo= from URL on initial load
     const initialRepo = $derived.by(() => {
         if (!browser) return ''
@@ -173,6 +176,7 @@
         sizeWarningBytes = 0
         showSizeWarning = false
         sizeGateBytes = 0
+        repoSizeBytes = null
         pendingRefresh = undefined
         stopTimer()
     }
@@ -215,6 +219,7 @@
                 stopTimer()
                 if (dayFlushTimeout) clearTimeout(dayFlushTimeout)
                 flushDayBuffer()
+                if (repoSizeBytes != null) event.result.repoSizeBytes = repoSizeBytes
                 result = event.result
                 cachedResult = event.result
                 phase = 'done'
@@ -285,11 +290,17 @@
             autoStartedRepo = repoInput // Prevent the URL-watching effect from re-triggering
             updateQueryParam(repoInput)
 
+            // Fetch repo size for display (fire-and-forget, non-blocking)
+            void fetchRepoSizeBytes(parsed.host, parsed.owner, parsed.repo).then((size) => {
+                repoSizeBytes = size
+            })
+
             // Check local cache first
             const cached = await getResult(parsed.url)
             if (cached) {
                 cachedResult = cached
                 result = cached
+                repoSizeBytes = cached.repoSizeBytes ?? null
                 phase = 'done'
                 return
             }
@@ -299,6 +310,7 @@
             if (serverEntry) {
                 cachedResult = serverEntry.result
                 result = serverEntry.result
+                repoSizeBytes = serverEntry.result.repoSizeBytes ?? null
                 fromServerCache = true
                 phase = 'done'
                 void saveResult(serverEntry.result)
@@ -737,6 +749,7 @@
             <ResultsSummary
                 days={displayDays}
                 detectedLanguages={displayLanguages}
+                {repoSizeBytes}
                 onHighlightDate={(d) => (chartHighlightDate = d)}
             />
 

@@ -22,6 +22,8 @@ export interface AnalysisResult {
     /** Language ids that appear in this result, sorted by final-day line count descending */
     detectedLanguages: string[]
     days: DayStats[]
+    /** Git repo size in bytes from the forge API (includes history). Undefined if unavailable. */
+    repoSizeBytes?: number
 }
 
 /** Payload stored in the shared server cache (R2) */
