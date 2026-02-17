@@ -2,8 +2,9 @@ import { openDB, type IDBPDatabase } from 'idb'
 import type { AnalysisResult } from './types'
 
 const dbName = 'git-strata'
-const dbVersion = 1
+const dbVersion = 2
 const storeName = 'results'
+const metaStoreName = 'results-meta'
 
 /** 500 MB cache limit for LRU eviction */
 const maxCacheBytes = 500 * 1024 * 1024
@@ -24,9 +25,27 @@ export interface CachedRepoInfo {
 
 const getDb = async (): Promise<IDBPDatabase> => {
     return openDB(dbName, dbVersion, {
-        upgrade(db) {
-            if (!db.objectStoreNames.contains(storeName)) {
+        upgrade(db, oldVersion, _newVersion, transaction) {
+            if (oldVersion < 1) {
                 db.createObjectStore(storeName, { keyPath: 'repoUrl' })
+            }
+            if (oldVersion < 2) {
+                db.createObjectStore(metaStoreName, { keyPath: 'repoUrl' })
+                // Backfill meta from existing results (~3 users, <10 entries)
+                if (db.objectStoreNames.contains(storeName)) {
+                    const store = transaction.objectStore(storeName)
+                    const metaStore = transaction.objectStore(metaStoreName)
+                    void store.getAll().then((entries: CachedResult[]) => {
+                        for (const entry of entries) {
+                            void metaStore.put({
+                                repoUrl: entry.repoUrl,
+                                analyzedAt: entry.result?.analyzedAt ?? '',
+                                lastAccessed: entry.lastAccessed ?? new Date().toISOString(),
+                                sizeBytes: entry.sizeBytes ?? 0,
+                            })
+                        }
+                    })
+                }
             }
         },
     })
@@ -56,10 +75,17 @@ export const formatBytes = (bytes: number): string => {
 export const saveResult = async (result: AnalysisResult): Promise<void> => {
     const db = await getDb()
     const sizeBytes = estimateSize(result)
+    const now = new Date().toISOString()
     const entry: CachedResult = {
         repoUrl: result.repoUrl,
         result,
-        lastAccessed: new Date().toISOString(),
+        lastAccessed: now,
+        sizeBytes,
+    }
+    const meta: CachedRepoInfo = {
+        repoUrl: result.repoUrl,
+        analyzedAt: result.analyzedAt,
+        lastAccessed: now,
         sizeBytes,
     }
 
@@ -67,7 +93,10 @@ export const saveResult = async (result: AnalysisResult): Promise<void> => {
     await evictIfNeeded(db, sizeBytes, result.repoUrl)
 
     try {
-        await db.put(storeName, entry)
+        const tx = db.transaction([storeName, metaStoreName], 'readwrite')
+        tx.objectStore(storeName).put(entry)
+        tx.objectStore(metaStoreName).put(meta)
+        await tx.done
     } catch (error) {
         // QuotaExceededError or other storage failures — skip caching.
         // The analysis result is still shown to the user; caching is best-effort.
@@ -82,58 +111,81 @@ export const getResult = async (repoUrl: string): Promise<AnalysisResult | undef
     const entry = (await db.get(storeName, repoUrl)) as CachedResult | undefined
     if (!entry) return undefined
 
-    // Update last-accessed timestamp (best-effort, don't block on storage errors)
-    entry.lastAccessed = new Date().toISOString()
-    void db.put(storeName, entry).catch((error) => {
-        console.warn('[cache] Failed to update lastAccessed:', error)
-    })
+    // Update last-accessed timestamp in meta only (best-effort, lightweight)
+    const now = new Date().toISOString()
+    void db
+        .put(metaStoreName, {
+            repoUrl: entry.repoUrl,
+            analyzedAt: entry.result.analyzedAt,
+            lastAccessed: now,
+            sizeBytes: entry.sizeBytes,
+        } satisfies CachedRepoInfo)
+        .catch((error: unknown) => {
+            console.warn('[cache] Failed to update lastAccessed:', error)
+        })
 
     return entry.result
 }
 
 export const listCachedRepos = async (): Promise<CachedRepoInfo[]> => {
     const db = await getDb()
-    const entries = (await db.getAll(storeName)) as CachedResult[]
-    return entries.map((e) => ({
-        repoUrl: e.repoUrl,
-        analyzedAt: e.result.analyzedAt,
-        lastAccessed: e.lastAccessed,
-        sizeBytes: e.sizeBytes ?? 0,
+    const metas = (await db.getAll(metaStoreName)) as CachedRepoInfo[]
+    return metas.map((m) => ({
+        repoUrl: m.repoUrl,
+        analyzedAt: m.analyzedAt,
+        lastAccessed: m.lastAccessed,
+        sizeBytes: m.sizeBytes ?? 0,
     }))
 }
 
 export const deleteRepo = async (repoUrl: string): Promise<void> => {
     const db = await getDb()
-    await db.delete(storeName, repoUrl)
+    const tx = db.transaction([storeName, metaStoreName], 'readwrite')
+    tx.objectStore(storeName).delete(repoUrl)
+    tx.objectStore(metaStoreName).delete(repoUrl)
+    await tx.done
     notifyCacheChange()
 }
 
 export const clearAll = async (): Promise<void> => {
     const db = await getDb()
-    await db.clear(storeName)
+    const tx = db.transaction([storeName, metaStoreName], 'readwrite')
+    tx.objectStore(storeName).clear()
+    tx.objectStore(metaStoreName).clear()
+    await tx.done
     notifyCacheChange()
 }
 
 export const getTotalSize = async (): Promise<number> => {
     const db = await getDb()
-    const entries = (await db.getAll(storeName)) as CachedResult[]
-    return entries.reduce((sum, e) => sum + (e.sizeBytes ?? 0), 0)
+    const metas = (await db.getAll(metaStoreName)) as CachedRepoInfo[]
+    return metas.reduce((sum, m) => sum + (m.sizeBytes ?? 0), 0)
 }
 
 const evictIfNeeded = async (db: IDBPDatabase, neededBytes: number, excludeUrl: string): Promise<void> => {
-    const entries = (await db.getAll(storeName)) as CachedResult[]
-    let totalBytes = entries.reduce((sum, e) => sum + (e.sizeBytes ?? 0), 0)
+    const metas = (await db.getAll(metaStoreName)) as CachedRepoInfo[]
+    let totalBytes = metas.reduce((sum, m) => sum + (m.sizeBytes ?? 0), 0)
 
     if (totalBytes + neededBytes <= maxCacheBytes) return
 
     // Sort by lastAccessed ascending (oldest first) for LRU eviction
-    const sorted = entries
-        .filter((e) => e.repoUrl !== excludeUrl)
+    const sorted = metas
+        .filter((m) => m.repoUrl !== excludeUrl)
         .sort((a, b) => a.lastAccessed.localeCompare(b.lastAccessed))
 
-    for (const entry of sorted) {
+    const toDelete: string[] = []
+    for (const meta of sorted) {
         if (totalBytes + neededBytes <= maxCacheBytes) break
-        totalBytes -= entry.sizeBytes ?? 0
-        await db.delete(storeName, entry.repoUrl)
+        totalBytes -= meta.sizeBytes ?? 0
+        toDelete.push(meta.repoUrl)
+    }
+
+    if (toDelete.length > 0) {
+        const tx = db.transaction([storeName, metaStoreName], 'readwrite')
+        for (const url of toDelete) {
+            tx.objectStore(storeName).delete(url)
+            tx.objectStore(metaStoreName).delete(url)
+        }
+        await tx.done
     }
 }
