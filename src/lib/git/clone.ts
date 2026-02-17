@@ -183,13 +183,21 @@ const createStalenessMonitor = (externalSignal: AbortSignal | undefined, label: 
     }
 }
 
+const defaultBranchTimeoutMs = 30_000
+
 export const detectDefaultBranch = async (options: {
     url: string
     corsProxy: string
     signal?: AbortSignal
 }): Promise<string> => {
     cloneLogger.info('Detecting default branch...')
-    const abortableHttp = makeAbortableHttp(options.signal)
+    // Unlike clone/fetch (which use StalenessMonitor for long-running transfers),
+    // ref discovery is a small, fast request — if it can't complete in 30s the server is unreachable.
+    const signal = AbortSignal.any([
+        ...(options.signal ? [options.signal] : []),
+        AbortSignal.timeout(defaultBranchTimeoutMs),
+    ])
+    const abortableHttp = makeAbortableHttp(signal)
     const refs = await git.listServerRefs({
         http: abortableHttp,
         corsProxy: options.corsProxy,
