@@ -56,6 +56,12 @@ const classifyError = (error: unknown): { message: string; kind: ErrorKind } => 
         }
     }
 
+    if (lower.includes('timed out'))
+        return {
+            message: 'The connection timed out — the repository may be too large to clone in the browser.',
+            kind: 'repo-too-large',
+        }
+
     if (lower.includes('quota') || lower.includes('storage') || lower.includes('indexeddb'))
         return {
             message: "Your browser's storage is full. Clear some cached repos in the footer menu.",
