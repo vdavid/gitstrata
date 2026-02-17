@@ -66,7 +66,14 @@ export const saveResult = async (result: AnalysisResult): Promise<void> => {
     // Evict LRU entries if adding this would exceed the limit
     await evictIfNeeded(db, sizeBytes, result.repoUrl)
 
-    await db.put(storeName, entry)
+    try {
+        await db.put(storeName, entry)
+    } catch (error) {
+        // QuotaExceededError or other storage failures — skip caching.
+        // The analysis result is still shown to the user; caching is best-effort.
+        console.warn('[cache] Failed to save result, skipping:', error)
+        return
+    }
     notifyCacheChange()
 }
 
@@ -75,9 +82,11 @@ export const getResult = async (repoUrl: string): Promise<AnalysisResult | undef
     const entry = (await db.get(storeName, repoUrl)) as CachedResult | undefined
     if (!entry) return undefined
 
-    // Update last-accessed timestamp
+    // Update last-accessed timestamp (best-effort, don't block on storage errors)
     entry.lastAccessed = new Date().toISOString()
-    await db.put(storeName, entry)
+    void db.put(storeName, entry).catch((error) => {
+        console.warn('[cache] Failed to update lastAccessed:', error)
+    })
 
     return entry.result
 }

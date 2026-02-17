@@ -12,7 +12,7 @@ a Web Worker.
   `noTestSplit: true` to skip prod/test breakdown (used for HTML, CSS, SQL, Shell, Svelte, Vue, Astro, Docs, Config).
 - `url.ts` — Repo URL parsing and normalization (GitHub/GitLab/Bitbucket, owner/repo shorthand)
 - `cache.ts` — IndexedDB results cache using `idb`, with size tracking, LRU eviction (500 MB limit), and `formatBytes`
-  helper
+  helper. Writes are wrapped in try/catch to handle QuotaExceededError gracefully (caching is best-effort).
 - `server-cache.ts` — Shared server cache client. Opt-in via `PUBLIC_SHARED_CACHE_URL` env var; all functions no-op when
   unset. Exports `fetchServerResult(repoUrl)` and `uploadServerResult(result)`. Errors are caught internally and never
   propagate. Uses SHA-256 for repo URL hashing and CompressionStream for gzip upload.
@@ -21,15 +21,17 @@ a Web Worker.
   wraps the external abort signal with an adaptive timeout: 5 min base, extended to 20 min once 10+ MB of data has been
   received (GitHub sends large packs in bursts). The UI detects silence internally via `PipelineProgress`.
 - `git/history.ts` — Commit log grouped by date, consecutive date generation, gap filling. `getCommitsByDate` fetches
-  commits in batches (via `git.log` with `depth` parameter) to bound peak memory on large repos. A `seenOids` Set
-  deduplicates commits across batches (merges can cause overlap). Supports `signal` for cancellation and `onProgress`
-  for reporting processed commit counts.
-- `git/count.ts` — Line counting per commit tree, prod/test classification, blob dedup caching. Files with unrecognized
-  extensions are counted under the `'other'` bucket (with test-dir detection). Blob reads are parallelized with a
-  concurrency limit of 8 using an inline `createLimiter` utility (no external dependency). Both `countLinesForCommit`
-  (full tree walk) and `countLinesForCommitIncremental` (diff-based) process files in parallel via `processFile`, then
-  aggregate results sequentially. Supports diff-based incremental processing via `countLinesForCommitIncremental`, which
-  uses custom tree traversal with `git.readTree` + an in-memory `treeCache` (`Map<treeOid, TreeEntry[]>`) to diff trees
+  commits in batches (via `git.log` with `depth` parameter) to bound peak memory on large repos. A `CompactOidSet`
+  deduplicates commits across batches — stores OIDs as 20-byte binary values in a flat Uint8Array-backed hash set (~4x
+  smaller than `Set<string>` for 40-char hex OIDs). Supports `signal` for cancellation and `onProgress` for reporting
+  processed commit counts.
+- `git/count.ts` — Line counting per commit tree, prod/test classification, blob dedup caching. Also exports `LruMap`, a
+  Map subclass with LRU eviction used to bound cache memory. Files with unrecognized extensions are counted under the
+  `'other'` bucket (with test-dir detection). Blob reads are parallelized with a concurrency limit of 8 using an inline
+  `createLimiter` utility (no external dependency). Both `countLinesForCommit` (full tree walk) and
+  `countLinesForCommitIncremental` (diff-based) process files in parallel via `processFile`, then aggregate results
+  sequentially. Supports diff-based incremental processing via `countLinesForCommitIncremental`, which uses custom tree
+  traversal with `git.readTree` + an in-memory `treeCache` (`LruMap<treeOid, TreeEntry[]>`, 10K cap) to diff trees
   between consecutive commits. A shared `FileState` map tracks per-file OID, language, and line counts across commits.
   Skip logic: `shouldSkip` filters individual files (lock files, minified output, protobuf/codegen, binary extensions)
   and `shouldSkipDir` filters vendored directories (`vendor`, `node_modules`, `Pods`, `bower_components`, `__pycache__`)
@@ -46,16 +48,17 @@ a Web Worker.
   parsed pack-file objects in memory, avoiding repeated IndexedDB reads. The `gitCache` operates at the low level (raw
   git object reads), while our custom `treeCache` and `blobCache`/`contentCache` operate at higher levels (parsed tree
   entries, line counts). All layers are complementary.
-- Blob dedup: `contentCache` (OID -> decoded UTF-8 content) avoids redundant reads; `blobCache` (OID+path -> result)
-  avoids redundant classification. These Maps are safe for concurrent async access because JavaScript is single-threaded
-  (Map operations are atomic between await points).
+- Blob dedup: `contentCache` (OID -> decoded UTF-8 content) avoids redundant reads within a single commit — cleared
+  after each commit to bound memory. `blobCache` (`LruMap`, 100K cap, OID+path -> result) avoids redundant
+  classification across commits. `treeCache` (`LruMap`, 10K cap) bounds parsed tree entry storage. These Maps are safe
+  for concurrent async access because JavaScript is single-threaded (Map operations are atomic between await points).
 - Non-UTF-8 handling: `processFile` uses `TextDecoder('utf-8', { fatal: true })`. On decode failure, line counts are
   computed from raw bytes (0x0A counting) and inline test detection is skipped.
 - Diff-based processing: After the first commit (full tree walk via `listFilesAtCommitCached`), subsequent commits use
-  custom `diffTrees` recursive traversal with `git.readTree` to diff against the previous commit. An in-memory
-  `treeCache` (`Map<treeOid, TreeEntry[]>`) shared across all commits eliminates redundant IndexedDB reads -- once a
-  tree object is read, it is served from memory. Unchanged subtrees (same tree OID) are skipped instantly via OID
-  comparison. A `fileStateMap` (path -> FileState) tracks current state and is updated incrementally.
+  custom `diffTrees` recursive traversal with `git.readTree` to diff against the previous commit. The `treeCache`
+  (`LruMap` with 10K cap) shared across all commits reduces redundant IndexedDB reads — once a tree object is read, it
+  is served from memory (evicting least-recently-used entries when full). Unchanged subtrees (same tree OID) are skipped
+  instantly via OID comparison. A `fileStateMap` (path -> FileState) tracks current state and is updated incrementally.
   `computeDayStatsFromFileState` aggregates the map into DayStats.
 - Date gaps are filled by carrying forward the previous day's stats with `comments: ["-"]`
 - `noTestSplit` languages have no prod/test split (LanguageCount.prod/test stay undefined). All other languages get test
