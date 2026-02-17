@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { countLines, shouldSkip, shouldSkipDir } from '$lib/git/count'
+import { countLines, shouldSkip, shouldSkipDir, LruMap } from '$lib/git/count'
 
 describe('countLines', () => {
     it('counts lines ending with newline', () => {
@@ -132,5 +132,60 @@ describe('shouldSkipDir', () => {
         expect(shouldSkipDir('Vendor')).toBe(false)
         expect(shouldSkipDir('NODE_MODULES')).toBe(false)
         expect(shouldSkipDir('pods')).toBe(false)
+    })
+})
+
+describe('LruMap', () => {
+    it('stores and retrieves values', () => {
+        const map = new LruMap<string, number>(3)
+        map.set('a', 1)
+        map.set('b', 2)
+        expect(map.get('a')).toBe(1)
+        expect(map.get('b')).toBe(2)
+        expect(map.get('c')).toBeUndefined()
+    })
+
+    it('evicts the oldest entry when full', () => {
+        const map = new LruMap<string, number>(3)
+        map.set('a', 1)
+        map.set('b', 2)
+        map.set('c', 3)
+        map.set('d', 4) // evicts 'a'
+        expect(map.get('a')).toBeUndefined()
+        expect(map.get('b')).toBe(2)
+        expect(map.size).toBe(3)
+    })
+
+    it('get() refreshes entry so it is not evicted next', () => {
+        const map = new LruMap<string, number>(3)
+        map.set('a', 1)
+        map.set('b', 2)
+        map.set('c', 3)
+        map.get('a') // refresh 'a'
+        map.set('d', 4) // evicts 'b' (oldest after refresh)
+        expect(map.get('a')).toBe(1)
+        expect(map.get('b')).toBeUndefined()
+        expect(map.get('d')).toBe(4)
+    })
+
+    it('set() with existing key updates value and refreshes position', () => {
+        const map = new LruMap<string, number>(3)
+        map.set('a', 1)
+        map.set('b', 2)
+        map.set('c', 3)
+        map.set('a', 10) // update + refresh
+        map.set('d', 4) // evicts 'b'
+        expect(map.get('a')).toBe(10)
+        expect(map.get('b')).toBeUndefined()
+        expect(map.size).toBe(3)
+    })
+
+    it('works as a drop-in Map replacement', () => {
+        const map: Map<string, number> = new LruMap<string, number>(10)
+        map.set('x', 42)
+        expect(map.has('x')).toBe(true)
+        expect(map.size).toBe(1)
+        map.delete('x')
+        expect(map.has('x')).toBe(false)
     })
 })

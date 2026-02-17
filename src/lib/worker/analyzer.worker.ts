@@ -9,7 +9,7 @@ import { configureSync, getConsoleSink, getLogger } from '@logtape/logtape'
 import type { AnalysisResult, DayStats, ErrorKind, ProgressEvent } from '../types'
 import { cloneRepo, detectDefaultBranch, fetchRepo, waitForBodyCleanups } from '../git/clone'
 import { fillDateGaps, getCommitsByDate, type DailyCommit } from '../git/history'
-import { countLinesForCommit, countLinesForCommitIncremental } from '../git/count'
+import { countLinesForCommit, countLinesForCommitIncremental, LruMap } from '../git/count'
 import type { FileState } from '../git/count'
 import { parseRepoUrl, repoToDir } from '../url'
 
@@ -146,6 +146,9 @@ const processDays = async (params: {
                     commit.messages,
                 )
             }
+            // Release decoded file contents — only needed within a single commit's processing.
+            // Keeps peak memory bounded to one commit's blobs instead of accumulating all.
+            contentCache.clear()
             prevCommitOid = commit.hash
             prevDay = dayStats
         } else if (prevDay) {
@@ -256,9 +259,11 @@ const analyzerApi = {
 
             // Step 5: Process each day
             logger.info('Starting: analyze ({totalDays} days)', { totalDays })
-            const blobCache = new Map<string, { lines: number; testLines: number; languageId: string | undefined }>()
-            const contentCache = new Map<string, string>()
-            const treeCache = new Map<string, { path: string; oid: string; type: string }[]>()
+            const blobCache = new LruMap<string, { lines: number; testLines: number; languageId: string | undefined }>(
+                100_000,
+            )
+            const contentCache = new Map<string, string>() // Cleared per commit, no LRU needed
+            const treeCache = new LruMap<string, { path: string; oid: string; type: string }[]>(10_000)
             const fileStateMap = new Map<string, FileState>()
             const allExtensions = new Set<string>()
 
@@ -390,9 +395,11 @@ const analyzerApi = {
             logger.info('Starting: analyze incremental ({totalDays} new days)', {
                 totalDays: newDayEntries.length,
             })
-            const blobCache = new Map<string, { lines: number; testLines: number; languageId: string | undefined }>()
-            const contentCache = new Map<string, string>()
-            const treeCache = new Map<string, { path: string; oid: string; type: string }[]>()
+            const blobCache = new LruMap<string, { lines: number; testLines: number; languageId: string | undefined }>(
+                100_000,
+            )
+            const contentCache = new Map<string, string>() // Cleared per commit, no LRU needed
+            const treeCache = new LruMap<string, { path: string; oid: string; type: string }[]>(10_000)
             const fileStateMap = new Map<string, FileState>()
             const allExtensions = new Set<string>()
 
@@ -417,6 +424,7 @@ const analyzerApi = {
                     lastCachedCommitEntry.date,
                     [],
                 )
+                contentCache.clear()
                 prevCommitOid = lastCachedCommitEntry.commit.hash
             }
 

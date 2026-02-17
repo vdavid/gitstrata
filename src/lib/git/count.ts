@@ -3,6 +3,41 @@ import type { LanguageDefinition } from '../types'
 import type { DayStats, LanguageCount } from '../types'
 import { defaultTestDirPatterns, getLanguages, isInTestDir, isTestFile, resolveHeaderLanguage } from '../languages'
 
+/**
+ * Map with LRU eviction — entries beyond maxSize are evicted oldest-first.
+ * Extends Map so callers that expect a Map work transparently.
+ * Note: stored values must not be `undefined` (used as a miss sentinel in `get`).
+ */
+export class LruMap<K, V> extends Map<K, V> {
+    private readonly maxSize: number
+
+    constructor(maxSize: number) {
+        super()
+        this.maxSize = maxSize
+    }
+
+    override get(key: K): V | undefined {
+        const val = super.get(key)
+        if (val !== undefined) {
+            // Move to end (most recently used)
+            super.delete(key)
+            super.set(key, val)
+        }
+        return val
+    }
+
+    override set(key: K, value: V): this {
+        if (super.has(key)) {
+            super.delete(key)
+        } else if (this.size >= this.maxSize) {
+            const oldest = this.keys().next().value
+            if (oldest !== undefined) super.delete(oldest)
+        }
+        super.set(key, value)
+        return this
+    }
+}
+
 const createLimiter = (limit: number) => {
     const queue: (() => void)[] = []
     let active = 0
