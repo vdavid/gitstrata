@@ -109,11 +109,11 @@
         return page.url.searchParams.get('repo') ?? ''
     })
 
-    let hasAutoStarted = $state(false)
+    let autoStartedRepo = $state('')
 
     $effect(() => {
-        if (browser && initialRepo && !hasAutoStarted) {
-            hasAutoStarted = true
+        if (browser && initialRepo && initialRepo !== autoStartedRepo) {
+            autoStartedRepo = initialRepo
             void startAnalysis(initialRepo)
         }
     })
@@ -282,6 +282,7 @@
 
         try {
             const parsed = parseRepoUrl(repoInput)
+            autoStartedRepo = repoInput // Prevent the URL-watching effect from re-triggering
             updateQueryParam(repoInput)
 
             // Check local cache first
