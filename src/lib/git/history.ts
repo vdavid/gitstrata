@@ -186,12 +186,21 @@ export const getCommitsByDate = async (options: {
         // Stop if this batch was smaller than requested (end of history)
         if (batch.length < commitBatchSize) break
 
-        // Stop if the oldest commit has no parents (root commit)
-        const oldest = batch[batch.length - 1]
-        if (oldest.commit.parent.length === 0) break
-
-        // Continue from the first parent of the oldest commit
-        currentRef = oldest.commit.parent[0]
+        // Find any unvisited parent to continue from. git.log does a full DAG
+        // traversal from the starting ref, so one entry point is enough — it will
+        // fan out and discover commits reachable from other frontier parents too.
+        let nextRef: string | undefined
+        for (const commit of batch) {
+            for (const parentOid of commit.commit.parent) {
+                if (!seenOids.has(parentOid)) {
+                    nextRef = parentOid
+                    break
+                }
+            }
+            if (nextRef) break
+        }
+        if (!nextRef) break
+        currentRef = nextRef
     }
 
     // Sort chronologically (oldest first)
