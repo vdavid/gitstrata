@@ -70,6 +70,17 @@ export const repoToDir = (parsed: ParsedRepo): string => {
     return `/${parsed.host}/${parsed.owner}/${parsed.repo}`
 }
 
+/** Extract a repo from a URL pathname like /github.com/owner/repo. Returns null if invalid. */
+export const parseRepoFromPathname = (pathname: string): ParsedRepo | null => {
+    const trimmed = pathname.replace(/^\//, '')
+    if (!trimmed) return null
+    try {
+        return parseRepoUrl(`https://${trimmed}`)
+    } catch {
+        return null
+    }
+}
+
 /** LightningFS IndexedDB database name for a parsed repo. */
 export const repoToFsName = (parsed: ParsedRepo): string => {
     return `git-strata-${parsed.host}-${parsed.owner}-${parsed.repo}`

@@ -4,7 +4,7 @@
     import { resolve } from '$app/paths'
     import { page } from '$app/state'
     import { env } from '$env/dynamic/public'
-    import { parseRepoUrl } from '$lib/url'
+    import { parseRepoUrl, parseRepoFromPathname } from '$lib/url'
     import { formatBytes, getResult, saveResult } from '$lib/cache'
     import { fetchServerResult, uploadServerResult } from '$lib/server-cache'
     import { createAnalyzer, type AnalyzerHandle } from '$lib/worker/analyzer.api'
@@ -106,10 +106,11 @@
     // Repo size for display in summary (from forge API, null if unavailable)
     let repoSizeBytes: number | null = $state(null)
 
-    // Read ?repo= from URL on initial load
+    // Read repo from URL pathname (e.g. /github.com/owner/repo)
     const initialRepo = $derived.by(() => {
         if (!browser) return ''
-        return page.url.searchParams.get('repo') ?? ''
+        const parsed = parseRepoFromPathname(page.url.pathname)
+        return parsed ? parsed.url : ''
     })
 
     let autoStartedRepo = $state('')
@@ -181,10 +182,21 @@
         stopTimer()
     }
 
-    const updateQueryParam = (repo: string) => {
-        const qs = repo ? `?repo=${encodeURIComponent(repo)}` : ''
-        // eslint-disable-next-line svelte/no-navigation-without-resolve -- resolve('/') is used, qs is appended
-        goto(resolve('/') + qs, { replaceState: true, keepFocus: true })
+    const updateUrl = (repo: string) => {
+        if (!repo) {
+            goto(resolve('/'), { replaceState: true, keepFocus: true })
+            return
+        }
+        try {
+            const parsed = parseRepoUrl(repo)
+            // eslint-disable-next-line svelte/no-navigation-without-resolve -- resolve('/') is embedded in template
+            goto(`${resolve('/')}${parsed.host}/${parsed.owner}/${parsed.repo}`, {
+                replaceState: true,
+                keepFocus: true,
+            })
+        } catch {
+            goto(resolve('/'), { replaceState: true, keepFocus: true })
+        }
     }
 
     const handleProgress = (event: ProgressEvent) => {
@@ -288,7 +300,7 @@
         try {
             const parsed = parseRepoUrl(repoInput)
             autoStartedRepo = repoInput // Prevent the URL-watching effect from re-triggering
-            updateQueryParam(repoInput)
+            updateUrl(repoInput)
 
             // Fetch repo size for display (fire-and-forget, non-blocking)
             void fetchRepoSizeBytes(parsed.host, parsed.owner, parsed.repo).then((size) => {

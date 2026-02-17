@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parseRepoUrl, repoToDir } from '$lib/url'
+import { parseRepoUrl, parseRepoFromPathname, repoToDir } from '$lib/url'
 
 describe('parseRepoUrl', () => {
     it('parses full GitHub HTTPS URL', () => {
@@ -63,6 +63,35 @@ describe('parseRepoUrl', () => {
 
     it('throws when path has no repo', () => {
         expect(() => parseRepoUrl('https://github.com/onlyone')).toThrow('owner and repository name')
+    })
+})
+
+describe('parseRepoFromPathname', () => {
+    it('parses /github.com/owner/repo', () => {
+        const result = parseRepoFromPathname('/github.com/sveltejs/svelte')
+        expect(result).toEqual({
+            url: 'https://github.com/sveltejs/svelte',
+            host: 'github.com',
+            owner: 'sveltejs',
+            repo: 'svelte',
+        })
+    })
+
+    it('parses GitLab pathname', () => {
+        const result = parseRepoFromPathname('/gitlab.com/owner/project')
+        expect(result).toEqual(expect.objectContaining({ host: 'gitlab.com' }))
+    })
+
+    it('returns null for root path', () => {
+        expect(parseRepoFromPathname('/')).toBeNull()
+    })
+
+    it('returns null for empty string', () => {
+        expect(parseRepoFromPathname('')).toBeNull()
+    })
+
+    it('returns null for invalid path', () => {
+        expect(parseRepoFromPathname('/not-a-host/owner/repo')).toBeNull()
     })
 })
 

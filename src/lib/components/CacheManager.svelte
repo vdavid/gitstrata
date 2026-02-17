@@ -2,6 +2,7 @@
     import { browser } from '$app/environment'
     import { resolve } from '$app/paths'
     import { listCachedRepos, deleteRepo, clearAll, getTotalSize, formatBytes, type CachedRepoInfo } from '$lib/cache'
+    import { parseRepoUrl } from '$lib/url'
 
     interface Props {
         id?: string
@@ -51,6 +52,15 @@
             return parsed.pathname.replace(/^\//, '').replace(/\.git$/, '')
         } catch {
             return url
+        }
+    }
+
+    const repoPath = (repoUrl: string): string => {
+        try {
+            const parsed = parseRepoUrl(repoUrl)
+            return `${parsed.host}/${parsed.owner}/${parsed.repo}`
+        } catch {
+            return ''
         }
     }
 </script>
@@ -110,7 +120,7 @@
                         <li class="flex items-center justify-between gap-3">
                             <div class="min-w-0 flex-1">
                                 <a
-                                    href="{resolve('/')}?repo={shortName(repo.repoUrl)}"
+                                    href="{resolve('/')}{repoPath(repo.repoUrl)}"
                                     class="block truncate text-foreground hover:text-accent hover:underline transition-colors"
                                     style="font-family: var(--font-mono); font-size: 0.875rem; text-decoration: none; transition-duration: var(--duration-fast);"
                                 >
