@@ -1,6 +1,10 @@
 import { describe, it, expect, vi } from 'vitest'
 import app from './index'
 
+vi.mock('./verify-head-commit', () => ({
+    verifyHeadCommit: vi.fn(async () => null),
+}))
+
 async function sha256Hex(input: string): Promise<string> {
     const encoded = new TextEncoder().encode(input)
     const hashBuffer = await crypto.subtle.digest('SHA-256', encoded)
@@ -13,16 +17,18 @@ async function gzip(data: string): Promise<ArrayBuffer> {
     return new Response(compressed).arrayBuffer()
 }
 
+const validCommit = 'a'.repeat(40)
+
 function makeEntry(repoUrl = 'https://github.com/owner/repo') {
     return {
         version: 1,
         repoUrl,
-        headCommit: 'abc123',
+        headCommit: validCommit,
         result: {
             repoUrl,
             defaultBranch: 'main',
             analyzedAt: '2025-01-01T00:00:00Z',
-            headCommit: 'abc123',
+            headCommit: validCommit,
             detectedLanguages: [],
             days: [],
         },
@@ -147,7 +153,7 @@ describe('PUT /cache/v1/:repoHash', () => {
             { RESULTS: bucket },
         )
         expect(res.status).toBe(400)
-        expect(await res.text()).toContain('Invalid cache entry shape')
+        expect(await res.text()).toContain('version must be 1')
     })
 
     it('rejects hash mismatch', async () => {
@@ -163,7 +169,7 @@ describe('PUT /cache/v1/:repoHash', () => {
             { RESULTS: bucket },
         )
         expect(res.status).toBe(400)
-        expect(await res.text()).toContain('hash does not match')
+        expect(await res.text()).toContain('repoUrl hash does not match')
     })
 
     it('stores valid entry and returns 200', async () => {
