@@ -29,6 +29,13 @@ responses; otherwise just a pass-through proxy.
   include `Cache-Control: no-store` so the browser doesn't cache them either (same v1/v2 concern). POST
   `/git-upload-pack` requests are never cached. The `X-Cache` response header indicates `HIT`, `MISS`, or `NONE` (for
   uncacheable requests). Cache is per-datacenter, not global.
+- **No upstream fetch timeout**: The proxy does not set a timeout on the `fetch()` to git hosts. This is intentional.
+  Cloudflare Workers have no hard wall-clock duration limit — a Worker runs as long as the client stays connected. CPU
+  time limits (Free: 10 ms, Paid: 5 min) only count active computation; I/O wait (streaming bytes) does not count. The
+  proxy does near-zero CPU work, so even the free plan is fine. Large repos like `torvalds/linux` can take 30+ minutes
+  for GitHub's server-side pack preparation ("Counting objects"), during which the proxy just streams sideband progress
+  bytes. Timeout/staleness logic lives client-side (`StalenessMonitor` in `clone.ts`). Source:
+  https://developers.cloudflare.com/workers/platform/limits/
 - For local frontend development, use `https://cors.isomorphic-git.org` instead — no need to run this worker locally.
 - **Shared results cache (optional)**: When an R2 bucket binding (`RESULTS`) is present, two cache routes activate.
   Without the binding, they return 404 and the proxy behaves as before.

@@ -14,8 +14,8 @@ a Web Worker.
 - `cache.ts` — IndexedDB results cache using `idb`, with size tracking, LRU eviction (500 MB limit), and `formatBytes`
   helper. Uses a separate `results-meta` store for lightweight metadata (`repoUrl`, `analyzedAt`, `lastAccessed`,
   `sizeBytes`) so eviction, size checks, and listing never deserialize full results. The heavy `results` store is only
-  read by `getResult`. DB version 2 added the meta store with a thin backfill migration. Writes are wrapped in
-  try/catch to handle QuotaExceededError gracefully (caching is best-effort).
+  read by `getResult`. DB version 2 added the meta store with a thin backfill migration. Writes are wrapped in try/catch
+  to handle QuotaExceededError gracefully (caching is best-effort).
 - `server-cache.ts` — Shared server cache client. Opt-in via `PUBLIC_SHARED_CACHE_URL` env var; all functions no-op when
   unset. Exports `fetchServerResult(repoUrl)` and `uploadServerResult(result)`. Errors are caught internally and never
   propagate. Uses SHA-256 for repo URL hashing and CompressionStream for gzip upload.
