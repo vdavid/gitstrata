@@ -6,7 +6,7 @@ import { defineConfig } from 'vitest/config'
 export default defineConfig({
     plugins: [tailwindcss(), sveltekit(), devtoolsJson()],
     server: {
-        port: 5233,
+        port: Number(process.env.CONDUCTOR_PORT) || 5233,
         strictPort: true,
         watch: {
             ignored: ['**/*.md', '**/todo.md', '**/.claude/**'],
