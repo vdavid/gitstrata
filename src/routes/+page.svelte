@@ -113,14 +113,21 @@
         return parsed ? parsed.url : ''
     })
 
-    let autoStartedRepo = $state('')
+    // Auto-start from URL on initial page load only (e.g. shared links).
+    // Must not re-trigger on programmatic goto — goto is async, so comparing
+    // the URL-derived initialRepo with a stored string races and can start the wrong repo.
+    let hasAutoStarted = $state(false)
 
     $effect(() => {
-        if (browser && initialRepo && initialRepo !== autoStartedRepo) {
-            autoStartedRepo = initialRepo
+        if (browser && initialRepo && !hasAutoStarted) {
+            hasAutoStarted = true
             void startAnalysis(initialRepo)
         }
     })
+
+    // Generation counter: incremented on each startAnalysis call so stale async
+    // flows (cache lookups, fire-and-forget fetches) bail out when superseded.
+    let analysisGeneration = 0
 
     const startTimer = (kind: 'clone' | 'process') => {
         stopTimer()
@@ -296,19 +303,22 @@
         cancel()
         resetState()
         lastRepoInput = repoInput
+        const generation = ++analysisGeneration
 
         try {
             const parsed = parseRepoUrl(repoInput)
-            autoStartedRepo = repoInput // Prevent the URL-watching effect from re-triggering
+            hasAutoStarted = true // Prevent the URL-watching effect from re-triggering
             updateUrl(repoInput)
 
-            // Fetch repo size for display (fire-and-forget, non-blocking)
+            // Fetch repo size for display (fire-and-forget, non-blocking).
+            // Guarded by generation to avoid setting size for the wrong repo.
             void fetchRepoSizeBytes(parsed.host, parsed.owner, parsed.repo).then((size) => {
-                repoSizeBytes = size
+                if (generation === analysisGeneration) repoSizeBytes = size
             })
 
             // Check local cache first
             const cached = await getResult(parsed.url)
+            if (generation !== analysisGeneration) return
             if (cached) {
                 cachedResult = cached
                 result = cached
@@ -319,6 +329,7 @@
 
             // Check shared server cache on local miss
             const serverEntry = await fetchServerResult(parsed.url)
+            if (generation !== analysisGeneration) return
             if (serverEntry) {
                 cachedResult = serverEntry.result
                 result = serverEntry.result
@@ -332,6 +343,7 @@
             // Pre-clone size gate (GitHub only, skipped on force or API failure)
             if (!force) {
                 const sizeBytes = await fetchRepoSizeBytes(parsed.host, parsed.owner, parsed.repo)
+                if (generation !== analysisGeneration) return
                 if (sizeBytes !== null && sizeBytes > sizeGateThresholdBytes) {
                     sizeGateBytes = sizeBytes
                     return
@@ -343,6 +355,7 @@
                 await cancelCleanup
                 cancelCleanup = undefined
             }
+            if (generation !== analysisGeneration) return
 
             phase = 'cloning'
             startTimer('clone')
@@ -356,6 +369,7 @@
 
             await analyzer.analyze(repoInput, corsProxy, handleProgress)
         } catch (e) {
+            if (generation !== analysisGeneration) return
             stopTimer()
             if (phase !== 'error') {
                 phase = 'error'
@@ -371,6 +385,7 @@
 
     const dismissSizeGate = () => {
         sizeGateBytes = 0
+        updateUrl('')
     }
 
     let cancelCleanup: Promise<void> | undefined
@@ -382,6 +397,12 @@
             analyzer = undefined
         }
         phase = 'idle'
+    }
+
+    /** User-facing cancel: also resets URL so stale repo path doesn't linger. */
+    const handleUserCancel = () => {
+        cancel()
+        updateUrl('')
     }
 
     const retry = () => {
@@ -621,7 +642,8 @@
                     {processTotal}
                     {processDate}
                     processElapsedMs={processElapsed}
-                    oncancel={cancel}
+                    {repoSizeBytes}
+                    oncancel={handleUserCancel}
                 />
             </div>
         {/if}
@@ -655,7 +677,7 @@
                         </p>
                         <div class="mt-3 flex items-center gap-3">
                             <button onclick={dismissSizeWarning} class="btn-primary text-sm"> Continue </button>
-                            <button onclick={cancel} class="btn-link text-sm"> Cancel </button>
+                            <button onclick={handleUserCancel} class="btn-link text-sm"> Cancel </button>
                         </div>
                     </div>
                 </div>

@@ -12,6 +12,7 @@
         processTotal: number
         processDate: string
         processElapsedMs: number
+        repoSizeBytes?: number | null
         oncancel: () => void
     }
 
@@ -26,6 +27,7 @@
         processTotal,
         processDate,
         processElapsedMs,
+        repoSizeBytes,
         oncancel,
     }: Props = $props()
 
@@ -94,10 +96,37 @@ ${statBlock}`
                             : ''
                     statBlock = `<span class="phase-info-stat"><span class="phase-info-stat-value">${formatBytes(snap.loaded)}</span> received${speed}</span>`
                 }
+
+                // Size estimate block — when we know the repo size, estimate compressed download range
+                const packRatioLow = 0.1
+                const packRatioHigh = 0.8
+                let sizeEstimateBlock = ''
+                if (repoSizeBytes != null && repoSizeBytes > 0) {
+                    const repoMb = formatMb(repoSizeBytes)
+                    const lowBytes = repoSizeBytes * packRatioLow
+                    const highBytes = repoSizeBytes * packRatioHigh
+                    const lowMb = formatMb(lowBytes)
+                    const highMb = formatMb(highBytes)
+                    const lowPctLabel = Math.round(packRatioLow * 100)
+                    const highPctLabel = Math.round(packRatioHigh * 100)
+
+                    const loaded = snap?.loaded ?? 0
+                    const progressLine =
+                        loaded > 0
+                            ? (() => {
+                                  const lowPct = Math.min(Math.round((loaded / lowBytes) * 100), 100)
+                                  const highPct = Math.min(Math.round((loaded / highBytes) * 100), 100)
+                                  return ` With <span class="phase-info-stat-value">${formatMb(loaded)} MB</span> downloaded, that\u2019s somewhere between <span class="phase-info-stat-value">${highPct}%</span> and <span class="phase-info-stat-value">${lowPct}%</span> done. That's all we know.`
+                              })()
+                            : ''
+
+                    sizeEstimateBlock = `<p class="phase-info-estimate">The repo is <span class="phase-info-stat-value">${repoMb} MB</span> uncompressed. Git packs are typically <span class="phase-info-stat-value">${lowPctLabel}\u2013${highPctLabel}%</span> of that, so expect roughly <span class="phase-info-stat-value">${lowMb}\u2013${highMb} MB</span> to download.${progressLine}</p>`
+                }
+
                 return `<p>This is the actual download \u2014 bytes flowing from the server through a CORS proxy into the browser. Everything runs in a Web Worker so the page stays responsive while data streams in.</p>
 <p>The pack file contains all the compressed objects from the previous step. Once it arrives, the objects still need to be unpacked and reconstructed.</p>
 <p>GitHub and other hosts often send data in bursts with long pauses between them \u2014 sometimes several minutes of silence. This is normal server behavior, not a connection problem.</p>
-${statBlock}`
+${sizeEstimateBlock}${statBlock}`
             }
 
             case 'resolve':
@@ -334,6 +363,11 @@ ${statBlock}`
     // --- Per-phase detail text ---
 
     const formatNumber = (n: number): string => n.toLocaleString()
+
+    const formatMb = (bytes: number): string => {
+        const mb = bytes / (1024 * 1024)
+        return mb >= 100 ? Math.round(mb).toLocaleString() : mb.toFixed(1)
+    }
 
     const getPhaseDetail = (phaseDef: PhaseDefinition, state: PhaseState): string => {
         const snap = snapshots[phaseDef.id]
