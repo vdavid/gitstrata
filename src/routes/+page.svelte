@@ -116,11 +116,15 @@
     // Auto-start from URL on initial page load only (e.g. shared links).
     // Must not re-trigger on programmatic goto — goto is async, so comparing
     // the URL-derived initialRepo with a stored string races and can start the wrong repo.
-    let hasAutoStarted = $state(false)
+    // Intentionally NOT $state — must not trigger the effect. The effect must only
+    // fire when initialRepo changes (URL navigation). If suppressedRepo were reactive,
+    // changing it in startAnalysis would re-trigger the effect while initialRepo still
+    // holds the OLD URL (goto is async) → race condition.
+    let suppressedRepo = ''
 
     $effect(() => {
-        if (browser && initialRepo && !hasAutoStarted) {
-            hasAutoStarted = true
+        if (browser && initialRepo && initialRepo !== suppressedRepo) {
+            suppressedRepo = initialRepo
             void startAnalysis(initialRepo)
         }
     })
@@ -307,7 +311,7 @@
 
         try {
             const parsed = parseRepoUrl(repoInput)
-            hasAutoStarted = true // Prevent the URL-watching effect from re-triggering
+            suppressedRepo = parsed.url // Prevent the URL-watching effect from re-triggering
             updateUrl(repoInput)
 
             // Fetch repo size for display (fire-and-forget, non-blocking).

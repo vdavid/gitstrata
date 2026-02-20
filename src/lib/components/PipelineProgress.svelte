@@ -87,14 +87,15 @@ ${statBlock}`
             case 'receive': {
                 const snap = snapshots['receive']
                 const ts = phaseTimestamps['receive']
+                const receivedBytes = peakDownloadedBytes > 0 ? peakDownloadedBytes : (snap?.loaded ?? 0)
                 let statBlock = ''
-                if (snap && snap.loaded > 0) {
+                if (receivedBytes > 0) {
                     const elapsedSec = ts ? ((ts.endTime ?? liveElapsedNow) - ts.startTime) / 1000 : 0
                     const speed =
                         elapsedSec > 0.5
-                            ? ` at <span class="phase-info-stat-value">~${formatBytes(Math.round(snap.loaded / elapsedSec))}/s</span>`
+                            ? ` at <span class="phase-info-stat-value">~${formatBytes(Math.round(receivedBytes / elapsedSec))}/s</span>`
                             : ''
-                    statBlock = `<span class="phase-info-stat"><span class="phase-info-stat-value">${formatBytes(snap.loaded)}</span> received${speed}</span>`
+                    statBlock = `<span class="phase-info-stat"><span class="phase-info-stat-value">${formatBytes(receivedBytes)}</span> received${speed}</span>`
                 }
 
                 // Size estimate block — when we know the repo size, estimate compressed download range
@@ -110,13 +111,12 @@ ${statBlock}`
                     const lowPctLabel = Math.round(packRatioLow * 100)
                     const highPctLabel = Math.round(packRatioHigh * 100)
 
-                    const loaded = snap?.loaded ?? 0
                     const progressLine =
-                        loaded > 0
+                        receivedBytes > 0
                             ? (() => {
-                                  const lowPct = Math.min(Math.round((loaded / lowBytes) * 100), 100)
-                                  const highPct = Math.min(Math.round((loaded / highBytes) * 100), 100)
-                                  return ` With <span class="phase-info-stat-value">${formatMb(loaded)} MB</span> downloaded, that\u2019s somewhere between <span class="phase-info-stat-value">${highPct}%</span> and <span class="phase-info-stat-value">${lowPct}%</span> done. That's all we know.`
+                                  const lowPct = Math.min(Math.round((receivedBytes / lowBytes) * 100), 100)
+                                  const highPct = Math.min(Math.round((receivedBytes / highBytes) * 100), 100)
+                                  return ` With <span class="phase-info-stat-value">${formatMb(receivedBytes)} MB</span> downloaded, that\u2019s somewhere between <span class="phase-info-stat-value">${highPct}%</span> and <span class="phase-info-stat-value">${lowPct}%</span> done. That's all we know.`
                               })()
                             : ''
 
@@ -179,6 +179,9 @@ ${statBlock}`
     let previousPhaseId: PhaseId | null = $state(null)
     let seenFetching = $state(false)
 
+    /** Peak bytes seen from 'downloading' events — never decreases. */
+    let peakDownloadedBytes = $state(0)
+
     // Track which clonePhase string was already acknowledged as complete.
     // Because effects run after render, a new phase arriving already at loaded >= total
     // gets at least one render cycle as 'active' before being marked complete.
@@ -211,13 +214,19 @@ ${statBlock}`
         }
     })
 
-    // Keep snapshots up to date: live data for the active phase, frozen for completed phases
+    // Keep snapshots up to date: live data for the active phase, frozen for completed phases.
+    // 'downloading' events (HTTP byte counts) are tracked separately in peakDownloadedBytes
+    // to avoid overwriting the 'receive' snapshot with object counts from 'Receiving objects'.
     $effect(() => {
         if (activePhaseId && activePhaseId !== previousPhaseId) {
             previousPhaseId = activePhaseId
         }
         if (activePhaseId && phase === 'cloning') {
-            snapshots[activePhaseId] = { loaded: cloneLoaded, total: cloneTotal }
+            if (clonePhase === 'downloading') {
+                peakDownloadedBytes = Math.max(peakDownloadedBytes, cloneLoaded)
+            } else {
+                snapshots[activePhaseId] = { loaded: cloneLoaded, total: cloneTotal }
+            }
             lastCloneProgressTime = Date.now()
         }
     })
@@ -327,9 +336,7 @@ ${statBlock}`
     const silenceMs = $derived(phase === 'cloning' ? Math.max(0, liveElapsedNow - lastCloneProgressTime) : 0)
     const isStale = $derived(silenceMs > staleThresholdMs)
     const silenceTimeoutMs = $derived(
-        (snapshots['receive']?.loaded ?? 0) > silenceExtensionThreshold
-            ? silenceExtendedTimeoutMs
-            : silenceBaseTimeoutMs,
+        peakDownloadedBytes > silenceExtensionThreshold ? silenceExtendedTimeoutMs : silenceBaseTimeoutMs,
     )
 
     // --- Info popup state ---
@@ -388,17 +395,16 @@ ${statBlock}`
                 if (state === 'done' && snap.loaded > 0) return `${formatNumber(snap.loaded)} objects`
                 return ''
 
-            case 'receive':
+            case 'receive': {
+                const bytes = peakDownloadedBytes > 0 ? peakDownloadedBytes : snap.loaded
                 if (state === 'active' && !cloneSubPhaseComplete) {
-                    return snap.total > 0
-                        ? `${formatBytes(snap.loaded)} / ~${formatBytes(snap.total)}`
-                        : formatBytes(snap.loaded)
+                    return bytes > 0 ? formatBytes(bytes) : ''
                 }
                 if (state === 'done') {
-                    const bytes = snap.total > 0 ? snap.total : snap.loaded
                     return bytes > 0 ? formatBytes(bytes) : ''
                 }
                 return ''
+            }
 
             case 'resolve':
                 if (state === 'active' && !cloneSubPhaseComplete && snap.total > 0)
