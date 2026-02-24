@@ -12,3 +12,4 @@ coverage/
 .DS_Store
 cors-proxy/.wrangler/
 cors-proxy/.dev.vars
+_ignored/
