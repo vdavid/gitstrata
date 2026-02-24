@@ -5,6 +5,7 @@
     import type { Chart as ChartType, ChartConfiguration, ChartDataset } from 'chart.js'
     import { areaLabelsPlugin } from './chart-area-labels-plugin'
     import { crosshairPlugin } from './chart-crosshair-plugin'
+    import { eraMarkersPlugin } from './chart-era-markers-plugin'
 
     interface Props {
         days: DayStats[]
@@ -18,14 +19,20 @@
 
     let { days, detectedLanguages, live = false, highlightDate = null }: Props = $props()
 
-    type ViewMode = 'all' | 'prod-vs-test' | 'languages-only'
+    type ViewMode = 'all' | 'prod-vs-test' | 'languages-only' | 'velocity'
     const viewModeToggles: { mode: ViewMode; label: string }[] = [
         { mode: 'all', label: 'All' },
         { mode: 'prod-vs-test', label: 'Prod vs test' },
         { mode: 'languages-only', label: 'Languages only' },
+        { mode: 'velocity', label: 'Velocity' },
     ]
     let viewMode = $state<ViewMode>('all')
     let patternFills = $state(false)
+    let showEraMarkers = $state(browser ? localStorage.getItem('gitstrata-era-markers') !== 'false' : true)
+
+    $effect(() => {
+        if (browser) localStorage.setItem('gitstrata-era-markers', String(showEraMarkers))
+    })
 
     let canvasEl: HTMLCanvasElement | undefined = $state()
     let chart: ChartType | undefined = $state()
@@ -49,6 +56,15 @@
 
     /** Format a number with thin-space thousands separator */
     const formatStripNumber = (n: number): string => n.toLocaleString('en').replace(/,/g, '\u2009')
+
+    /** Format a delta value with sign prefix */
+    const formatDelta = (n: number): string => {
+        const rounded = Math.round(n)
+        const formatted = formatStripNumber(Math.abs(rounded))
+        if (rounded > 0) return `+${formatted}`
+        if (rounded < 0) return `\u2212${formatted}`
+        return formatted
+    }
 
     /** Abbreviate dataset labels for mobile (shorten prod/test suffix) */
     const abbreviateLabel = (label: string): string =>
@@ -173,6 +189,7 @@
             zoomModule.default,
             crosshairPlugin,
             areaLabelsPlugin,
+            eraMarkersPlugin,
         )
 
         ChartConstructor = Chart
@@ -439,6 +456,46 @@
         return datasets
     }
 
+    const buildVelocityDatasets = (daysList: DayStats[]): ChartDataset<'line'>[] => {
+        const rawDeltas = daysList.map((d, i) => (i === 0 ? d.total : d.total - daysList[i - 1].total))
+
+        const rollingAvg = rawDeltas.map((_, i) => {
+            const windowStart = Math.max(0, i - 6)
+            let sum = 0
+            for (let j = windowStart; j <= i; j++) {
+                sum += rawDeltas[j]
+            }
+            return sum / (i - windowStart + 1)
+        })
+
+        const accentColor = getCssVar('--color-accent')
+
+        return [
+            {
+                label: 'Daily change',
+                data: rawDeltas,
+                borderColor: accentColor + '40',
+                backgroundColor: accentColor + '40',
+                borderWidth: 1,
+                fill: false,
+                tension: 0.3,
+                pointRadius: 0,
+                pointHitRadius: 6,
+            },
+            {
+                label: '7-day average',
+                data: rollingAvg,
+                borderColor: accentColor,
+                backgroundColor: accentColor,
+                borderWidth: 2.5,
+                fill: false,
+                tension: 0.3,
+                pointRadius: 0,
+                pointHitRadius: 6,
+            },
+        ]
+    }
+
     /** Scales chart top padding with canvas width so the overlay strip rarely covers data. */
     const responsivePaddingPlugin = {
         id: 'responsivePadding',
@@ -450,9 +507,25 @@
         },
     }
 
-    const buildConfig = (daysList: DayStats[], datasets: ChartDataset<'line'>[]): ChartConfiguration<'line'> => {
+    const buildConfig = (
+        daysList: DayStats[],
+        datasets: ChartDataset<'line'>[],
+        isVelocity: boolean,
+    ): ChartConfiguration<'line'> => {
         const labels = daysList.map((d) => d.date)
         const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches
+
+        const formatVelocityTick = (v: number): string => {
+            if (Math.abs(v) >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M/day`
+            if (Math.abs(v) >= 1_000) return `${(v / 1_000).toFixed(0)}k/day`
+            return `${v}/day`
+        }
+
+        const formatCumulativeTick = (v: number): string => {
+            if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`
+            if (v >= 1_000) return `${(v / 1_000).toFixed(0)}K`
+            return String(v)
+        }
 
         return {
             type: 'line',
@@ -471,7 +544,7 @@
                     x: {
                         type: 'time',
                         time: { unit: 'month', tooltipFormat: 'yyyy-MM-dd' },
-                        grid: { color: getCssVar('--color-border') + '30' },
+                        grid: { color: getCssVar('--color-border-strong') + '55' },
                         ticks: {
                             color: getCssVar('--color-foreground-tertiary'),
                             maxTicksLimit: 12,
@@ -480,17 +553,23 @@
                         border: { color: getCssVar('--color-border') },
                     },
                     y: {
-                        stacked: true,
-                        beginAtZero: true,
-                        grid: { color: getCssVar('--color-border') + '30' },
+                        stacked: !isVelocity,
+                        ...(isVelocity ? {} : { beginAtZero: true }),
+                        grid: {
+                            color: (ctx: { tick: { value: number } }) => {
+                                if (isVelocity && ctx.tick.value === 0)
+                                    return getCssVar('--color-foreground-tertiary') + '90'
+                                return getCssVar('--color-border-strong') + '55'
+                            },
+                            lineWidth: (ctx: { tick: { value: number } }) =>
+                                isVelocity && ctx.tick.value === 0 ? 1.5 : 1,
+                        },
                         ticks: {
                             color: getCssVar('--color-foreground-tertiary'),
                             font: { family: getCssVar('--font-mono').split(',')[0].replace(/'/g, ''), size: 12 },
                             callback: (value) => {
                                 const v = value as number
-                                if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`
-                                if (v >= 1_000) return `${(v / 1_000).toFixed(0)}K`
-                                return String(v)
+                                return isVelocity ? formatVelocityTick(v) : formatCumulativeTick(v)
                             },
                         },
                         border: { color: getCssVar('--color-border') },
@@ -523,7 +602,12 @@
                         },
                     },
                     crosshair: { enabled: true },
-                    areaLabels: { enabled: true },
+                    areaLabels: { enabled: !isVelocity },
+                    eraMarkers: {
+                        enabled: showEraMarkers,
+                        firstDate: daysList[0]?.date,
+                        lastDate: daysList[daysList.length - 1]?.date,
+                    },
                 },
             },
         }
@@ -553,9 +637,14 @@
         // Read isDark so this effect re-runs on theme switch, re-reading CSS variables
         void isDark
 
-        const { shown, other: hasOther } = computeVisibleLanguages(days, detectedLanguages)
-        const datasets = buildDatasets(days, shown, hasOther, viewMode)
-        const config = buildConfig(days, datasets)
+        const isVelocity = viewMode === 'velocity'
+        const datasets = isVelocity
+            ? buildVelocityDatasets(days)
+            : (() => {
+                  const { shown, other: hasOther } = computeVisibleLanguages(days, detectedLanguages)
+                  return buildDatasets(days, shown, hasOther, viewMode)
+              })()
+        const config = buildConfig(days, datasets, isVelocity)
 
         if (chart) {
             chart.data = config.data
@@ -635,13 +724,23 @@
         {/each}
         <div class="flex-1"></div>
         <button
-            onclick={() => (patternFills = !patternFills)}
-            aria-pressed={patternFills}
+            onclick={() => (showEraMarkers = !showEraMarkers)}
+            aria-pressed={showEraMarkers}
             class="strata-chip"
-            title="Toggle pattern fills for color blindness accessibility"
+            title="Show industry AI milestones (Copilot GA, agentic era, Opus 4.5) as vertical markers"
         >
-            Pattern fills
+            Era markers
         </button>
+        {#if viewMode !== 'velocity'}
+            <button
+                onclick={() => (patternFills = !patternFills)}
+                aria-pressed={patternFills}
+                class="strata-chip"
+                title="Toggle pattern fills for color blindness accessibility"
+            >
+                Pattern fills
+            </button>
+        {/if}
         <button onclick={resetZoom} class="btn-ghost"> Reset zoom </button>
     </div>
 
@@ -676,14 +775,20 @@
                         ></span>
                         <span class="hidden sm:inline">{item.label}:</span>
                         <span class="sm:hidden">{abbreviateLabel(item.label)}:</span>
-                        <span class="text-foreground">{formatStripNumber(item.value)}</span>
-                        <span class="hidden sm:inline text-foreground-tertiary">({item.pct}%)</span>
+                        <span class="text-foreground"
+                            >{viewMode === 'velocity' ? formatDelta(item.value) : formatStripNumber(item.value)}</span
+                        >
+                        {#if viewMode !== 'velocity'}
+                            <span class="hidden sm:inline text-foreground-tertiary">({item.pct}%)</span>
+                        {/if}
                     </span>
                 {/each}
 
-                <span class="ml-auto whitespace-nowrap font-medium text-foreground">
-                    Total: {formatStripNumber(activeStrip.total)}
-                </span>
+                {#if viewMode !== 'velocity'}
+                    <span class="ml-auto whitespace-nowrap font-medium text-foreground">
+                        Total: {formatStripNumber(activeStrip.total)}
+                    </span>
+                {/if}
             </div>
         {/if}
         <canvas bind:this={canvasEl}></canvas>

@@ -1,5 +1,6 @@
 <script lang="ts">
     import type { DayStats } from '$lib/types'
+    import { getLanguages } from '$lib/languages'
 
     interface Props {
         days: DayStats[]
@@ -107,6 +108,38 @@
     // --- Age ---
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
+    const metaLanguageIds = new Set(
+        getLanguages()
+            .filter((lang) => lang.isMeta || lang.id === 'docs' || lang.id === 'config')
+            .map((lang) => lang.id),
+    )
+
+    const nonMetaTotal = (day: DayStats): number => {
+        let sum = 0
+        for (const [id, lc] of Object.entries(day.languages)) {
+            if (!metaLanguageIds.has(id)) sum += lc.total
+        }
+        return sum
+    }
+
+    const lastMeaningfulUpdate = $derived.by(() => {
+        if (days.length < 2) return null
+        for (let i = days.length - 1; i >= 1; i--) {
+            const delta = Math.abs(nonMetaTotal(days[i]) - nonMetaTotal(days[i - 1]))
+            if (delta > 10) return days[i].date
+        }
+        return null
+    })
+
+    const showLastActive = $derived.by(() => {
+        if (!lastMeaningfulUpdate || days.length === 0) return null
+        const lastDate = new Date(days[days.length - 1].date)
+        const meaningfulDate = new Date(lastMeaningfulUpdate)
+        const daysDiff = (lastDate.getTime() - meaningfulDate.getTime()) / (1000 * 60 * 60 * 24)
+        if (daysDiff <= 30) return null
+        return `${monthNames[meaningfulDate.getMonth()]} ${meaningfulDate.getFullYear()}`
+    })
+
     const repoAge = $derived.by(() => {
         if (days.length === 0)
             return {
@@ -198,10 +231,32 @@
     })
 
     const formatNumber = (n: number): string => n.toLocaleString('en-US').replace(/,/g, '\u2009')
+
+    // --- Contributors ---
+    const contributorStats = $derived.by(() => {
+        const authorCounts: Record<string, number> = {}
+        for (const day of days) {
+            for (const author of day.authors ?? []) {
+                authorCounts[author] = (authorCounts[author] ?? 0) + 1
+            }
+        }
+
+        const keys = Object.keys(authorCounts)
+        const total = keys.length
+        if (total === 0) return null
+
+        const sorted = keys.map((k) => authorCounts[k]).sort((a, b) => b - a)
+        const totalCommitDays = sorted.reduce((sum, c) => sum + c, 0)
+        const topN = Math.min(2, sorted.length)
+        const topSum = sorted.slice(0, topN).reduce((sum, c) => sum + c, 0)
+        const topPct = Math.round((topSum / totalCommitDays) * 100)
+
+        return { total, topN, topPct }
+    })
 </script>
 
 <div
-    class="grid grid-cols-2 auto-rows-[1fr] gap-3 sm:grid-cols-3 lg:grid-cols-5 strata-stagger"
+    class="grid grid-cols-2 auto-rows-[1fr] gap-3 sm:grid-cols-3 lg:grid-cols-3 strata-stagger"
     role="region"
     aria-label="Summary statistics"
 >
@@ -349,6 +404,11 @@
             <p class="mt-1 text-foreground-secondary" style="font-family: var(--font-mono); font-size: 0.75rem;">
                 started {repoAge.startLabel}
             </p>
+            {#if showLastActive}
+                <p class="mt-1 text-foreground-secondary" style="font-family: var(--font-mono); font-size: 0.75rem;">
+                    last active {showLastActive}
+                </p>
+            {/if}
             {#if repoAge.isDead}
                 <div class="mt-1 flex items-center gap-1">
                     <!-- Tombstone icon -->
@@ -495,6 +555,34 @@
             </div>
             <p class="mt-1 text-foreground-secondary" style="font-family: var(--font-mono); font-size: 0.75rem;">
                 {peakDateFormatted}
+            </p>
+        {:else}
+            <p
+                class="mt-2 text-foreground"
+                style="font-family: var(--font-mono); font-size: 1.125rem; font-weight: 500;"
+            >
+                --
+            </p>
+        {/if}
+    </div>
+
+    <!-- Contributors -->
+    <div class="strata-card p-4">
+        <p
+            class="text-foreground-tertiary"
+            style="font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.05em; text-transform: uppercase;"
+        >
+            Contributors
+        </p>
+        {#if contributorStats}
+            <p
+                class="mt-2 text-foreground"
+                style="font-family: var(--font-mono); font-size: 1.125rem; font-weight: 500; letter-spacing: -0.01em;"
+            >
+                {formatNumber(contributorStats.total)}
+            </p>
+            <p class="mt-1 text-foreground-secondary" style="font-family: var(--font-mono); font-size: 0.75rem;">
+                Top {contributorStats.topN}: {contributorStats.topPct}% of commits
             </p>
         {:else}
             <p

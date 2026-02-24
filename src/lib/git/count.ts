@@ -350,7 +350,7 @@ const computeDayStatsFromFileState = (
         }
     }
 
-    return { date, total, languages, comments: messages }
+    return { date, total, languages, comments: messages, authors: [] }
 }
 
 /** Full tree walk; uses blob dedup caches to avoid redundant reads. */
@@ -436,7 +436,7 @@ export const countLinesForCommit = async (
         }
     }
 
-    return { date, total, languages, comments: messages }
+    return { date, total, languages, comments: messages, authors: [] }
 }
 
 const processFile = async (

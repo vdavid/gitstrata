@@ -10,6 +10,7 @@ export interface DayStats {
     total: number // Sum of all languages
     languages: Record<string, LanguageCount> // Keyed by language id
     comments: string[] // Commit messages for this day
+    authors: string[] // Unique author identifiers for this day
 }
 
 /** Full analysis result, stored in cache */
@@ -24,6 +25,8 @@ export interface AnalysisResult {
     days: DayStats[]
     /** Git repo size in bytes from the forge API (includes history). Undefined if unavailable. */
     repoSizeBytes?: number
+    /** Distinct authors across all commits. Undefined for cached results from before this field existed. */
+    totalContributors?: number
 }
 
 /** Payload stored in the shared server cache (R2) */

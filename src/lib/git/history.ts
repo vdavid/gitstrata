@@ -5,6 +5,7 @@ export interface DailyCommit {
     date: string // YYYY-MM-DD
     hash: string // OID of the latest commit that day
     messages: string[]
+    authors: string[] // Deduplicated "Name <email>" strings for this day
 }
 
 // --- Compact OID dedup set ---
@@ -146,6 +147,7 @@ export const getCommitsByDate = async (options: {
     const { fs, dir, ref, gitCache, signal, onProgress } = options
 
     const byDate = new Map<string, DailyCommit>()
+    const authorSets = new Map<string, Set<string>>()
     const seenOids = new CompactOidSet()
     let currentRef: string = ref
     let totalProcessed = 0
@@ -169,15 +171,21 @@ export const getCommitsByDate = async (options: {
             totalProcessed++
 
             const date = formatDate(commit.commit.author.timestamp)
+            const authorStr = `${commit.commit.author.name} <${commit.commit.author.email}>`
             const existing = byDate.get(date)
             if (!existing) {
+                const authorSet = new Set<string>([authorStr])
+                authorSets.set(date, authorSet)
                 byDate.set(date, {
                     date,
                     hash: commit.oid,
                     messages: [commit.commit.message.trim()],
+                    authors: [], // populated after the loop
                 })
             } else {
                 existing.messages.push(commit.commit.message.trim())
+                const existingAuthors = authorSets.get(date)
+                if (existingAuthors) existingAuthors.add(authorStr)
             }
         }
 
@@ -201,6 +209,12 @@ export const getCommitsByDate = async (options: {
         }
         if (!nextRef) break
         currentRef = nextRef
+    }
+
+    // Populate deduplicated authors from Sets
+    for (const [date, entry] of byDate) {
+        const authorSet = authorSets.get(date)
+        entry.authors = authorSet ? [...authorSet] : []
     }
 
     // Sort chronologically (oldest first)

@@ -152,6 +152,7 @@ const processDays = async (params: {
                     commit.messages,
                 )
             }
+            dayStats.authors = commit.authors
             // Release decoded file contents — only needed within a single commit's processing.
             // Keeps peak memory bounded to one commit's blobs instead of accumulating all.
             contentCache.clear()
@@ -164,6 +165,7 @@ const processDays = async (params: {
                 total: prevDay.total,
                 languages: Object.fromEntries(Object.entries(prevDay.languages).map(([k, v]) => [k, { ...v }])),
                 comments: ['-'],
+                authors: [],
             }
         } else {
             continue
@@ -306,6 +308,14 @@ const analyzerApi = {
                 .sort(([, a], [, b]) => b.total - a.total)
                 .map(([id]) => id)
 
+            // Compute total distinct contributors across all days
+            const allAuthors = new Set<string>()
+            for (const day of days) {
+                for (const author of day.authors) {
+                    allAuthors.add(author)
+                }
+            }
+
             const result: AnalysisResult = {
                 repoUrl: parsed.url,
                 defaultBranch,
@@ -313,6 +323,7 @@ const analyzerApi = {
                 analyzedAt: new Date().toISOString(),
                 detectedLanguages,
                 days,
+                totalContributors: allAuthors.size,
             }
 
             onProgress({ type: 'done', result })
@@ -472,6 +483,14 @@ const analyzerApi = {
                 .sort(([, a], [, b]) => b.total - a.total)
                 .map(([id]) => id)
 
+            // Compute total distinct contributors across all days
+            const allAuthors = new Set<string>()
+            for (const day of mergedDays) {
+                for (const author of day.authors ?? []) {
+                    allAuthors.add(author)
+                }
+            }
+
             const result: AnalysisResult = {
                 repoUrl: parsed.url,
                 defaultBranch,
@@ -479,6 +498,7 @@ const analyzerApi = {
                 analyzedAt: new Date().toISOString(),
                 detectedLanguages,
                 days: mergedDays,
+                totalContributors: allAuthors.size,
             }
 
             onProgress({ type: 'done', result })

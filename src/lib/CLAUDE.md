@@ -5,8 +5,9 @@ a Web Worker.
 
 ## Module overview
 
-- `types.ts` — Shared interfaces: LanguageDefinition, LanguageCount, DayStats, AnalysisResult (includes `headCommit` for
-  freshness checking), SharedCacheEntry, ProgressEvent
+- `types.ts` — Shared interfaces: LanguageDefinition, LanguageCount, DayStats (includes `authors` per day),
+  AnalysisResult (includes `headCommit` for freshness checking and optional `totalContributors`), SharedCacheEntry,
+  ProgressEvent
 - `languages.ts` — Language registry (~35 languages), extension mapping, test file/dir pattern matching, Rust and Zig
   inline test detection. `.h` defaults to C but reassigns to C++ when `.cpp`/`.cc`/`.cxx` files exist. Languages can set
   `noTestSplit: true` to skip prod/test breakdown (used for HTML, CSS, SQL, Shell, Svelte, Vue, Astro, Docs, Config).
@@ -23,11 +24,11 @@ a Web Worker.
   (protocol v2), abortable HTTP wrapper for signal support, size-warning emission for repos >1 GB. A `StalenessMonitor`
   wraps the external abort signal with an adaptive timeout: 5 min base, extended to 20 min once 10+ MB of data has been
   received (GitHub sends large packs in bursts). The UI detects silence internally via `PipelineProgress`.
-- `git/history.ts` — Commit log grouped by date, consecutive date generation, gap filling. `getCommitsByDate` fetches
-  commits in batches (via `git.log` with `depth` parameter) to bound peak memory on large repos. A `CompactOidSet`
-  deduplicates commits across batches — stores OIDs as 20-byte binary values in a flat Uint8Array-backed hash set (~4x
-  smaller than `Set<string>` for 40-char hex OIDs). Supports `signal` for cancellation and `onProgress` for reporting
-  processed commit counts.
+- `git/history.ts` — Commit log grouped by date, consecutive date generation, gap filling. `DailyCommit` includes an
+  `authors` field with deduplicated `"Name <email>"` strings per day. `getCommitsByDate` fetches commits in batches (via
+  `git.log` with `depth` parameter) to bound peak memory on large repos. A `CompactOidSet` deduplicates commits across
+  batches — stores OIDs as 20-byte binary values in a flat Uint8Array-backed hash set (~4x smaller than `Set<string>`
+  for 40-char hex OIDs). Supports `signal` for cancellation and `onProgress` for reporting processed commit counts.
 - `git/count.ts` — Line counting per commit tree, prod/test classification, blob dedup caching. Also exports `LruMap`, a
   Map subclass with LRU eviction used to bound cache memory. Files with unrecognized extensions are counted under the
   `'other'` bucket (with test-dir detection). Blob reads are parallelized with a concurrency limit of 8 using an inline
@@ -40,7 +41,9 @@ a Web Worker.
   and `shouldSkipDir` filters vendored directories (`vendor`, `node_modules`, `Pods`, `bower_components`, `__pycache__`)
   at tree-walk time, avoiding recursion into entire subtrees. Both are exported for testing.
 - `worker/analyzer.worker.ts` — Web Worker entry point (Comlink), orchestrates full pipeline and incremental refresh
-  (`analyzeIncremental` fetches only new commits, processes new days, merges)
+  (`analyzeIncremental` fetches only new commits, processes new days, merges). `processDays` attaches `authors` from
+  `DailyCommit` to each `DayStats`. Both `analyze` and `analyzeIncremental` compute `totalContributors` by collecting
+  all unique authors across all days.
 - `worker/analyzer.api.ts` — Comlink wrapper for main thread consumption
 
 ## Key patterns
@@ -63,8 +66,23 @@ a Web Worker.
   is served from memory (evicting least-recently-used entries when full). Unchanged subtrees (same tree OID) are skipped
   instantly via OID comparison. A `fileStateMap` (path -> FileState) tracks current state and is updated incrementally.
   `computeDayStatsFromFileState` aggregates the map into DayStats.
-- Date gaps are filled by carrying forward the previous day's stats with `comments: ["-"]`
+- Date gaps are filled by carrying forward the previous day's stats with `comments: ["-"]` and `authors: []`
 - `noTestSplit` languages have no prod/test split (LanguageCount.prod/test stay undefined). All other languages get test
   directory detection via `defaultTestDirPatterns`, even without explicit heuristics.
 - `classifyFile` order: noTestSplit → test dir → test file pattern → inline detection → default prod
 - Incremental refresh: `analyzeIncremental` uses `git.fetch` + processes only days after last cached date
+
+## Components
+
+- `components/ResultsChart.svelte` — Chart.js stacked area chart with 4 view modes: All, Prod vs test, Languages only,
+  and Velocity. The Velocity mode (`buildVelocityDatasets`) shows daily line-count changes plus a 7-day rolling average
+  as two unfilled line datasets, with Y-axis labels in lines/day (for example, "5k/day"). An "Era markers" toggle
+  (persisted to localStorage under `gitstrata-era-markers`) controls the `eraMarkersPlugin`. Pattern fills are hidden in
+  velocity mode since there are no filled areas.
+- `components/chart-era-markers-plugin.ts` — Chart.js plugin that draws vertical dashed lines at AI-era milestones
+  (Copilot GA '22, Agentic era '25, Opus 4.5 '25). Only renders markers within the repo's date range. Reads CSS
+  variables for colors and font.
+- `components/ResultsSummary.svelte` — 6 summary stat cards: Total lines, Prod/test split, Average growth, Age, Peak
+  day, Contributors. The Age card includes a "last active" line that appears when the last meaningful code change (>10
+  non-meta lines delta) differs from the last commit date by >30 days. The Contributors card aggregates unique authors
+  from `DayStats.authors` and shows top-N commit-day concentration.

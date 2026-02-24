@@ -169,14 +169,24 @@ always gets light gray. Each language also gets a lighter tint for its test laye
 - "All" (default) — shows all languages with prod/test split where applicable
 - "Prod vs test" — two layers: total prod, total test (aggregated across all languages)
 - "Languages only" — collapses prod/test per language, shows one layer per language
+- "Velocity" — shows daily line-count changes as a line chart plus a 7-day rolling average. Y axis shows lines/day (for
+  example, "5k/day"), is not stacked, and can go negative.
 
-#### Summary stats (above or beside the chart)
+**Era markers** — a toggleable overlay (persisted to localStorage) that draws vertical dashed lines at AI-era milestones
+(Copilot GA 2022, Agentic era 2025, Opus 4.5 2025). Only markers within the repo's date range are shown. Works in all
+view modes.
 
-- Total lines of code (current)
-- Total growth (first → last, as absolute and percentage)
-- Dominant language (by line count)
-- Average daily growth rate
-- Date range analyzed
+#### Summary stats (above the chart, 6 cards in a grid)
+
+- **Total lines** — current line count with repo size
+- **Prod / test split** — percentage breakdown with mini pie chart
+- **Average growth** — lines/day overall and last 90 days, with trend arrow
+- **Age** — human-readable duration, start date, and optional "last active Mon YYYY" line shown when the last meaningful
+  code change (>10 non-meta lines) is more than 30 days before the last commit. Also shows a dead-repo indicator when
+  inactive for 6+ months.
+- **Peak day** — single largest daily growth, with date
+- **Contributors** — distinct author count derived from `DayStats.authors`, with top-N commit-day concentration
+  percentage
 
 #### Data table (below the chart)
 
@@ -293,16 +303,23 @@ interface DayStats {
     total: number // Sum of all languages
     languages: Record<string, LanguageCount> // Keyed by language id (e.g. 'python', 'rust')
     comments: string[] // Commit messages for this day
+    authors: string[] // Unique "Name <email>" identifiers for this day
 }
 
 /** Full analysis result, stored in cache */
 interface AnalysisResult {
     repoUrl: string
     defaultBranch: string
+    /** OID of HEAD at analysis time — used for freshness checking */
+    headCommit: string
     analyzedAt: string // ISO 8601
     /** Language ids that appear in this result, sorted by final-day line count descending */
     detectedLanguages: string[]
     days: DayStats[]
+    /** Git repo size in bytes from the forge API (includes history) */
+    repoSizeBytes?: number
+    /** Distinct authors across all commits */
+    totalContributors?: number
 }
 
 /** Progress updates from the worker */

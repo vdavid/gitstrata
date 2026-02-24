@@ -35,8 +35,8 @@ describe('fillDateGaps', () => {
 
     it('fills gaps between commits', () => {
         const commits: DailyCommit[] = [
-            { date: '2024-01-01', hash: 'abc', messages: ['first'] },
-            { date: '2024-01-03', hash: 'def', messages: ['third'] },
+            { date: '2024-01-01', hash: 'abc', messages: ['first'], authors: ['Alice <alice@example.com>'] },
+            { date: '2024-01-03', hash: 'def', messages: ['third'], authors: ['Bob <bob@example.com>'] },
         ]
         const result = fillDateGaps(commits)
         expect(result).toHaveLength(3)
@@ -50,8 +50,8 @@ describe('fillDateGaps', () => {
 
     it('handles consecutive commits with no gaps', () => {
         const commits: DailyCommit[] = [
-            { date: '2024-01-01', hash: 'abc', messages: ['a'] },
-            { date: '2024-01-02', hash: 'def', messages: ['b'] },
+            { date: '2024-01-01', hash: 'abc', messages: ['a'], authors: [] },
+            { date: '2024-01-02', hash: 'def', messages: ['b'], authors: [] },
         ]
         const result = fillDateGaps(commits)
         expect(result).toHaveLength(2)
@@ -59,10 +59,59 @@ describe('fillDateGaps', () => {
     })
 
     it('handles single commit', () => {
-        const commits: DailyCommit[] = [{ date: '2024-01-15', hash: 'abc', messages: ['only'] }]
+        const commits: DailyCommit[] = [{ date: '2024-01-15', hash: 'abc', messages: ['only'], authors: [] }]
         const result = fillDateGaps(commits)
         expect(result).toHaveLength(1)
         expect(result[0].commit?.hash).toBe('abc')
+    })
+})
+
+describe('DailyCommit authors', () => {
+    it('preserves authors from commit data', () => {
+        const commits: DailyCommit[] = [
+            {
+                date: '2024-01-01',
+                hash: 'abc',
+                messages: ['init'],
+                authors: ['Alice <alice@example.com>'],
+            },
+            {
+                date: '2024-01-02',
+                hash: 'def',
+                messages: ['update'],
+                authors: ['Bob <bob@example.com>', 'Carol <carol@example.com>'],
+            },
+        ]
+        expect(commits[0].authors).toEqual(['Alice <alice@example.com>'])
+        expect(commits[1].authors).toHaveLength(2)
+        expect(commits[1].authors).toContain('Bob <bob@example.com>')
+        expect(commits[1].authors).toContain('Carol <carol@example.com>')
+    })
+
+    it('deduplicates authors within a single day', () => {
+        const authorSet = new Set<string>()
+        authorSet.add('Alice <alice@example.com>')
+        authorSet.add('Alice <alice@example.com>')
+        authorSet.add('Bob <bob@example.com>')
+        const authors = [...authorSet]
+        expect(authors).toHaveLength(2)
+        expect(authors).toContain('Alice <alice@example.com>')
+        expect(authors).toContain('Bob <bob@example.com>')
+    })
+
+    it('gap days get empty authors array via fillDateGaps', () => {
+        const commits: DailyCommit[] = [
+            { date: '2024-01-01', hash: 'abc', messages: ['first'], authors: ['Alice <alice@example.com>'] },
+            { date: '2024-01-03', hash: 'def', messages: ['third'], authors: ['Bob <bob@example.com>'] },
+        ]
+        const result = fillDateGaps(commits)
+        expect(result).toHaveLength(3)
+        // Day with commit has authors
+        expect(result[0].commit?.authors).toEqual(['Alice <alice@example.com>'])
+        // Gap day has no commit
+        expect(result[1].commit).toBeUndefined()
+        // Day with commit has authors
+        expect(result[2].commit?.authors).toEqual(['Bob <bob@example.com>'])
     })
 })
 
