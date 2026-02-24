@@ -1,11 +1,20 @@
 import git, { type FsClient, type ReadCommitResult } from 'isomorphic-git'
 
+/** A single commit with its metadata */
+export interface CommitEntry {
+    hash: string
+    author: string // "Name <email>" (mailmap-normalized)
+    message: string
+    timestamp: number // unix seconds, for ordering within a day
+}
+
 /** A commit grouped by date, keeping the latest hash and all messages */
 export interface DailyCommit {
     date: string // YYYY-MM-DD
     hash: string // OID of the latest commit that day
     messages: string[]
     authors: string[] // Deduplicated "Name <email>" strings for this day
+    commits: CommitEntry[] // ALL commits this day, sorted oldest-first
 }
 
 // --- Compact OID dedup set ---
@@ -143,8 +152,10 @@ export const getCommitsByDate = async (options: {
     gitCache?: object
     signal?: AbortSignal
     onProgress?: (processedCommits: number) => void
+    normalizeAuthor?: (name: string, email: string) => string
 }): Promise<DailyCommit[]> => {
     const { fs, dir, ref, gitCache, signal, onProgress } = options
+    const normalizeAuthor = options.normalizeAuthor ?? ((name: string, email: string) => `${name} <${email}>`)
 
     const byDate = new Map<string, DailyCommit>()
     const authorSets = new Map<string, Set<string>>()
@@ -171,7 +182,10 @@ export const getCommitsByDate = async (options: {
             totalProcessed++
 
             const date = formatDate(commit.commit.author.timestamp)
-            const authorStr = `${commit.commit.author.name} <${commit.commit.author.email}>`
+            const authorStr = normalizeAuthor(commit.commit.author.name, commit.commit.author.email)
+            const message = commit.commit.message.trim()
+            const timestamp = commit.commit.author.timestamp
+            const entry: CommitEntry = { hash: commit.oid, author: authorStr, message, timestamp }
             const existing = byDate.get(date)
             if (!existing) {
                 const authorSet = new Set<string>([authorStr])
@@ -179,11 +193,13 @@ export const getCommitsByDate = async (options: {
                 byDate.set(date, {
                     date,
                     hash: commit.oid,
-                    messages: [commit.commit.message.trim()],
+                    messages: [message],
                     authors: [], // populated after the loop
+                    commits: [entry],
                 })
             } else {
-                existing.messages.push(commit.commit.message.trim())
+                existing.messages.push(message)
+                existing.commits.push(entry)
                 const existingAuthors = authorSets.get(date)
                 if (existingAuthors) existingAuthors.add(authorStr)
             }
@@ -211,10 +227,11 @@ export const getCommitsByDate = async (options: {
         currentRef = nextRef
     }
 
-    // Populate deduplicated authors from Sets
+    // Populate deduplicated authors from Sets and sort commits oldest-first
     for (const [date, entry] of byDate) {
         const authorSet = authorSets.get(date)
         entry.authors = authorSet ? [...authorSet] : []
+        entry.commits.sort((a, b) => a.timestamp - b.timestamp)
     }
 
     // Sort chronologically (oldest first)

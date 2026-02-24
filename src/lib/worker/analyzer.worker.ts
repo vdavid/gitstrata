@@ -11,6 +11,7 @@ import { cloneRepo, detectDefaultBranch, fetchRepo, waitForBodyCleanups } from '
 import { fillDateGaps, getCommitsByDate, type DailyCommit } from '../git/history'
 import { countLinesForCommit, countLinesForCommitIncremental, LruMap } from '../git/count'
 import type { FileState } from '../git/count'
+import { readMailmapFromRepo, createMailmapLookup } from '../git/mailmap'
 import { parseRepoUrl, repoToDir, repoToFsName } from '../url'
 
 // Configure LogTape for the worker context
@@ -88,6 +89,7 @@ const processDays = async (params: {
     prevDay: DayStats | undefined
     fileStateMap: Map<string, FileState>
     allExtensions: Set<string>
+    authorLineTotals: Map<string, number>
 }): Promise<DayStats[]> => {
     const {
         fs,
@@ -101,6 +103,7 @@ const processDays = async (params: {
         onProgress,
         fileStateMap,
         allExtensions,
+        authorLineTotals,
     } = params
     let { prevCommitOid, prevDay } = params
     const totalDays = dayEntries.length
@@ -113,51 +116,108 @@ const processDays = async (params: {
 
         onProgress({ type: 'process', current: i + 1, total: totalDays, date })
 
-        let dayStats: DayStats
+        let dayStats: DayStats | undefined
 
         if (commit) {
-            if (prevCommitOid) {
-                dayStats = await countLinesForCommitIncremental(
-                    {
-                        fs,
-                        dir,
-                        commitOid: commit.hash,
-                        prevCommitOid,
-                        blobCache,
-                        contentCache,
-                        treeCache,
-                        gitCache,
-                        signal,
-                    },
-                    fileStateMap,
-                    allExtensions,
-                    date,
-                    commit.messages,
-                )
+            if (commit.commits && commit.commits.length > 0) {
+                // Multi-commit path: iterate each commit to attribute line deltas to authors
+                let prevTotal = i === 0 && days.length === 0 ? 0 : (prevDay?.total ?? 0)
+
+                for (const ce of commit.commits) {
+                    if (prevCommitOid) {
+                        dayStats = await countLinesForCommitIncremental(
+                            {
+                                fs,
+                                dir,
+                                commitOid: ce.hash,
+                                prevCommitOid,
+                                blobCache,
+                                contentCache,
+                                treeCache,
+                                gitCache,
+                                signal,
+                            },
+                            fileStateMap,
+                            allExtensions,
+                            date,
+                            commit.messages,
+                        )
+                    } else {
+                        dayStats = await countLinesForCommit(
+                            {
+                                fs,
+                                dir,
+                                commitOid: ce.hash,
+                                blobCache,
+                                contentCache,
+                                fileStateMap,
+                                allExtensions,
+                                treeCache,
+                                gitCache,
+                                signal,
+                            },
+                            date,
+                            commit.messages,
+                        )
+                    }
+
+                    const delta = dayStats.total - prevTotal
+                    authorLineTotals.set(ce.author, (authorLineTotals.get(ce.author) ?? 0) + delta)
+                    prevTotal = dayStats.total
+
+                    contentCache.clear()
+                    prevCommitOid = ce.hash
+                }
+
+                // dayStats from last iteration = latest commit state (correct for language chart)
+                // Loop always runs (commit.commits.length > 0), so dayStats is assigned
+                if (dayStats) {
+                    dayStats.authors = commit.authors
+                    dayStats.contributors = Object.fromEntries(authorLineTotals)
+                }
             } else {
-                dayStats = await countLinesForCommit(
-                    {
-                        fs,
-                        dir,
-                        commitOid: commit.hash,
-                        blobCache,
-                        contentCache,
+                // Backward compat: old data without commits array — single-commit behavior
+                if (prevCommitOid) {
+                    dayStats = await countLinesForCommitIncremental(
+                        {
+                            fs,
+                            dir,
+                            commitOid: commit.hash,
+                            prevCommitOid,
+                            blobCache,
+                            contentCache,
+                            treeCache,
+                            gitCache,
+                            signal,
+                        },
                         fileStateMap,
                         allExtensions,
-                        treeCache,
-                        gitCache,
-                        signal,
-                    },
-                    date,
-                    commit.messages,
-                )
+                        date,
+                        commit.messages,
+                    )
+                } else {
+                    dayStats = await countLinesForCommit(
+                        {
+                            fs,
+                            dir,
+                            commitOid: commit.hash,
+                            blobCache,
+                            contentCache,
+                            fileStateMap,
+                            allExtensions,
+                            treeCache,
+                            gitCache,
+                            signal,
+                        },
+                        date,
+                        commit.messages,
+                    )
+                }
+                dayStats.authors = commit.authors
+                contentCache.clear()
+                prevCommitOid = commit.hash
             }
-            dayStats.authors = commit.authors
-            // Release decoded file contents — only needed within a single commit's processing.
-            // Keeps peak memory bounded to one commit's blobs instead of accumulating all.
-            contentCache.clear()
-            prevCommitOid = commit.hash
-            prevDay = dayStats
+            if (dayStats) prevDay = dayStats
         } else if (prevDay) {
             // Gap day: carry forward previous stats
             dayStats = {
@@ -166,11 +226,13 @@ const processDays = async (params: {
                 languages: Object.fromEntries(Object.entries(prevDay.languages).map(([k, v]) => [k, { ...v }])),
                 comments: ['-'],
                 authors: [],
+                contributors: prevDay.contributors ? { ...prevDay.contributors } : undefined,
             }
         } else {
             continue
         }
 
+        if (!dayStats) continue
         days.push(dayStats)
         onProgress({ type: 'day-result', day: dayStats })
     }
@@ -246,15 +308,19 @@ const analyzerApi = {
             // Resolve HEAD OID for freshness checking
             const headCommit = await git.resolveRef({ fs, dir, ref: defaultBranch })
 
-            // Step 3: Get commit history grouped by date
+            // Step 3: Read mailmap and get commit history grouped by date
             onProgress({ type: 'process', current: 0, total: 0, date: 'Loading history...' })
             const gitCache = {}
+            const mailmapEntries = await readMailmapFromRepo(fs, dir, defaultBranch, gitCache)
+            const normalizeAuthor = createMailmapLookup(mailmapEntries)
+
             const dailyCommits = await getCommitsByDate({
                 fs,
                 dir,
                 ref: defaultBranch,
                 gitCache,
                 signal,
+                normalizeAuthor,
                 onProgress: (processed) => {
                     onProgress({
                         type: 'process',
@@ -283,6 +349,7 @@ const analyzerApi = {
             const treeCache = new LruMap<string, { path: string; oid: string; type: string }[]>(10_000)
             const fileStateMap = new Map<string, FileState>()
             const allExtensions = new Set<string>()
+            const authorLineTotals = new Map<string, number>()
 
             const days = await processDays({
                 fs,
@@ -298,6 +365,7 @@ const analyzerApi = {
                 prevDay: undefined,
                 fileStateMap,
                 allExtensions,
+                authorLineTotals,
             })
 
             logger.info('Analysis complete ({count} days)', { count: days.length })
@@ -372,15 +440,19 @@ const analyzerApi = {
             // Resolve HEAD OID for freshness checking
             const headCommit = await git.resolveRef({ fs, dir, ref: defaultBranch })
 
-            // Step 2: Get full commit history
+            // Step 2: Read mailmap and get full commit history
             onProgress({ type: 'process', current: 0, total: 0, date: 'Loading history...' })
             const gitCache = {}
+            const mailmapEntries = await readMailmapFromRepo(fs, dir, defaultBranch, gitCache)
+            const normalizeAuthor = createMailmapLookup(mailmapEntries)
+
             const dailyCommits = await getCommitsByDate({
                 fs,
                 dir,
                 ref: defaultBranch,
                 gitCache,
                 signal,
+                normalizeAuthor,
                 onProgress: (processed) => {
                     onProgress({
                         type: 'process',
@@ -429,6 +501,15 @@ const analyzerApi = {
             const fileStateMap = new Map<string, FileState>()
             const allExtensions = new Set<string>()
 
+            // Bootstrap authorLineTotals from the last cached day
+            const authorLineTotals = new Map<string, number>()
+            const lastCachedDay = cachedResult.days.at(-1)
+            if (lastCachedDay?.contributors) {
+                for (const [author, lines] of Object.entries(lastCachedDay.contributors)) {
+                    authorLineTotals.set(author, lines)
+                }
+            }
+
             // Initialize from last cached commit so the first new commit
             // uses incremental tree diffing instead of a full tree walk
             const lastCachedCommitEntry = allDays.filter((d) => d.date <= lastCachedDate && d.commit).at(-1)
@@ -472,6 +553,7 @@ const analyzerApi = {
                 prevDay,
                 fileStateMap,
                 allExtensions,
+                authorLineTotals,
             })
 
             logger.info('Analysis complete ({count} days)', { count: newDays.length })

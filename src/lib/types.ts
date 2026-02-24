@@ -11,6 +11,8 @@ export interface DayStats {
     languages: Record<string, LanguageCount> // Keyed by language id
     comments: string[] // Commit messages for this day
     authors: string[] // Unique author identifiers for this day
+    /** Per-author cumulative line count at end of day. Undefined for old cached results. */
+    contributors?: Record<string, number>
 }
 
 /** Full analysis result, stored in cache */

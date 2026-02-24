@@ -5,9 +5,9 @@ a Web Worker.
 
 ## Module overview
 
-- `types.ts` — Shared interfaces: LanguageDefinition, LanguageCount, DayStats (includes `authors` per day),
-  AnalysisResult (includes `headCommit` for freshness checking and optional `totalContributors`), SharedCacheEntry,
-  ProgressEvent
+- `types.ts` — Shared interfaces: LanguageDefinition, LanguageCount, DayStats (includes `authors` per day and optional
+  `contributors` map of per-author cumulative line counts), AnalysisResult (includes `headCommit` for freshness checking
+  and optional `totalContributors`), SharedCacheEntry, ProgressEvent
 - `languages.ts` — Language registry (~35 languages), extension mapping, test file/dir pattern matching, Rust and Zig
   inline test detection. `.h` defaults to C but reassigns to C++ when `.cpp`/`.cc`/`.cxx` files exist. Languages can set
   `noTestSplit: true` to skip prod/test breakdown (used for HTML, CSS, SQL, Shell, Svelte, Vue, Astro, Docs, Config).
@@ -24,11 +24,18 @@ a Web Worker.
   (protocol v2), abortable HTTP wrapper for signal support, size-warning emission for repos >1 GB. A `StalenessMonitor`
   wraps the external abort signal with an adaptive timeout: 5 min base, extended to 20 min once 10+ MB of data has been
   received (GitHub sends large packs in bursts). The UI detects silence internally via `PipelineProgress`.
-- `git/history.ts` — Commit log grouped by date, consecutive date generation, gap filling. `DailyCommit` includes an
-  `authors` field with deduplicated `"Name <email>"` strings per day. `getCommitsByDate` fetches commits in batches (via
-  `git.log` with `depth` parameter) to bound peak memory on large repos. A `CompactOidSet` deduplicates commits across
-  batches — stores OIDs as 20-byte binary values in a flat Uint8Array-backed hash set (~4x smaller than `Set<string>`
-  for 40-char hex OIDs). Supports `signal` for cancellation and `onProgress` for reporting processed commit counts.
+- `git/history.ts` — Commit log grouped by date, consecutive date generation, gap filling. `CommitEntry` stores
+  per-commit metadata (hash, author, message, timestamp). `DailyCommit` includes an `authors` field with deduplicated
+  `"Name <email>"` strings per day and a `commits: CommitEntry[]` array (sorted oldest-first) with every commit that
+  day. `getCommitsByDate` fetches commits in batches (via `git.log` with `depth` parameter) to bound peak memory on
+  large repos and accepts an optional `normalizeAuthor(name, email)` callback for mailmap normalization. A
+  `CompactOidSet` deduplicates commits across batches — stores OIDs as 20-byte binary values in a flat Uint8Array-backed
+  hash set (~4x smaller than `Set<string>` for 40-char hex OIDs). Supports `signal` for cancellation and `onProgress`
+  for reporting processed commit counts.
+- `git/mailmap.ts` — Lightweight .mailmap parser supporting all 4 forms (name-only, email-only, both by email, both by
+  name+email). Exports `parseMailmap(content)`, `createMailmapLookup(entries)` (returns normalized "Name <email>" with
+  most-specific-form-wins priority), and `readMailmapFromRepo(fs, dir, headRef, gitCache?)` which reads `.mailmap` from
+  the repo root tree (returns `[]` if not found).
 - `git/count.ts` — Line counting per commit tree, prod/test classification, blob dedup caching. Also exports `LruMap`, a
   Map subclass with LRU eviction used to bound cache memory. Files with unrecognized extensions are counted under the
   `'other'` bucket (with test-dir detection). Blob reads are parallelized with a concurrency limit of 8 using an inline
@@ -41,9 +48,12 @@ a Web Worker.
   and `shouldSkipDir` filters vendored directories (`vendor`, `node_modules`, `Pods`, `bower_components`, `__pycache__`)
   at tree-walk time, avoiding recursion into entire subtrees. Both are exported for testing.
 - `worker/analyzer.worker.ts` — Web Worker entry point (Comlink), orchestrates full pipeline and incremental refresh
-  (`analyzeIncremental` fetches only new commits, processes new days, merges). `processDays` attaches `authors` from
-  `DailyCommit` to each `DayStats`. Both `analyze` and `analyzeIncremental` compute `totalContributors` by collecting
-  all unique authors across all days.
+  (`analyzeIncremental` fetches only new commits, processes new days, merges). Both `analyze` and `analyzeIncremental`
+  read `.mailmap` via `readMailmapFromRepo` and pass a `normalizeAuthor` callback to `getCommitsByDate`. `processDays`
+  iterates individual commits within each day (via `DailyCommit.commits`), running incremental tree diffs per commit and
+  tracking an `authorLineTotals` map to attribute line-count deltas to each commit's author. The resulting cumulative
+  per-author totals are written to `DayStats.contributors`. Both pipelines compute `totalContributors` by collecting all
+  unique authors across all days.
 - `worker/analyzer.api.ts` — Comlink wrapper for main thread consumption
 
 ## Key patterns
@@ -74,11 +84,15 @@ a Web Worker.
 
 ## Components
 
-- `components/ResultsChart.svelte` — Chart.js stacked area chart with 4 view modes: All, Prod vs test, Languages only,
-  and Velocity. The Velocity mode (`buildVelocityDatasets`) shows daily line-count changes plus a 7-day rolling average
-  as two unfilled line datasets, with Y-axis labels in lines/day (for example, "5k/day"). An "Era markers" toggle
-  (persisted to localStorage under `gitstrata-era-markers`) controls the `eraMarkersPlugin`. Pattern fills are hidden in
-  velocity mode since there are no filled areas.
+- `components/ResultsChart.svelte` — Chart.js stacked area chart with a two-row toolbar. Row 1 has primary tabs
+  (Languages / Contributors) using `strata-tab` + a Velocity toggle chip. Row 2 has sub-mode chips: Languages tab shows
+  All / Prod vs test / Languages only; Contributors tab shows All contributors / Top 10. A `buildContributorDatasets`
+  function creates stacked areas per contributor (using the same mineral color palette by rank), with
+  `computeVisibleContributors` filtering by >= 5% of total (all-contributors mode) or top 10. The Contributors tab is
+  disabled when `DayStats.contributors` data is unavailable. Velocity mode (`buildVelocityDatasets`) shows daily
+  line-count changes plus a 7-day rolling average as two unfilled line datasets. An "Era markers" toggle (persisted to
+  localStorage under `gitstrata-era-markers`) controls the `eraMarkersPlugin`. Pattern fills are hidden when velocity is
+  enabled or contributors tab is active.
 - `components/chart-era-markers-plugin.ts` — Chart.js plugin that draws vertical dashed lines at AI-era milestones
   (Copilot GA '22, Agentic era '25, Opus 4.5 '25). Only renders markers within the repo's date range. Reads CSS
   variables for colors and font.

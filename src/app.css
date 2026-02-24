@@ -426,6 +426,35 @@ body::before {
     color: #fff;
 }
 
+/* Underline tab (for primary chart tabs) */
+.strata-tab {
+    display: inline-flex;
+    align-items: center;
+    padding: 12px 16px;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    color: var(--color-foreground-tertiary);
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: all var(--duration-fast) var(--ease-out-expo);
+}
+
+.strata-tab:hover {
+    color: var(--color-foreground-secondary);
+}
+.strata-tab[aria-selected='true'] {
+    color: var(--color-accent);
+    border-bottom-color: var(--color-accent);
+}
+.strata-tab:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
 /* Table styling */
 .strata-table {
     width: 100%;

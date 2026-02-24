@@ -19,16 +19,18 @@
 
     let { days, detectedLanguages, live = false, highlightDate = null }: Props = $props()
 
-    type ViewMode = 'all' | 'prod-vs-test' | 'languages-only' | 'velocity'
-    const viewModeToggles: { mode: ViewMode; label: string }[] = [
-        { mode: 'all', label: 'All' },
-        { mode: 'prod-vs-test', label: 'Prod vs test' },
-        { mode: 'languages-only', label: 'Languages only' },
-        { mode: 'velocity', label: 'Velocity' },
-    ]
-    let viewMode = $state<ViewMode>('all')
+    type PrimaryTab = 'languages' | 'contributors'
+    type LanguageSubMode = 'all' | 'prod-vs-test' | 'languages-only'
+    type ContributorSubMode = 'all-contributors' | 'top-10'
+
+    let primaryTab = $state<PrimaryTab>('languages')
+    let languageSubMode = $state<LanguageSubMode>('all')
+    let contributorSubMode = $state<ContributorSubMode>('all-contributors')
+    let velocityEnabled = $state(false)
     let patternFills = $state(false)
     let showEraMarkers = $state(browser ? localStorage.getItem('gitstrata-era-markers') !== 'false' : true)
+
+    const hasContributorData = $derived(days.length > 0 && days[days.length - 1].contributors !== undefined)
 
     $effect(() => {
         if (browser) localStorage.setItem('gitstrata-era-markers', String(showEraMarkers))
@@ -331,7 +333,7 @@
         daysList: DayStats[],
         shown: string[],
         hasOther: boolean,
-        mode: ViewMode,
+        mode: LanguageSubMode,
     ): ChartDataset<'line'>[] => {
         const datasets: ChartDataset<'line'>[] = []
         let dsIndex = 0
@@ -443,7 +445,7 @@
             datasets.push({
                 label: 'Other',
                 data: otherData,
-                backgroundColor: getBackground(getCssVar('--chart-other') + '80', dsIndex++),
+                backgroundColor: getBackground(getCssVar('--chart-other') + '80', dsIndex),
                 borderColor: getCssVar('--chart-other'),
                 borderWidth: 1.5,
                 fill: datasets.length === 0 ? 'origin' : '-1',
@@ -494,6 +496,85 @@
                 pointHitRadius: 6,
             },
         ]
+    }
+
+    const computeVisibleContributors = (
+        daysList: DayStats[],
+        mode: ContributorSubMode,
+    ): { shown: string[]; other: boolean } => {
+        if (daysList.length === 0) return { shown: [], other: false }
+        const last = daysList[daysList.length - 1]
+        if (!last.contributors) return { shown: [], other: false }
+
+        const sorted = Object.entries(last.contributors).sort(([, a], [, b]) => b - a)
+
+        if (mode === 'top-10') {
+            const top = sorted.slice(0, 10).map(([name]) => name)
+            return { shown: top, other: sorted.length > 10 }
+        }
+
+        // 'all-contributors': show >= 5% of total
+        const totalAtEnd = last.total || 1
+        const shown: string[] = []
+        let hasOther = false
+        for (const [name, lines] of sorted) {
+            if (lines / totalAtEnd >= 0.05) shown.push(name)
+            else hasOther = true
+        }
+        return { shown, other: hasOther }
+    }
+
+    const contributorDisplayName = (authorStr: string): string => {
+        const match = authorStr.match(/^(.+?)\s*</)
+        return match ? match[1] : authorStr
+    }
+
+    const buildContributorDatasets = (daysList: DayStats[], mode: ContributorSubMode): ChartDataset<'line'>[] => {
+        const { shown, other: hasOther } = computeVisibleContributors(daysList, mode)
+        const datasets: ChartDataset<'line'>[] = []
+        let dsIndex = 0
+
+        for (let i = 0; i < shown.length; i++) {
+            const author = shown[i]
+            const colorIdx = i % maxChartColors
+            const data = daysList.map((d) => d.contributors?.[author] ?? 0)
+            datasets.push({
+                label: contributorDisplayName(author),
+                data,
+                backgroundColor: getBackground(getChartColor(colorIdx) + '80', dsIndex++),
+                borderColor: getChartColor(colorIdx),
+                borderWidth: 1.5,
+                fill: datasets.length === 0 ? 'origin' : '-1',
+                tension: 0.3,
+                pointRadius: 0,
+                pointHitRadius: 6,
+            })
+        }
+
+        if (hasOther) {
+            const shownSet = new Set(shown)
+            const otherData = daysList.map((d) => {
+                if (!d.contributors) return 0
+                let sum = 0
+                for (const [name, lines] of Object.entries(d.contributors)) {
+                    if (!shownSet.has(name)) sum += lines
+                }
+                return sum
+            })
+            datasets.push({
+                label: 'Other',
+                data: otherData,
+                backgroundColor: getBackground(getCssVar('--chart-other') + '80', dsIndex),
+                borderColor: getCssVar('--chart-other'),
+                borderWidth: 1.5,
+                fill: datasets.length === 0 ? 'origin' : '-1',
+                tension: 0.3,
+                pointRadius: 0,
+                pointHitRadius: 6,
+            })
+        }
+
+        return datasets
     }
 
     /** Scales chart top padding with canvas width so the overlay strip rarely covers data. */
@@ -631,19 +712,21 @@
         return `Stacked area chart showing ${totalLines} lines of code across ${langCount} languages from ${first.date} to ${last.date}`
     })
 
-    // Render/update chart when days, viewMode, or theme change
+    // Render/update chart when tabs, modes, or theme change
     $effect(() => {
         if (!canvasEl || !chartReady || !ChartConstructor) return
         // Read isDark so this effect re-runs on theme switch, re-reading CSS variables
         void isDark
 
-        const isVelocity = viewMode === 'velocity'
+        const isVelocity = velocityEnabled
         const datasets = isVelocity
             ? buildVelocityDatasets(days)
-            : (() => {
-                  const { shown, other: hasOther } = computeVisibleLanguages(days, detectedLanguages)
-                  return buildDatasets(days, shown, hasOther, viewMode)
-              })()
+            : primaryTab === 'contributors'
+              ? buildContributorDatasets(days, contributorSubMode)
+              : (() => {
+                    const { shown, other: hasOther } = computeVisibleLanguages(days, detectedLanguages)
+                    return buildDatasets(days, shown, hasOther, languageSubMode)
+                })()
         const config = buildConfig(days, datasets, isVelocity)
 
         if (chart) {
@@ -707,21 +790,75 @@
 </script>
 
 <div class="strata-card overflow-hidden">
-    <!-- View toggles + reset zoom -->
+    <!-- Row 1: Primary tabs + velocity toggle -->
+    <div class="flex items-center border-b border-border">
+        <div role="tablist" aria-label="Chart data source" class="flex">
+            <button
+                role="tab"
+                aria-selected={primaryTab === 'languages'}
+                onclick={() => (primaryTab = 'languages')}
+                class="strata-tab"
+            >
+                Languages
+            </button>
+            <button
+                role="tab"
+                aria-selected={primaryTab === 'contributors'}
+                onclick={() => (primaryTab = 'contributors')}
+                class="strata-tab"
+                disabled={!hasContributorData}
+            >
+                Contributors
+            </button>
+        </div>
+        <div class="flex-1"></div>
+        <div class="px-4">
+            <button
+                onclick={() => (velocityEnabled = !velocityEnabled)}
+                aria-pressed={velocityEnabled}
+                class="strata-chip"
+            >
+                Velocity
+            </button>
+        </div>
+    </div>
+
+    <!-- Row 2: Sub-mode chips + utility toggles -->
     <div
         class="flex flex-wrap items-center gap-2 border-b border-border px-4 py-3"
         role="group"
-        aria-label="Chart view mode"
+        aria-label="Chart options"
     >
-        {#each viewModeToggles as toggle (toggle.mode)}
-            <button
-                onclick={() => (viewMode = toggle.mode)}
-                aria-pressed={viewMode === toggle.mode}
-                class="strata-chip"
-            >
-                {toggle.label}
-            </button>
-        {/each}
+        {#if !velocityEnabled}
+            {#if primaryTab === 'languages'}
+                <button
+                    onclick={() => (languageSubMode = 'all')}
+                    aria-pressed={languageSubMode === 'all'}
+                    class="strata-chip">All</button
+                >
+                <button
+                    onclick={() => (languageSubMode = 'prod-vs-test')}
+                    aria-pressed={languageSubMode === 'prod-vs-test'}
+                    class="strata-chip">Prod vs test</button
+                >
+                <button
+                    onclick={() => (languageSubMode = 'languages-only')}
+                    aria-pressed={languageSubMode === 'languages-only'}
+                    class="strata-chip">Languages only</button
+                >
+            {:else}
+                <button
+                    onclick={() => (contributorSubMode = 'all-contributors')}
+                    aria-pressed={contributorSubMode === 'all-contributors'}
+                    class="strata-chip">All contributors</button
+                >
+                <button
+                    onclick={() => (contributorSubMode = 'top-10')}
+                    aria-pressed={contributorSubMode === 'top-10'}
+                    class="strata-chip">Top 10</button
+                >
+            {/if}
+        {/if}
         <div class="flex-1"></div>
         <button
             onclick={() => (showEraMarkers = !showEraMarkers)}
@@ -731,7 +868,7 @@
         >
             Era markers
         </button>
-        {#if viewMode !== 'velocity'}
+        {#if !velocityEnabled && primaryTab === 'languages'}
             <button
                 onclick={() => (patternFills = !patternFills)}
                 aria-pressed={patternFills}
@@ -776,15 +913,15 @@
                         <span class="hidden sm:inline">{item.label}:</span>
                         <span class="sm:hidden">{abbreviateLabel(item.label)}:</span>
                         <span class="text-foreground"
-                            >{viewMode === 'velocity' ? formatDelta(item.value) : formatStripNumber(item.value)}</span
+                            >{velocityEnabled ? formatDelta(item.value) : formatStripNumber(item.value)}</span
                         >
-                        {#if viewMode !== 'velocity'}
+                        {#if !velocityEnabled}
                             <span class="hidden sm:inline text-foreground-tertiary">({item.pct}%)</span>
                         {/if}
                     </span>
                 {/each}
 
-                {#if viewMode !== 'velocity'}
+                {#if !velocityEnabled}
                     <span class="ml-auto whitespace-nowrap font-medium text-foreground">
                         Total: {formatStripNumber(activeStrip.total)}
                     </span>
