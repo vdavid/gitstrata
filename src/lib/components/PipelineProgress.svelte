@@ -351,21 +351,25 @@ ${statBlock}`
         openInfoPhaseId = null
     }
 
-    // Close popup on Escape key
-    const handleKeydown = (event: KeyboardEvent) => {
-        if (event.key === 'Escape' && openInfoPhaseId) {
-            closeInfo()
-        }
-    }
-
-    // Close popup when clicking outside
-    const handleOutsideClick = (event: MouseEvent) => {
+    // Close popup on Escape or click-outside — document-level so it works regardless of focus
+    $effect(() => {
         if (!openInfoPhaseId) return
-        const target = event.target as HTMLElement
-        if (!target.closest('.phase-info-anchor')) {
-            closeInfo()
+
+        const handleKeydown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') closeInfo()
         }
-    }
+        const handleClick = (event: MouseEvent) => {
+            const target = event.target as HTMLElement
+            if (!target.closest('.phase-info-anchor')) closeInfo()
+        }
+
+        document.addEventListener('keydown', handleKeydown)
+        document.addEventListener('click', handleClick)
+        return () => {
+            document.removeEventListener('keydown', handleKeydown)
+            document.removeEventListener('click', handleClick)
+        }
+    })
 
     // --- Per-phase detail text ---
 
@@ -378,6 +382,19 @@ ${statBlock}`
 
     const getPhaseDetail = (phaseDef: PhaseDefinition, state: PhaseState): string => {
         const snap = snapshots[phaseDef.id]
+
+        // 'receive' can show peakDownloadedBytes even before snap exists
+        if (phaseDef.id === 'receive') {
+            const bytes = peakDownloadedBytes
+            if (state === 'active' && !cloneSubPhaseComplete) {
+                return bytes > 0 ? formatBytes(bytes) : ''
+            }
+            if (state === 'done') {
+                return bytes > 0 ? formatBytes(bytes) : ''
+            }
+            return ''
+        }
+
         if (!snap) return ''
 
         switch (phaseDef.id) {
@@ -394,17 +411,6 @@ ${statBlock}`
                 if (state === 'done' && snap.total > 0) return `${formatNumber(snap.total)} objects`
                 if (state === 'done' && snap.loaded > 0) return `${formatNumber(snap.loaded)} objects`
                 return ''
-
-            case 'receive': {
-                const bytes = peakDownloadedBytes > 0 ? peakDownloadedBytes : snap.loaded
-                if (state === 'active' && !cloneSubPhaseComplete) {
-                    return bytes > 0 ? formatBytes(bytes) : ''
-                }
-                if (state === 'done') {
-                    return bytes > 0 ? formatBytes(bytes) : ''
-                }
-                return ''
-            }
 
             case 'resolve':
                 if (state === 'active' && !cloneSubPhaseComplete && snap.total > 0)
@@ -468,15 +474,7 @@ ${statBlock}`
     }
 </script>
 
-<!-- Click-outside/Escape handler for dismissing info popups, not an interactive control -->
-<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-<div
-    class="strata-card p-5"
-    role="region"
-    aria-label="Pipeline progress"
-    onkeydown={handleKeydown}
-    onclick={handleOutsideClick}
->
+<div class="strata-card p-5" role="region" aria-label="Pipeline progress">
     {#if repoSlug}
         <p class="mb-4 text-sm text-foreground-tertiary" style="font-family: var(--font-mono); letter-spacing: 0.02em;">
             Getting <span class="text-accent">{repoSlug}</span>&hellip;

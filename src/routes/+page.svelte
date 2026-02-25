@@ -638,7 +638,7 @@
     >
         <!-- Pipeline progress -->
         {#if phase === 'cloning' || phase === 'processing'}
-            <div class="mx-auto max-w-2xl strata-fade-in">
+            <div class="mx-auto max-w-2xl strata-fade-in relative z-20">
                 <PipelineProgress
                     repoSlug={displayRepoSlug}
                     {phase}

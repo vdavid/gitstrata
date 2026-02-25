@@ -6,6 +6,7 @@ export interface CommitEntry {
     author: string // "Name <email>" (mailmap-normalized)
     message: string
     timestamp: number // unix seconds, for ordering within a day
+    parentOids: string[] // OIDs of parent commits (from commit.commit.parent)
 }
 
 /** A commit grouped by date, keeping the latest hash and all messages */
@@ -185,7 +186,8 @@ export const getCommitsByDate = async (options: {
             const authorStr = normalizeAuthor(commit.commit.author.name, commit.commit.author.email)
             const message = commit.commit.message.trim()
             const timestamp = commit.commit.author.timestamp
-            const entry: CommitEntry = { hash: commit.oid, author: authorStr, message, timestamp }
+            const parentOids = commit.commit.parent
+            const entry: CommitEntry = { hash: commit.oid, author: authorStr, message, timestamp, parentOids }
             const existing = byDate.get(date)
             if (!existing) {
                 const authorSet = new Set<string>([authorStr])

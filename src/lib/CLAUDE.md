@@ -5,9 +5,11 @@ a Web Worker.
 
 ## Module overview
 
-- `types.ts` — Shared interfaces: LanguageDefinition, LanguageCount, DayStats (includes `authors` per day and optional
-  `contributors` map of per-author cumulative line counts), AnalysisResult (includes `headCommit` for freshness checking
-  and optional `totalContributors`), SharedCacheEntry, ProgressEvent
+- `types.ts` — Shared interfaces: LanguageDefinition, LanguageCount, DayStats (includes `authors` per day, optional
+  `contributors` map of per-author cumulative line counts, and optional velocity fields
+  `languageAdded`/`languageRemoved` /`contributorAdded`/`contributorRemoved` for per-day activity breakdown),
+  AnalysisResult (includes `headCommit` for freshness checking and optional `totalContributors`), SharedCacheEntry,
+  ProgressEvent
 - `languages.ts` — Language registry (~35 languages), extension mapping, test file/dir pattern matching, Rust and Zig
   inline test detection. `.h` defaults to C but reassigns to C++ when `.cpp`/`.cc`/`.cxx` files exist. Languages can set
   `noTestSplit: true` to skip prod/test breakdown (used for HTML, CSS, SQL, Shell, Svelte, Vue, Astro, Docs, Config).
@@ -25,10 +27,10 @@ a Web Worker.
   wraps the external abort signal with an adaptive timeout: 5 min base, extended to 20 min once 10+ MB of data has been
   received (GitHub sends large packs in bursts). The UI detects silence internally via `PipelineProgress`.
 - `git/history.ts` — Commit log grouped by date, consecutive date generation, gap filling. `CommitEntry` stores
-  per-commit metadata (hash, author, message, timestamp). `DailyCommit` includes an `authors` field with deduplicated
-  `"Name <email>"` strings per day and a `commits: CommitEntry[]` array (sorted oldest-first) with every commit that
-  day. `getCommitsByDate` fetches commits in batches (via `git.log` with `depth` parameter) to bound peak memory on
-  large repos and accepts an optional `normalizeAuthor(name, email)` callback for mailmap normalization. A
+  per-commit metadata (hash, author, message, timestamp, parentOids). `DailyCommit` includes an `authors` field with
+  deduplicated `"Name <email>"` strings per day and a `commits: CommitEntry[]` array (sorted oldest-first) with every
+  commit that day. `getCommitsByDate` fetches commits in batches (via `git.log` with `depth` parameter) to bound peak
+  memory on large repos and accepts an optional `normalizeAuthor(name, email)` callback for mailmap normalization. A
   `CompactOidSet` deduplicates commits across batches — stores OIDs as 20-byte binary values in a flat Uint8Array-backed
   hash set (~4x smaller than `Set<string>` for 40-char hex OIDs). Supports `signal` for cancellation and `onProgress`
   for reporting processed commit counts.
@@ -46,14 +48,20 @@ a Web Worker.
   between consecutive commits. A shared `FileState` map tracks per-file OID, language, and line counts across commits.
   Skip logic: `shouldSkip` filters individual files (lock files, minified output, protobuf/codegen, binary extensions)
   and `shouldSkipDir` filters vendored directories (`vendor`, `node_modules`, `Pods`, `bower_components`, `__pycache__`)
-  at tree-walk time, avoiding recursion into entire subtrees. Both are exported for testing.
+  at tree-walk time, avoiding recursion into entire subtrees. Both are exported for testing. `diffTreesDetailed`
+  recursively diffs two tree OIDs and returns a discriminated union of diff entries (added/modified/deleted) with path
+  and relevant OIDs. `countLinesForCommitIncremental` delegates to `diffTreesDetailed` internally.
+  `computeCommitContribution` (exported) computes per-language lines added/removed for a single commit vs its git parent
+  (not the previous commit in timestamp order), returning `languageAdded`, `languageRemoved`, and totals.
 - `worker/analyzer.worker.ts` — Web Worker entry point (Comlink), orchestrates full pipeline and incremental refresh
   (`analyzeIncremental` fetches only new commits, processes new days, merges). Both `analyze` and `analyzeIncremental`
   read `.mailmap` via `readMailmapFromRepo` and pass a `normalizeAuthor` callback to `getCommitsByDate`. `processDays`
-  iterates individual commits within each day (via `DailyCommit.commits`), running incremental tree diffs per commit and
-  tracking an `authorLineTotals` map to attribute line-count deltas to each commit's author. The resulting cumulative
-  per-author totals are written to `DayStats.contributors`. Both pipelines compute `totalContributors` by collecting all
-  unique authors across all days.
+  iterates individual commits within each day (via `DailyCommit.commits`), running incremental tree diffs per commit.
+  Attribution uses `computeCommitContribution` to diff each commit against its git parent (not the previous commit in
+  timestamp order), fixing incorrect deltas from interleaved branch commits. Merge commits (>1 parent) are skipped.
+  Per-day velocity fields (`languageAdded`, `languageRemoved`, `contributorAdded`, `contributorRemoved`) are accumulated
+  from individual commit contributions and written to `DayStats`. Gap days get empty velocity maps. Both pipelines
+  compute `totalContributors` by collecting all unique authors across all days.
 - `worker/analyzer.api.ts` — Comlink wrapper for main thread consumption
 
 ## Key patterns
@@ -71,7 +79,7 @@ a Web Worker.
 - Non-UTF-8 handling: `processFile` uses `TextDecoder('utf-8', { fatal: true })`. On decode failure, line counts are
   computed from raw bytes (0x0A counting) and inline test detection is skipped.
 - Diff-based processing: After the first commit (full tree walk via `listFilesAtCommitCached`), subsequent commits use
-  custom `diffTrees` recursive traversal with `git.readTree` to diff against the previous commit. The `treeCache`
+  `diffTreesDetailed` for recursive tree diffing with `git.readTree` against the previous commit. The `treeCache`
   (`LruMap` with 10K cap) shared across all commits reduces redundant IndexedDB reads — once a tree object is read, it
   is served from memory (evicting least-recently-used entries when full). Unchanged subtrees (same tree OID) are skipped
   instantly via OID comparison. A `fileStateMap` (path -> FileState) tracks current state and is updated incrementally.
@@ -85,14 +93,20 @@ a Web Worker.
 ## Components
 
 - `components/ResultsChart.svelte` — Chart.js stacked area chart with a two-row toolbar. Row 1 has primary tabs
-  (Languages / Contributors) using `strata-tab` + a Velocity toggle chip. Row 2 has sub-mode chips: Languages tab shows
-  All / Prod vs test / Languages only; Contributors tab shows All contributors / Top 10. A `buildContributorDatasets`
-  function creates stacked areas per contributor (using the same mineral color palette by rank), with
-  `computeVisibleContributors` filtering by >= 5% of total (all-contributors mode) or top 10. The Contributors tab is
-  disabled when `DayStats.contributors` data is unavailable. Velocity mode (`buildVelocityDatasets`) shows daily
-  line-count changes plus a 7-day rolling average as two unfilled line datasets. An "Era markers" toggle (persisted to
-  localStorage under `gitstrata-era-markers`) controls the `eraMarkersPlugin`. Pattern fills are hidden when velocity is
-  enabled or contributors tab is active.
+  (Languages / Contributors) using `strata-tab` + a Velocity toggle chip. Row 2 has sub-mode chips (visible in both
+  cumulative and velocity modes): Languages tab shows All / Prod vs test / Languages only; Contributors tab shows All
+  contributors / Top 10. A `buildContributorDatasets` function creates stacked areas per contributor (using the same
+  mineral color palette by rank), with `computeVisibleContributors` filtering by >= 5% of total (all-contributors mode)
+  or top 10. Contributor values are clamped to `Math.max(0, ...)`. The Contributors tab is disabled when
+  `DayStats.contributors` data is unavailable. Velocity mode (`buildVelocityDatasets`) supports two rendering paths:
+  when new per-language/contributor velocity fields (`languageAdded`, `languageRemoved`, `contributorAdded`,
+  `contributorRemoved`) are available, it shows colored stacked area charts with 7-day rolling averages per category
+  (activity = `Math.max(added, removed)` per language/contributor); when those fields are absent (old cached data), it
+  falls back to monochrome daily change + 7-day average as two unfilled line datasets. In velocity mode, the "Prod vs
+  test" sub-mode is treated as "Languages only" (no prod/test velocity split). A `rolling7DayAvg` helper computes
+  windowed averages. The Y-axis uses `stacked: true` + `beginAtZero: true` for stacked velocity, and `stacked: false`
+  for monochrome fallback velocity. An "Era markers" toggle (persisted to localStorage under `gitstrata-era-markers`)
+  controls the `eraMarkersPlugin`. Pattern fills are hidden when velocity is enabled or contributors tab is active.
 - `components/chart-era-markers-plugin.ts` — Chart.js plugin that draws vertical dashed lines at AI-era milestones
   (Copilot GA '22, Agentic era '25, Opus 4.5 '25). Only renders markers within the repo's date range. Reads CSS
   variables for colors and font.

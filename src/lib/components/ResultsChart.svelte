@@ -458,44 +458,166 @@
         return datasets
     }
 
-    const buildVelocityDatasets = (daysList: DayStats[]): ChartDataset<'line'>[] => {
-        const rawDeltas = daysList.map((d, i) => (i === 0 ? d.total : d.total - daysList[i - 1].total))
-
-        const rollingAvg = rawDeltas.map((_, i) => {
+    const rolling7DayAvg = (values: number[]): number[] =>
+        values.map((_, i) => {
             const windowStart = Math.max(0, i - 6)
             let sum = 0
-            for (let j = windowStart; j <= i; j++) {
-                sum += rawDeltas[j]
-            }
+            for (let j = windowStart; j <= i; j++) sum += values[j]
             return sum / (i - windowStart + 1)
         })
 
-        const accentColor = getCssVar('--color-accent')
+    const buildVelocityDatasets = (
+        daysList: DayStats[],
+        tab: PrimaryTab,
+        langSubMode: LanguageSubMode,
+        contribSubMode: ContributorSubMode,
+    ): ChartDataset<'line'>[] => {
+        const hasColoredData = daysList[0]?.languageAdded !== undefined
 
-        return [
-            {
-                label: 'Daily change',
-                data: rawDeltas,
-                borderColor: accentColor + '40',
-                backgroundColor: accentColor + '40',
-                borderWidth: 1,
-                fill: false,
+        // Fallback: monochrome velocity (old cached data without per-language/contributor breakdown)
+        if (!hasColoredData) {
+            const rawDeltas = daysList.map((d, i) => (i === 0 ? d.total : d.total - daysList[i - 1].total))
+            const rollingAvg = rolling7DayAvg(rawDeltas)
+            const accentColor = getCssVar('--color-accent')
+
+            return [
+                {
+                    label: 'Daily change',
+                    data: rawDeltas,
+                    borderColor: accentColor + '40',
+                    backgroundColor: accentColor + '40',
+                    borderWidth: 1,
+                    fill: false,
+                    tension: 0.3,
+                    pointRadius: 0,
+                    pointHitRadius: 6,
+                },
+                {
+                    label: '7-day average',
+                    data: rollingAvg,
+                    borderColor: accentColor,
+                    backgroundColor: accentColor,
+                    borderWidth: 2.5,
+                    fill: false,
+                    tension: 0.3,
+                    pointRadius: 0,
+                    pointHitRadius: 6,
+                },
+            ]
+        }
+
+        // Colored stacked velocity: languages tab
+        // Note: 'prod-vs-test' sub-mode is treated as 'languages-only' — no prod/test velocity split
+        if (tab === 'languages') {
+            const { shown, other: hasOther } = computeVisibleLanguages(daysList, detectedLanguages)
+            const datasets: ChartDataset<'line'>[] = []
+
+            for (let i = 0; i < shown.length; i++) {
+                const langId = shown[i]
+                const colorIdx = i % maxChartColors
+                const rawActivity = daysList.map((d) => {
+                    const added = d.languageAdded?.[langId] ?? 0
+                    const removed = d.languageRemoved?.[langId] ?? 0
+                    return Math.max(added, removed)
+                })
+                const smoothed = rolling7DayAvg(rawActivity)
+                datasets.push({
+                    label: langName(langId),
+                    data: smoothed,
+                    backgroundColor: getChartColor(colorIdx) + '80',
+                    borderColor: getChartColor(colorIdx),
+                    borderWidth: 1.5,
+                    fill: datasets.length === 0 ? 'origin' : '-1',
+                    tension: 0.3,
+                    pointRadius: 0,
+                    pointHitRadius: 6,
+                })
+            }
+
+            if (hasOther) {
+                const shownSet = new Set(shown)
+                const rawActivity = daysList.map((d) => {
+                    let addedSum = 0
+                    let removedSum = 0
+                    for (const [id, val] of Object.entries(d.languageAdded ?? {})) {
+                        if (!shownSet.has(id)) addedSum += val
+                    }
+                    for (const [id, val] of Object.entries(d.languageRemoved ?? {})) {
+                        if (!shownSet.has(id)) removedSum += val
+                    }
+                    return Math.max(addedSum, removedSum)
+                })
+                const smoothed = rolling7DayAvg(rawActivity)
+                datasets.push({
+                    label: 'Other',
+                    data: smoothed,
+                    backgroundColor: getCssVar('--chart-other') + '80',
+                    borderColor: getCssVar('--chart-other'),
+                    borderWidth: 1.5,
+                    fill: datasets.length === 0 ? 'origin' : '-1',
+                    tension: 0.3,
+                    pointRadius: 0,
+                    pointHitRadius: 6,
+                })
+            }
+
+            return datasets
+        }
+
+        // Colored stacked velocity: contributors tab
+        const { shown, other: hasOther } = computeVisibleContributors(daysList, contribSubMode)
+        const datasets: ChartDataset<'line'>[] = []
+
+        for (let i = 0; i < shown.length; i++) {
+            const author = shown[i]
+            const colorIdx = i % maxChartColors
+            const rawActivity = daysList.map((d) => {
+                const added = d.contributorAdded?.[author] ?? 0
+                const removed = d.contributorRemoved?.[author] ?? 0
+                return Math.max(added, removed)
+            })
+            const smoothed = rolling7DayAvg(rawActivity)
+            datasets.push({
+                label: contributorDisplayName(author),
+                data: smoothed,
+                backgroundColor: getChartColor(colorIdx) + '80',
+                borderColor: getChartColor(colorIdx),
+                borderWidth: 1.5,
+                fill: datasets.length === 0 ? 'origin' : '-1',
                 tension: 0.3,
                 pointRadius: 0,
                 pointHitRadius: 6,
-            },
-            {
-                label: '7-day average',
-                data: rollingAvg,
-                borderColor: accentColor,
-                backgroundColor: accentColor,
-                borderWidth: 2.5,
-                fill: false,
+            })
+        }
+
+        if (hasOther) {
+            const shownSet = new Set(shown)
+            const rawActivity = daysList.map((d) => {
+                let addedSum = 0
+                let removedSum = 0
+                for (const [name, val] of Object.entries(d.contributorAdded ?? {})) {
+                    if (!shownSet.has(name)) addedSum += val
+                }
+                for (const [name, val] of Object.entries(d.contributorRemoved ?? {})) {
+                    if (!shownSet.has(name)) removedSum += val
+                }
+                return Math.max(addedSum, removedSum)
+            })
+            const smoothed = rolling7DayAvg(rawActivity)
+            datasets.push({
+                label: 'Other',
+                data: smoothed,
+                backgroundColor: getCssVar('--chart-other') + '80',
+                borderColor: getCssVar('--chart-other'),
+                borderWidth: 1.5,
+                fill: datasets.length === 0 ? 'origin' : '-1',
                 tension: 0.3,
                 pointRadius: 0,
                 pointHitRadius: 6,
-            },
-        ]
+            })
+        }
+
+        return datasets
     }
 
     const computeVisibleContributors = (
@@ -537,7 +659,7 @@
         for (let i = 0; i < shown.length; i++) {
             const author = shown[i]
             const colorIdx = i % maxChartColors
-            const data = daysList.map((d) => d.contributors?.[author] ?? 0)
+            const data = daysList.map((d) => Math.max(0, d.contributors?.[author] ?? 0))
             datasets.push({
                 label: contributorDisplayName(author),
                 data,
@@ -559,7 +681,7 @@
                 for (const [name, lines] of Object.entries(d.contributors)) {
                     if (!shownSet.has(name)) sum += lines
                 }
-                return sum
+                return Math.max(0, sum)
             })
             datasets.push({
                 label: 'Other',
@@ -592,6 +714,7 @@
         daysList: DayStats[],
         datasets: ChartDataset<'line'>[],
         isVelocity: boolean,
+        isStackedVelocity: boolean,
     ): ChartConfiguration<'line'> => {
         const labels = daysList.map((d) => d.date)
         const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -634,8 +757,8 @@
                         border: { color: getCssVar('--color-border') },
                     },
                     y: {
-                        stacked: !isVelocity,
-                        ...(isVelocity ? {} : { beginAtZero: true }),
+                        stacked: !isVelocity || isStackedVelocity,
+                        ...(!isVelocity || isStackedVelocity ? { beginAtZero: true } : {}),
                         grid: {
                             color: (ctx: { tick: { value: number } }) => {
                                 if (isVelocity && ctx.tick.value === 0)
@@ -720,14 +843,15 @@
 
         const isVelocity = velocityEnabled
         const datasets = isVelocity
-            ? buildVelocityDatasets(days)
+            ? buildVelocityDatasets(days, primaryTab, languageSubMode, contributorSubMode)
             : primaryTab === 'contributors'
               ? buildContributorDatasets(days, contributorSubMode)
               : (() => {
                     const { shown, other: hasOther } = computeVisibleLanguages(days, detectedLanguages)
                     return buildDatasets(days, shown, hasOther, languageSubMode)
                 })()
-        const config = buildConfig(days, datasets, isVelocity)
+        const isStackedVelocity = isVelocity && days[0]?.languageAdded !== undefined
+        const config = buildConfig(days, datasets, isVelocity, isStackedVelocity)
 
         if (chart) {
             chart.data = config.data
@@ -829,35 +953,33 @@
         role="group"
         aria-label="Chart options"
     >
-        {#if !velocityEnabled}
-            {#if primaryTab === 'languages'}
-                <button
-                    onclick={() => (languageSubMode = 'all')}
-                    aria-pressed={languageSubMode === 'all'}
-                    class="strata-chip">All</button
-                >
-                <button
-                    onclick={() => (languageSubMode = 'prod-vs-test')}
-                    aria-pressed={languageSubMode === 'prod-vs-test'}
-                    class="strata-chip">Prod vs test</button
-                >
-                <button
-                    onclick={() => (languageSubMode = 'languages-only')}
-                    aria-pressed={languageSubMode === 'languages-only'}
-                    class="strata-chip">Languages only</button
-                >
-            {:else}
-                <button
-                    onclick={() => (contributorSubMode = 'all-contributors')}
-                    aria-pressed={contributorSubMode === 'all-contributors'}
-                    class="strata-chip">All contributors</button
-                >
-                <button
-                    onclick={() => (contributorSubMode = 'top-10')}
-                    aria-pressed={contributorSubMode === 'top-10'}
-                    class="strata-chip">Top 10</button
-                >
-            {/if}
+        {#if primaryTab === 'languages'}
+            <button
+                onclick={() => (languageSubMode = 'all')}
+                aria-pressed={languageSubMode === 'all'}
+                class="strata-chip">All</button
+            >
+            <button
+                onclick={() => (languageSubMode = 'prod-vs-test')}
+                aria-pressed={languageSubMode === 'prod-vs-test'}
+                class="strata-chip">Prod vs test</button
+            >
+            <button
+                onclick={() => (languageSubMode = 'languages-only')}
+                aria-pressed={languageSubMode === 'languages-only'}
+                class="strata-chip">Languages only</button
+            >
+        {:else}
+            <button
+                onclick={() => (contributorSubMode = 'all-contributors')}
+                aria-pressed={contributorSubMode === 'all-contributors'}
+                class="strata-chip">All contributors</button
+            >
+            <button
+                onclick={() => (contributorSubMode = 'top-10')}
+                aria-pressed={contributorSubMode === 'top-10'}
+                class="strata-chip">Top 10</button
+            >
         {/if}
         <div class="flex-1"></div>
         <button
@@ -903,7 +1025,7 @@
                     {activeStrip.date}
                 </span>
 
-                {#each activeStrip.items as item (item.label)}
+                {#each activeStrip.items as item, i (i)}
                     <span class="inline-flex items-center gap-1 whitespace-nowrap text-foreground-secondary">
                         <span
                             class="inline-block h-2 w-2 shrink-0 rounded-full"

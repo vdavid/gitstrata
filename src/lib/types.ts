@@ -13,6 +13,14 @@ export interface DayStats {
     authors: string[] // Unique author identifiers for this day
     /** Per-author cumulative line count at end of day. Undefined for old cached results. */
     contributors?: Record<string, number>
+    /** Per-language lines added this day (for velocity mode). Undefined for old cached results. */
+    languageAdded?: Record<string, number>
+    /** Per-language lines removed this day (for velocity mode). Undefined for old cached results. */
+    languageRemoved?: Record<string, number>
+    /** Per-author lines added this day (for velocity mode). Undefined for old cached results. */
+    contributorAdded?: Record<string, number>
+    /** Per-author lines removed this day (for velocity mode). Undefined for old cached results. */
+    contributorRemoved?: Record<string, number>
 }
 
 /** Full analysis result, stored in cache */

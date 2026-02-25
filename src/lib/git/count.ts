@@ -517,6 +517,82 @@ const processFile = async (
     }
 }
 
+type DiffEntry =
+    | { type: 'added'; path: string; newOid: string }
+    | { type: 'modified'; path: string; oldOid: string; newOid: string }
+    | { type: 'deleted'; path: string; oldOid: string }
+
+export const diffTreesDetailed = async (options: {
+    fs: FsClient
+    dir: string
+    prevTreeOid: string | undefined
+    currTreeOid: string | undefined
+    treeCache: Map<string, TreeEntry[]>
+    gitCache?: object
+}): Promise<DiffEntry[]> => {
+    const { fs, dir, prevTreeOid, currTreeOid, treeCache, gitCache } = options
+    const results: DiffEntry[] = []
+
+    const collectDeletedBlobs = async (treeOid: string, basePath: string) => {
+        const entries = await readTreeCached(fs, dir, treeOid, treeCache, gitCache)
+        for (const entry of entries) {
+            const fullPath = basePath ? `${basePath}/${entry.path}` : entry.path
+            if (entry.type === 'blob') {
+                results.push({ type: 'deleted', path: fullPath, oldOid: entry.oid })
+            } else if (entry.type === 'tree') {
+                if (!shouldSkipDir(entry.path)) {
+                    await collectDeletedBlobs(entry.oid, fullPath)
+                }
+            }
+        }
+    }
+
+    const walkDiff = async (prevOid: string | undefined, currOid: string | undefined, basePath: string) => {
+        if (prevOid === currOid) return
+
+        const prevEntries = prevOid ? await readTreeCached(fs, dir, prevOid, treeCache, gitCache) : []
+        const currEntries = currOid ? await readTreeCached(fs, dir, currOid, treeCache, gitCache) : []
+
+        const prevMap = new Map(prevEntries.map((e) => [e.path, e]))
+        const currMap = new Map(currEntries.map((e) => [e.path, e]))
+
+        // Process current entries (additions and modifications)
+        for (const entry of currEntries) {
+            const fullPath = basePath ? `${basePath}/${entry.path}` : entry.path
+            const prev = prevMap.get(entry.path)
+
+            if (entry.type === 'blob') {
+                if (!prev || prev.type !== 'blob') {
+                    results.push({ type: 'added', path: fullPath, newOid: entry.oid })
+                } else if (prev.oid !== entry.oid) {
+                    results.push({ type: 'modified', path: fullPath, oldOid: prev.oid, newOid: entry.oid })
+                }
+            } else if (entry.type === 'tree') {
+                if (!shouldSkipDir(entry.path)) {
+                    const prevSubOid = prev && prev.type === 'tree' ? prev.oid : undefined
+                    await walkDiff(prevSubOid, entry.oid, fullPath)
+                }
+            }
+        }
+
+        // Process deletions (in prev but not in curr)
+        for (const entry of prevEntries) {
+            if (currMap.has(entry.path)) continue
+            const fullPath = basePath ? `${basePath}/${entry.path}` : entry.path
+            if (entry.type === 'blob') {
+                results.push({ type: 'deleted', path: fullPath, oldOid: entry.oid })
+            } else if (entry.type === 'tree') {
+                if (!shouldSkipDir(entry.path)) {
+                    await collectDeletedBlobs(entry.oid, fullPath)
+                }
+            }
+        }
+    }
+
+    await walkDiff(prevTreeOid, currTreeOid, '')
+    return results
+}
+
 /** Diff-based: only processes files changed between prevCommitOid and commitOid. */
 export const countLinesForCommitIncremental = async (
     options: CountOptions & { prevCommitOid: string },
@@ -535,68 +611,33 @@ export const countLinesForCommitIncremental = async (
     const currRootTree = currCommit.commit.tree
 
     // Diff trees recursively using cached tree reads
+    const diffEntries = await diffTreesDetailed({
+        fs,
+        dir,
+        prevTreeOid: prevRootTree,
+        currTreeOid: currRootTree,
+        treeCache,
+        gitCache,
+    })
+
+    // Map DiffEntry results back into the existing added/modified/deleted arrays
     const added: FileEntry[] = []
     const modified: FileEntry[] = []
     const deleted: string[] = []
 
-    const collectDeletedBlobs = async (treeOid: string, basePath: string) => {
-        const entries = await readTreeCached(fs, dir, treeOid, treeCache, gitCache)
-        for (const entry of entries) {
-            const fullPath = basePath ? `${basePath}/${entry.path}` : entry.path
-            if (entry.type === 'blob') {
-                deleted.push(fullPath)
-            } else if (entry.type === 'tree') {
-                if (!shouldSkipDir(entry.path)) {
-                    await collectDeletedBlobs(entry.oid, fullPath)
-                }
-            }
+    for (const entry of diffEntries) {
+        switch (entry.type) {
+            case 'added':
+                added.push({ path: entry.path, oid: entry.newOid })
+                break
+            case 'modified':
+                modified.push({ path: entry.path, oid: entry.newOid })
+                break
+            case 'deleted':
+                deleted.push(entry.path)
+                break
         }
     }
-
-    const diffTrees = async (prevTreeOid: string | undefined, currTreeOid: string | undefined, basePath: string) => {
-        // Same tree OID = no changes in this subtree
-        if (prevTreeOid === currTreeOid) return
-
-        const prevEntries = prevTreeOid ? await readTreeCached(fs, dir, prevTreeOid, treeCache, gitCache) : []
-        const currEntries = currTreeOid ? await readTreeCached(fs, dir, currTreeOid, treeCache, gitCache) : []
-
-        const prevMap = new Map(prevEntries.map((e) => [e.path, e]))
-        const currMap = new Map(currEntries.map((e) => [e.path, e]))
-
-        // Process current entries (additions and modifications)
-        for (const entry of currEntries) {
-            const fullPath = basePath ? `${basePath}/${entry.path}` : entry.path
-            const prev = prevMap.get(entry.path)
-
-            if (entry.type === 'blob') {
-                if (!prev || prev.type !== 'blob') {
-                    added.push({ path: fullPath, oid: entry.oid })
-                } else if (prev.oid !== entry.oid) {
-                    modified.push({ path: fullPath, oid: entry.oid })
-                }
-            } else if (entry.type === 'tree') {
-                if (!shouldSkipDir(entry.path)) {
-                    const prevSubOid = prev && prev.type === 'tree' ? prev.oid : undefined
-                    await diffTrees(prevSubOid, entry.oid, fullPath)
-                }
-            }
-        }
-
-        // Process deletions (in prev but not in curr)
-        for (const entry of prevEntries) {
-            if (currMap.has(entry.path)) continue
-            const fullPath = basePath ? `${basePath}/${entry.path}` : entry.path
-            if (entry.type === 'blob') {
-                deleted.push(fullPath)
-            } else if (entry.type === 'tree') {
-                if (!shouldSkipDir(entry.path)) {
-                    await collectDeletedBlobs(entry.oid, fullPath)
-                }
-            }
-        }
-    }
-
-    await diffTrees(prevRootTree, currRootTree, '')
 
     if (signal?.aborted) throw new Error('Cancelled')
 
@@ -630,6 +671,163 @@ export const countLinesForCommitIncremental = async (
     }
 
     return computeDayStatsFromFileState(fileStateMap, date, messages)
+}
+
+interface CommitContribution {
+    languageAdded: Record<string, number>
+    languageRemoved: Record<string, number>
+    totalDelta: number
+    totalAdded: number
+    totalRemoved: number
+}
+
+export const computeCommitContribution = async (options: {
+    fs: FsClient
+    dir: string
+    commitOid: string
+    parentOid: string | undefined
+    blobCache: Map<string, BlobCacheEntry>
+    contentCache: Map<string, string>
+    treeCache: Map<string, TreeEntry[]>
+    allExtensions: Set<string>
+    gitCache?: object
+}): Promise<CommitContribution> => {
+    const { fs, dir, commitOid, parentOid, blobCache, contentCache, treeCache, allExtensions, gitCache } = options
+
+    // Read commit tree OIDs
+    const currCommit = await git.readCommit({ fs, dir, oid: commitOid, cache: gitCache })
+    const currTreeOid = currCommit.commit.tree
+
+    let prevTreeOid: string | undefined
+    if (parentOid !== undefined) {
+        const parentCommit = await git.readCommit({ fs, dir, oid: parentOid, cache: gitCache })
+        prevTreeOid = parentCommit.commit.tree
+    }
+
+    // Diff the trees
+    const diffEntries = await diffTreesDetailed({
+        fs,
+        dir,
+        prevTreeOid,
+        currTreeOid,
+        treeCache,
+        gitCache,
+    })
+
+    const extensionMap = resolveHeaderLanguage(allExtensions)
+    const limit = createLimiter(8)
+
+    const languageAdded: Record<string, number> = {}
+    const languageRemoved: Record<string, number> = {}
+
+    // Process all diff entries in parallel
+    const entryResults = await Promise.all(
+        diffEntries.map((entry) =>
+            limit(async () => {
+                switch (entry.type) {
+                    case 'added': {
+                        const state = await processFile(
+                            entry.path,
+                            entry.newOid,
+                            fs,
+                            dir,
+                            blobCache,
+                            contentCache,
+                            extensionMap,
+                            gitCache,
+                        )
+                        return { type: 'added' as const, langId: state.languageId, lines: state.lines }
+                    }
+                    case 'deleted': {
+                        const state = await processFile(
+                            entry.path,
+                            entry.oldOid,
+                            fs,
+                            dir,
+                            blobCache,
+                            contentCache,
+                            extensionMap,
+                            gitCache,
+                        )
+                        return { type: 'deleted' as const, langId: state.languageId, lines: state.lines }
+                    }
+                    case 'modified': {
+                        const [oldState, newState] = await Promise.all([
+                            processFile(
+                                entry.path,
+                                entry.oldOid,
+                                fs,
+                                dir,
+                                blobCache,
+                                contentCache,
+                                extensionMap,
+                                gitCache,
+                            ),
+                            processFile(
+                                entry.path,
+                                entry.newOid,
+                                fs,
+                                dir,
+                                blobCache,
+                                contentCache,
+                                extensionMap,
+                                gitCache,
+                            ),
+                        ])
+                        return {
+                            type: 'modified' as const,
+                            langId: newState.languageId,
+                            oldLines: oldState.lines,
+                            newLines: newState.lines,
+                        }
+                    }
+                }
+            }),
+        ),
+    )
+
+    // Aggregate results
+    for (const result of entryResults) {
+        const langId = result.langId
+        if (!langId) continue
+
+        switch (result.type) {
+            case 'added': {
+                languageAdded[langId] = (languageAdded[langId] ?? 0) + result.lines
+                break
+            }
+            case 'deleted': {
+                languageRemoved[langId] = (languageRemoved[langId] ?? 0) + result.lines
+                break
+            }
+            case 'modified': {
+                const delta = result.newLines - result.oldLines
+                if (delta > 0) {
+                    languageAdded[langId] = (languageAdded[langId] ?? 0) + delta
+                } else if (delta < 0) {
+                    languageRemoved[langId] = (languageRemoved[langId] ?? 0) + -delta
+                }
+                break
+            }
+        }
+    }
+
+    let totalAdded = 0
+    let totalRemoved = 0
+    for (const count of Object.values(languageAdded)) {
+        totalAdded += count
+    }
+    for (const count of Object.values(languageRemoved)) {
+        totalRemoved += count
+    }
+
+    return {
+        languageAdded,
+        languageRemoved,
+        totalDelta: totalAdded - totalRemoved,
+        totalAdded,
+        totalRemoved,
+    }
 }
 
 interface Classification {

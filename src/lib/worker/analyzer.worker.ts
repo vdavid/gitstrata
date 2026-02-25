@@ -9,7 +9,7 @@ import { configureSync, getConsoleSink, getLogger } from '@logtape/logtape'
 import type { AnalysisResult, DayStats, ErrorKind, ProgressEvent } from '../types'
 import { cloneRepo, detectDefaultBranch, fetchRepo, waitForBodyCleanups } from '../git/clone'
 import { fillDateGaps, getCommitsByDate, type DailyCommit } from '../git/history'
-import { countLinesForCommit, countLinesForCommitIncremental, LruMap } from '../git/count'
+import { countLinesForCommit, countLinesForCommitIncremental, LruMap, computeCommitContribution } from '../git/count'
 import type { FileState } from '../git/count'
 import { readMailmapFromRepo, createMailmapLookup } from '../git/mailmap'
 import { parseRepoUrl, repoToDir, repoToFsName } from '../url'
@@ -121,7 +121,10 @@ const processDays = async (params: {
         if (commit) {
             if (commit.commits && commit.commits.length > 0) {
                 // Multi-commit path: iterate each commit to attribute line deltas to authors
-                let prevTotal = i === 0 && days.length === 0 ? 0 : (prevDay?.total ?? 0)
+                const dayLanguageAdded: Record<string, number> = {}
+                const dayLanguageRemoved: Record<string, number> = {}
+                const dayContributorAdded: Record<string, number> = {}
+                const dayContributorRemoved: Record<string, number> = {}
 
                 for (const ce of commit.commits) {
                     if (prevCommitOid) {
@@ -161,9 +164,37 @@ const processDays = async (params: {
                         )
                     }
 
-                    const delta = dayStats.total - prevTotal
-                    authorLineTotals.set(ce.author, (authorLineTotals.get(ce.author) ?? 0) + delta)
-                    prevTotal = dayStats.total
+                    // Parent-based attribution via computeCommitContribution
+                    if (ce.parentOids.length <= 1) {
+                        // Normal commit (1 parent) or root commit (0 parents); skip merge commits (>1 parent)
+                        const parentOid = ce.parentOids.length === 1 ? ce.parentOids[0] : undefined
+                        const contribution = await computeCommitContribution({
+                            fs,
+                            dir,
+                            commitOid: ce.hash,
+                            parentOid,
+                            blobCache,
+                            contentCache,
+                            treeCache,
+                            allExtensions,
+                            gitCache,
+                        })
+
+                        authorLineTotals.set(
+                            ce.author,
+                            (authorLineTotals.get(ce.author) ?? 0) + contribution.totalDelta,
+                        )
+
+                        for (const [lang, value] of Object.entries(contribution.languageAdded)) {
+                            dayLanguageAdded[lang] = (dayLanguageAdded[lang] ?? 0) + value
+                        }
+                        for (const [lang, value] of Object.entries(contribution.languageRemoved)) {
+                            dayLanguageRemoved[lang] = (dayLanguageRemoved[lang] ?? 0) + value
+                        }
+                        dayContributorAdded[ce.author] = (dayContributorAdded[ce.author] ?? 0) + contribution.totalAdded
+                        dayContributorRemoved[ce.author] =
+                            (dayContributorRemoved[ce.author] ?? 0) + contribution.totalRemoved
+                    }
 
                     contentCache.clear()
                     prevCommitOid = ce.hash
@@ -174,6 +205,10 @@ const processDays = async (params: {
                 if (dayStats) {
                     dayStats.authors = commit.authors
                     dayStats.contributors = Object.fromEntries(authorLineTotals)
+                    dayStats.languageAdded = dayLanguageAdded
+                    dayStats.languageRemoved = dayLanguageRemoved
+                    dayStats.contributorAdded = dayContributorAdded
+                    dayStats.contributorRemoved = dayContributorRemoved
                 }
             } else {
                 // Backward compat: old data without commits array — single-commit behavior
@@ -227,6 +262,10 @@ const processDays = async (params: {
                 comments: ['-'],
                 authors: [],
                 contributors: prevDay.contributors ? { ...prevDay.contributors } : undefined,
+                languageAdded: {},
+                languageRemoved: {},
+                contributorAdded: {},
+                contributorRemoved: {},
             }
         } else {
             continue
