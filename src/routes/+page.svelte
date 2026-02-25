@@ -200,9 +200,13 @@
         }
         try {
             const parsed = parseRepoUrl(repo)
+            const targetPath = `${resolve('/')}${parsed.host}/${parsed.owner}/${parsed.repo}`
+            // Push a new history entry when navigating to a different repo,
+            // but replace when confirming the current URL (initial load, back button)
+            const isSamePath = page.url.pathname === targetPath
             // eslint-disable-next-line svelte/no-navigation-without-resolve -- resolve('/') is embedded in template
-            goto(`${resolve('/')}${parsed.host}/${parsed.owner}/${parsed.repo}`, {
-                replaceState: true,
+            goto(targetPath, {
+                replaceState: isSamePath,
                 keepFocus: true,
             })
         } catch {
