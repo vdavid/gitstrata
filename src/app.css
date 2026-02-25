@@ -537,7 +537,7 @@ body::before {
 
 .tig-group {
     display: inline;
-    animation: tig-swap-anim 2s linear 5s forwards;
+    animation: tig-swap-anim 2s ease-in-out 5s forwards;
 }
 
 @keyframes tig-swap-anim {
