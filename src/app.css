@@ -426,12 +426,6 @@ body::before {
     color: #fff;
 }
 
-.strata-chip:disabled {
-    opacity: 0.4;
-    cursor: default;
-    pointer-events: none;
-}
-
 /* Underline tab (for primary chart tabs) */
 .strata-tab {
     display: inline-flex;

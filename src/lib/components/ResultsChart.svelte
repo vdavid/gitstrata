@@ -487,30 +487,117 @@
         }
 
         // Colored stacked velocity: languages tab
-        // Note: 'prod-vs-test' sub-mode is treated as 'languages-only' — no prod/test velocity split
         if (tab === 'languages') {
+            if (langSubMode === 'prod-vs-test') {
+                // Two stacks: Production velocity and Test velocity (derived from cumulative data)
+                const prodDeltas = daysList.map((d, idx) => {
+                    let prod = 0
+                    for (const lc of Object.values(d.languages)) prod += lc.prod ?? lc.total
+                    if (idx === 0) return prod
+                    let prevProd = 0
+                    for (const lc of Object.values(daysList[idx - 1].languages)) prevProd += lc.prod ?? lc.total
+                    return Math.abs(prod - prevProd)
+                })
+                const testDeltas = daysList.map((d, idx) => {
+                    let test = 0
+                    for (const lc of Object.values(d.languages)) test += lc.test ?? 0
+                    if (idx === 0) return test
+                    let prevTest = 0
+                    for (const lc of Object.values(daysList[idx - 1].languages)) prevTest += lc.test ?? 0
+                    return Math.abs(test - prevTest)
+                })
+                return [
+                    {
+                        label: 'Production',
+                        data: prodDeltas,
+                        backgroundColor: getChartColor(0) + '80',
+                        borderColor: getChartColor(0),
+                        borderWidth: 1.5,
+                        fill: 'origin',
+                        tension: 0.3,
+                        pointRadius: 0,
+                        pointHitRadius: 6,
+                    },
+                    {
+                        label: 'Test',
+                        data: testDeltas,
+                        backgroundColor: getChartTint(0) + '80',
+                        borderColor: getChartTint(0),
+                        borderWidth: 1.5,
+                        fill: '-1',
+                        tension: 0.3,
+                        pointRadius: 0,
+                        pointHitRadius: 6,
+                    },
+                ]
+            }
+
+            // 'all' and 'languages-only' modes
             const { shown, other: hasOther } = computeVisibleLanguages(daysList, detectedLanguages)
             const datasets: ChartDataset<'line'>[] = []
 
             for (let i = 0; i < shown.length; i++) {
                 const langId = shown[i]
                 const colorIdx = i % maxChartColors
-                const rawActivity = daysList.map((d) => {
-                    const added = d.languageAdded?.[langId] ?? 0
-                    const removed = d.languageRemoved?.[langId] ?? 0
-                    return Math.max(added, removed)
-                })
-                datasets.push({
-                    label: langName(langId),
-                    data: rawActivity,
-                    backgroundColor: getChartColor(colorIdx) + '80',
-                    borderColor: getChartColor(colorIdx),
-                    borderWidth: 1.5,
-                    fill: datasets.length === 0 ? 'origin' : '-1',
-                    tension: 0.3,
-                    pointRadius: 0,
-                    pointHitRadius: 6,
-                })
+                const splitTest = langSubMode === 'all' && shouldSplitTestLayer(daysList, langId)
+
+                if (splitTest) {
+                    // Prod velocity derived from cumulative prod data
+                    const prodDeltas = daysList.map((d, idx) => {
+                        const lc = d.languages[langId]
+                        const prod = lc?.prod ?? lc?.total ?? 0
+                        if (idx === 0) return prod
+                        const prevLc = daysList[idx - 1].languages[langId]
+                        const prevProd = prevLc?.prod ?? prevLc?.total ?? 0
+                        return Math.abs(prod - prevProd)
+                    })
+                    datasets.push({
+                        label: `${langName(langId)} (prod)`,
+                        data: prodDeltas,
+                        backgroundColor: getChartColor(colorIdx) + '80',
+                        borderColor: getChartColor(colorIdx),
+                        borderWidth: 1.5,
+                        fill: datasets.length === 0 ? 'origin' : '-1',
+                        tension: 0.3,
+                        pointRadius: 0,
+                        pointHitRadius: 6,
+                    })
+                    // Test velocity derived from cumulative test data
+                    const testDeltas = daysList.map((d, idx) => {
+                        const test = d.languages[langId]?.test ?? 0
+                        if (idx === 0) return test
+                        const prevTest = daysList[idx - 1].languages[langId]?.test ?? 0
+                        return Math.abs(test - prevTest)
+                    })
+                    datasets.push({
+                        label: `${langName(langId)} (test)`,
+                        data: testDeltas,
+                        backgroundColor: getChartTint(colorIdx) + '80',
+                        borderColor: getChartTint(colorIdx),
+                        borderWidth: 1.5,
+                        fill: datasets.length === 0 ? 'origin' : '-1',
+                        tension: 0.3,
+                        pointRadius: 0,
+                        pointHitRadius: 6,
+                    })
+                } else {
+                    const rawActivity = daysList.map((d) => {
+                        const added = d.languageAdded?.[langId] ?? 0
+                        const removed = d.languageRemoved?.[langId] ?? 0
+                        return Math.max(added, removed)
+                    })
+                    datasets.push({
+                        label: langName(langId),
+                        data: rawActivity,
+                        backgroundColor: getChartColor(colorIdx) + '80',
+                        borderColor: getChartColor(colorIdx),
+                        borderWidth: 1.5,
+                        fill: datasets.length === 0 ? 'origin' : '-1',
+                        tension: 0.3,
+                        pointRadius: 0,
+                        pointHitRadius: 6,
+                    })
+                }
             }
 
             if (hasOther) {
@@ -933,19 +1020,16 @@
             <button
                 onclick={() => (languageSubMode = 'all')}
                 aria-pressed={languageSubMode === 'all'}
-                disabled={velocityEnabled}
                 class="strata-chip">All</button
             >
             <button
                 onclick={() => (languageSubMode = 'prod-vs-test')}
                 aria-pressed={languageSubMode === 'prod-vs-test'}
-                disabled={velocityEnabled}
                 class="strata-chip">Prod vs test</button
             >
             <button
                 onclick={() => (languageSubMode = 'languages-only')}
                 aria-pressed={languageSubMode === 'languages-only'}
-                disabled={velocityEnabled}
                 class="strata-chip">Languages only</button
             >
         {:else}
