@@ -957,16 +957,19 @@
             <button
                 onclick={() => (languageSubMode = 'all')}
                 aria-pressed={languageSubMode === 'all'}
+                disabled={velocityEnabled}
                 class="strata-chip">All</button
             >
             <button
                 onclick={() => (languageSubMode = 'prod-vs-test')}
                 aria-pressed={languageSubMode === 'prod-vs-test'}
+                disabled={velocityEnabled}
                 class="strata-chip">Prod vs test</button
             >
             <button
                 onclick={() => (languageSubMode = 'languages-only')}
                 aria-pressed={languageSubMode === 'languages-only'}
+                disabled={velocityEnabled}
                 class="strata-chip">Languages only</button
             >
         {:else}
