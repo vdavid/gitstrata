@@ -5,7 +5,7 @@
     import { page } from '$app/state'
     import { env } from '$env/dynamic/public'
     import { parseRepoUrl, parseRepoFromPathname } from '$lib/url'
-    import { formatBytes, getResult, saveResult } from '$lib/cache'
+    import { formatBytes, getResult, saveResult, deleteRepo } from '$lib/cache'
     import { fetchServerResult, uploadServerResult } from '$lib/server-cache'
     import { createAnalyzer, type AnalyzerHandle } from '$lib/worker/analyzer.api'
     import type { AnalysisResult, DayStats, ErrorKind, ProgressEvent } from '$lib/types'
@@ -91,9 +91,6 @@
 
     // Last repo input for retry
     let lastRepoInput = $state('')
-
-    // Snapshot of the result we're refreshing from, so retry can re-attempt a failed refresh
-    let pendingRefresh: AnalysisResult | undefined
 
     // Size warning (during clone, from worker)
     let sizeWarningBytes = $state(0)
@@ -189,7 +186,6 @@
         showSizeWarning = false
         sizeGateBytes = 0
         repoSizeBytes = null
-        pendingRefresh = undefined
         stopTimer()
     }
 
@@ -414,46 +410,17 @@
     }
 
     const retry = () => {
-        if (pendingRefresh) {
-            // Re-attempt the failed refresh
-            result = pendingRefresh
-            pendingRefresh = undefined
-            void refresh()
-        } else if (lastRepoInput) {
+        if (lastRepoInput) {
             startAnalysis(lastRepoInput)
         }
     }
 
     const refresh = async () => {
         if (!result) return
-        // Snapshot strips Svelte 5 reactivity proxies so the object can be sent to the worker via postMessage
-        const previousResult = $state.snapshot(result) as AnalysisResult
-        const repoUrl = previousResult.repoUrl
-        pendingRefresh = previousResult
-
-        // Keep showing cached results while refreshing
-        streamingDays = [...previousResult.days]
-        streamingLanguages = [...previousResult.detectedLanguages]
-        cachedResult = previousResult
-        result = undefined
-
-        phase = 'cloning'
-        startTimer('clone')
-
-        try {
-            if (analyzer) await cancelAndTerminate(analyzer)
-            analyzer = createAnalyzer()
-            await analyzer.analyzeIncremental(repoUrl, corsProxy, previousResult, handleProgress)
-            pendingRefresh = undefined
-        } catch (e) {
-            stopTimer()
-            // phase may have been set to 'error' by handleProgress during the await
-            if ((phase as Phase) !== 'error') {
-                phase = 'error'
-                errorMessage = e instanceof Error ? e.message : 'Refresh failed'
-                errorKind = 'unknown'
-            }
-        }
+        const repoUrl = result.repoUrl
+        // Wipe cache + LightningFS so the full re-analysis starts clean
+        await deleteRepo(repoUrl)
+        void startAnalysis(repoUrl)
     }
 
     const copyShareLink = async () => {
