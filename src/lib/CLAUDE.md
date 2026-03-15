@@ -93,20 +93,19 @@ a Web Worker.
 ## Components
 
 - `components/ResultsChart.svelte` — Chart.js stacked area chart with a two-row toolbar. Row 1 has primary tabs
-  (Languages / Contributors) using `strata-tab` + a Velocity toggle chip. Row 2 has sub-mode chips (visible in both
-  cumulative and velocity modes): Languages tab shows All / Prod vs test / Languages only; Contributors tab shows All
-  contributors / Top 10. A `buildContributorDatasets` function creates stacked areas per contributor (using the same
-  mineral color palette by rank), with `computeVisibleContributors` filtering by >= 5% of total (all-contributors mode)
-  or top 10. Contributor values are clamped to `Math.max(0, ...)`. The Contributors tab is disabled when
-  `DayStats.contributors` data is unavailable. Velocity mode (`buildVelocityDatasets`) supports two rendering paths:
-  when new per-language/contributor velocity fields (`languageAdded`, `languageRemoved`, `contributorAdded`,
-  `contributorRemoved`) are available, it shows colored stacked area charts with 7-day rolling averages per category
+  (Languages / Contributors) using `strata-tab` + a Velocity toggle chip. Row 2 has sub-mode chips (disabled when
+  velocity is on since velocity has no prod/test split): Languages tab shows All / Prod vs test / Languages only;
+  Contributors tab shows All contributors / Top 10. A `buildContributorDatasets` function creates stacked areas per
+  contributor (using the same mineral color palette by rank), with `computeVisibleContributors` filtering by >= 5% of
+  total (all-contributors mode) or top 10. Contributor values are clamped to `Math.max(0, ...)`. The Contributors tab is
+  disabled when `DayStats.contributors` data is unavailable. Velocity mode (`buildVelocityDatasets`) supports two
+  rendering paths: when new per-language/contributor velocity fields (`languageAdded`, `languageRemoved`,
+  `contributorAdded`, `contributorRemoved`) are available, it shows colored stacked area charts with raw daily values
   (activity = `Math.max(added, removed)` per language/contributor); when those fields are absent (old cached data), it
-  falls back to monochrome daily change + 7-day average as two unfilled line datasets. In velocity mode, the "Prod vs
-  test" sub-mode is treated as "Languages only" (no prod/test velocity split). A `rolling7DayAvg` helper computes
-  windowed averages. The Y-axis uses `stacked: true` + `beginAtZero: true` for stacked velocity, and `stacked: false`
-  for monochrome fallback velocity. An "Era markers" toggle (persisted to localStorage under `gitstrata-era-markers`)
-  controls the `eraMarkersPlugin`. Pattern fills are hidden when velocity is enabled or contributors tab is active.
+  falls back to a monochrome daily change line dataset. The Y-axis uses `stacked: true` + `beginAtZero: true` for
+  stacked velocity, and `stacked: false` for monochrome fallback velocity. An "Era markers" toggle (persisted to
+  localStorage under `gitstrata-era-markers`) controls the `eraMarkersPlugin`. Pattern fills are hidden when velocity is
+  enabled or contributors tab is active.
 - `components/chart-era-markers-plugin.ts` — Chart.js plugin that draws vertical dashed lines at AI-era milestones
   (Copilot GA '22, Agentic era '25, Opus 4.5 '25). Only renders markers within the repo's date range. Reads CSS
   variables for colors and font.
