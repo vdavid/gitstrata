@@ -458,14 +458,6 @@
         return datasets
     }
 
-    const rolling7DayAvg = (values: number[]): number[] =>
-        values.map((_, i) => {
-            const windowStart = Math.max(0, i - 6)
-            let sum = 0
-            for (let j = windowStart; j <= i; j++) sum += values[j]
-            return sum / (i - windowStart + 1)
-        })
-
     const buildVelocityDatasets = (
         daysList: DayStats[],
         tab: PrimaryTab,
@@ -477,28 +469,16 @@
         // Fallback: monochrome velocity (old cached data without per-language/contributor breakdown)
         if (!hasColoredData) {
             const rawDeltas = daysList.map((d, i) => (i === 0 ? d.total : d.total - daysList[i - 1].total))
-            const rollingAvg = rolling7DayAvg(rawDeltas)
             const accentColor = getCssVar('--color-accent')
 
             return [
                 {
                     label: 'Daily change',
                     data: rawDeltas,
-                    borderColor: accentColor + '40',
-                    backgroundColor: accentColor + '40',
-                    borderWidth: 1,
-                    fill: false,
-                    tension: 0.3,
-                    pointRadius: 0,
-                    pointHitRadius: 6,
-                },
-                {
-                    label: '7-day average',
-                    data: rollingAvg,
                     borderColor: accentColor,
-                    backgroundColor: accentColor,
-                    borderWidth: 2.5,
-                    fill: false,
+                    backgroundColor: accentColor + '40',
+                    borderWidth: 1.5,
+                    fill: 'origin',
                     tension: 0.3,
                     pointRadius: 0,
                     pointHitRadius: 6,
@@ -520,10 +500,9 @@
                     const removed = d.languageRemoved?.[langId] ?? 0
                     return Math.max(added, removed)
                 })
-                const smoothed = rolling7DayAvg(rawActivity)
                 datasets.push({
                     label: langName(langId),
-                    data: smoothed,
+                    data: rawActivity,
                     backgroundColor: getChartColor(colorIdx) + '80',
                     borderColor: getChartColor(colorIdx),
                     borderWidth: 1.5,
@@ -547,10 +526,9 @@
                     }
                     return Math.max(addedSum, removedSum)
                 })
-                const smoothed = rolling7DayAvg(rawActivity)
                 datasets.push({
                     label: 'Other',
-                    data: smoothed,
+                    data: rawActivity,
                     backgroundColor: getCssVar('--chart-other') + '80',
                     borderColor: getCssVar('--chart-other'),
                     borderWidth: 1.5,
@@ -576,10 +554,9 @@
                 const removed = d.contributorRemoved?.[author] ?? 0
                 return Math.max(added, removed)
             })
-            const smoothed = rolling7DayAvg(rawActivity)
             datasets.push({
                 label: contributorDisplayName(author),
-                data: smoothed,
+                data: rawActivity,
                 backgroundColor: getChartColor(colorIdx) + '80',
                 borderColor: getChartColor(colorIdx),
                 borderWidth: 1.5,
@@ -603,10 +580,9 @@
                 }
                 return Math.max(addedSum, removedSum)
             })
-            const smoothed = rolling7DayAvg(rawActivity)
             datasets.push({
                 label: 'Other',
-                data: smoothed,
+                data: rawActivity,
                 backgroundColor: getCssVar('--chart-other') + '80',
                 borderColor: getCssVar('--chart-other'),
                 borderWidth: 1.5,
