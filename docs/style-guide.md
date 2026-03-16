@@ -6,7 +6,11 @@ Writing and code styles.
 
 - Wording
     - **Use a friendly style**: Make all texts informal, friendly, encouraging, and concise.
-    - **Use active voice**: Prefer an active voice rather than passive when writing text.
+    - **Always prefer active voice**: Active voice is direct and clear. Passive voice feels bureaucratic.
+      "We released a new feature" not "A new feature was released." "Add a repo" not "A repo can be added."
+    - **Use verbs, not verb-noun phrases**: "Search" not "Make a search." "Analyze" not "Perform an analysis."
+    - **Don't use permissive language**: Give users confidence. "Add repos and start searching" not "Add repos and you
+      can start searching."
     - **Abbreviate English**: Use "I'm", "don't", and such.
     - **Don't trivialize**: Avoid terminology of "just", "simple", "easy", and "all you have to do".
     - **Use gender-neutral language**: Use they/them rather than he/him/she/her. Use "folks" or "everyone" rather than
@@ -33,8 +37,19 @@ Writing and code styles.
     - **Use ISO dates**: Use YYYY-MM-DD wherever it makes sense.
 - UI
     - Make **error messages** positive, actionable, and specific.
+    - **Success messages**: Talk about the user, not the action. Make success implicit and warm.
+      "You're in!" not "Login successful." "Repo added" not "The repository has been successfully added."
+    - **Confirmation dialogs**: Title should be a verb+noun question ("Delete this repo?"). Body should be a plain
+      irreversibility warning ("This can't be undone."). Buttons should be outcome verbs ("Delete" / "Keep"), never
+      "Yes" / "No".
+    - **Empty states**: Say what belongs here and offer a next step.
+      "No repos yet. Add one to start tracking lines of code."
     - **Start UI actions with a verb**: This makes buttons and links more actionable. Use "Create user" instead of "New
       user".
+    - **Link the destination, not the sentence**: Only link text that describes where you'll go.
+      "Read the [style guide](...)." not "[Read the style guide](...)."
+    - **Helper text**: Only add helper text if users actually need it. Keep it short and specific.
+      "Must be a valid GitHub URL" not "Please enter the URL of the GitHub repository you would like to add."
     - **Give examples in placeholder text**: Use "Example: 2025-01-01" or "name@example.com" rather than an instruction
       like "Enter your email".
     - **Never write "something(s)"**: Always pluralize dynamically: "1 user" instead of "1 user(s)".
@@ -49,21 +64,8 @@ Writing and code styles.
 
 Only add JSDoc that actually adds info. No tautologies.
 
-- Add meaningful comments for public functions, methods, and types to help the next dev.
-- BUT DO NOT use JSDoc for stuff like `Gets the name` for a function called `getName` :D
-- Before adding JSDoc, try using a more descriptive name for the function/param/variable.
-- DO NOT repeat TypeScript types in `@param`/`@returns`.
-- USE JSDoc to mark caveats, tricky/unusual solutions, formats (`YYYY-MM-DD`), and constraints (`must end with /`)
-
-## Git
-
-### Commit messages
-
-Max 50 chars title, a few bullets of body if needed. No co-author.
-
-### PRs
-
-- Use the PR title to summarize the changes in a casual/informal tone. Be information dense and concise.
-- In the desc., write a thorough, organized, but concise, often bulleted list of the changes. Use no headings.
-- At the bottom of the PR description, use a single "## Test plan" heading, in which, explain how the changes were
-  tested. Assume that the changes were also tested manually if it makes sense for the type of changes.
+- ✅ Add meaningful comments for public functions, methods, and types to help the next dev.
+- ❌ DO NOT use JSDoc for stuff like `Gets the name` for a function called `getName` :D
+- ✅ Before adding JSDoc, try using a more descriptive name for the function/param/variable.
+- ❌ DO NOT repeat TypeScript types in `@param`/`@returns`.
+- ⚠️ USE JSDoc to mark caveats, tricky/unusual solutions, formats (`YYYY-MM-DD`), and constraints (`must end with /`)

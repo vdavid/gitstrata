@@ -49,10 +49,38 @@ Run the smallest set of checks possible for efficiency while maintaining confide
 Frontend (SvelteKit): `prettier` → `eslint` → `knip` → `svelte-check` → `vitest` | `pnpm-audit` Scripts (Go): `gofmt` →
 `go-vet` → `go-tests` | `gofmt` → `staticcheck`
 
+## Critical rules
+
+- ❌ Don't add JSDoc that repeats types or obvious function names
+- ❌ Don't ignore linter warnings (fix them or justify with a comment)
+- ❌ Don't add dependencies without checking license compatibility (all deps must be MIT or similarly permissive)
+- ❌ Don't use `any` type. ESLint will error.
+- ❌ Don't use classes. Only functional components and modules.
+
+## Workflow
+
+- Always read `docs/style-guide.md` before writing code or user-facing text. Especially sentence case!
+- Cover your code with tests until you're confident. Don't go overboard. Test per milestone.
+- When getting oriented, consider the docs: `docs` folder and `CLAUDE.md` files in each directory.
+- When coming up with a plan, save it to `docs/specs/{feature}-plan.md` (we clean out old plans periodically, git
+  history remembers them).
+- Also create an accompanying task list that fully covers but doesn't duplicate the plan on a high level. If all items
+  on the task list are honestly marked as done, the plan is fully implemented in great quality. Tasks should be
+  one-liners, grouped by milestones. Include docs, testing, and running all necessary checks.
+- Always tick off tasks as they're done when using a task list.
+- **Keep docs alive**: When modifying a feature directory that has a `CLAUDE.md`, check if the doc still matches the
+  code. Update it if your changes affect architecture, key decisions, or gotchas. Don't update for trivial changes. If
+  there's no `CLAUDE.md` file yet, but you want to capture high-level info about a module or feature, create one. Make
+  it faster for the next person or agent to get oriented.
+
+Always do a last round of checks before finishing up:
+
+1. Looking back at this work, do you think this will be convenient to maintain later?
+2. Will this lead to great UX for the end user, with sufficient transparency into the work that's happening?
+3. Discuss with the user anything that's not great, or fix if straightforward then go to point 1.
+
 ## TypeScript
 
-- Only functional components and modules. No classes.
-- Don't use `any` type. ESLint will error.
 - Prefer functional programming (map, reduce, some, forEach) and pure functions wherever it makes sense.
 - Use `const` for everything, unless it makes the code unnecessarily verbose.
 - Start function names with a verb, unless unidiomatic in the specific case.
@@ -67,61 +95,16 @@ Frontend (SvelteKit): `prettier` → `eslint` → `knip` → `svelte-check` → 
 - Always think about accessibility when designing, and dark+light modes.
 - Use `px` by default but can use `rem` if it's more descriptive.
 
-## Design guidelines
-
-- Always make features extremely user-friendly.
-- Always apply radical transparency: make the internals of what's happening available. Hide the details from the surface
-  so the main UI isn't cluttered.
-- For longer processes: 1. show a progress indicator (an animation), 2. a progress bar and counter if we know the end
-  state (for example, how many files we're loading), and 3. a time estimate if we have a guess how long it'll take.
-- Always keep accessibility in mind. Features should be available to people with impaired vision, hearing, and cognitive
-  disabilities.
-- All actions longer than, say, one second should be immediately cancelable, canceling not just the UI but any
-  background processes as well, to avoid wasting the user's resources.
-
-## Things to avoid
-
-- Don't add JSDoc that repeats types or obvious function names
-- Don't ignore linter warnings (fix them or justify with a comment)
-- Don't add dependencies without checking license compatibility (all deps must be MIT or similarly permissive)
-
-## Git
-
-Max 50 char title, a few bullets of body if needed. No co-author.
-
-## Planning
-
-- When getting oriented, consider the docs: `docs` folder and `CLAUDE.md` files in each directory.
-- When coming up with a plan, save it to `docs/specs/{feature}-plan.md` (we clean out old plans periodically, git
-  history remembers them).
-- Also create an accompanying task list that fully covers but doesn't duplicate the plan on a high level. If all items
-  on the task list are honestly marked as done, the plan is fully implemented in great quality. Tasks should be
-  one-liners, grouped by milestones. Include docs, testing, and running all necessary checks.
-
-## Development
-
-- Always tick off tasks as they're done when using a task list.
-- When testing, consider using Vitest and Playwright, whatever is needed to feel confident about the development. Do
-  this per milestone. Don't go overboard with unit tests. Test exactly so that you feel confident.
-- **Keep docs alive**: When modifying a feature directory that has a `CLAUDE.md`, check if the doc still matches the
-  code. Update it if your changes affect architecture, key decisions, or gotchas. Don't update for trivial changes. If
-  there's no `CLAUDE.md` file yet, but you want to capture high-level info about a module or feature, create one. Make
-  it faster for the next person or agent to get oriented.
-
-Always do a last round of checks before finishing up:
-
-1. Looking back at this work, do you think this will be convenient to maintain later?
-2. Will this lead to great UX for the end user, with sufficient transparency into the work that's happening?
-3. Discuss with the user anything that's not great, or fix if straightforward then go to point 1.
-
 ## Useful references
 
+- [Style guide](docs/style-guide.md) — writing and code style rules. Especially "sentence case" for titles and labels!
+- [Visual language](docs/visual-language.md) — color tokens, typography, surfaces, component patterns
+- [Design principles](docs/design-principles.md) — product design values
+- [Architecture](docs/architecture.md) — subsystem map with links to colocated `CLAUDE.md` files
 - [Svelte 5 docs](https://svelte.dev/docs/svelte/overview)
 - [SvelteKit docs](https://svelte.dev/docs/kit/introduction)
 - [Tailwind CSS v4 docs](https://tailwindcss.com/docs)
 - [isomorphic-git docs](https://isomorphic-git.org/docs/en/guide)
 - [Chart.js docs](https://www.chartjs.org/docs/latest/)
-- [Style guide](docs/style-guide.md) — keep this in mind! Especially "sentence case" for titles and labels!
-- [Visual language](docs/visual-language.md) — color tokens, typography, surfaces, component patterns
 
 Happy coding!
