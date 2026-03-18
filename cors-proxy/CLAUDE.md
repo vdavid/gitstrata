@@ -24,11 +24,11 @@ responses; otherwise just a pass-through proxy.
   `corsProxy`, so the proxy re-adds `https://` when the path doesn't start with `http`. Example:
   `https://proxy-host/github.com/foo/bar.git/info/refs` → upstream `https://github.com/foo/bar.git/info/refs`.
 - **Caching**: GET `/info/refs` v1 responses (no `Git-Protocol` header) are cached via the Cloudflare Cache API with a
-  5-minute TTL (`Cache-Control: public, max-age=300`). v2 responses are never cached — isomorphic-git uses v2 for
-  branch detection then v1 for clone, and caching v2 would poison v1 lookups. `/info/refs` responses to the browser
-  include `Cache-Control: no-store` so the browser doesn't cache them either (same v1/v2 concern). POST
-  `/git-upload-pack` requests are never cached. The `X-Cache` response header indicates `HIT`, `MISS`, or `NONE` (for
-  uncacheable requests). Cache is per-datacenter, not global.
+  5-minute TTL (`Cache-Control: public, max-age=300`). v2 responses are never cached — isomorphic-git uses v2 for branch
+  detection then v1 for clone, and caching v2 would poison v1 lookups. `/info/refs` responses to the browser include
+  `Cache-Control: no-store` so the browser doesn't cache them either (same v1/v2 concern). POST `/git-upload-pack`
+  requests are never cached. The `X-Cache` response header indicates `HIT`, `MISS`, or `NONE` (for uncacheable
+  requests). Cache is per-datacenter, not global.
 - **No upstream fetch timeout**: The proxy does not set a timeout on the `fetch()` to git hosts. This is intentional.
   Cloudflare Workers have no hard wall-clock duration limit — a Worker runs as long as the client stays connected. CPU
   time limits (Free: 10 ms, Paid: 5 min) only count active computation; I/O wait (streaming bytes) does not count. The

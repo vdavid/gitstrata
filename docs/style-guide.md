@@ -6,8 +6,8 @@ Writing and code styles.
 
 - Wording
     - **Use a friendly style**: Make all texts informal, friendly, encouraging, and concise.
-    - **Always prefer active voice**: Active voice is direct and clear. Passive voice feels bureaucratic.
-      "We released a new feature" not "A new feature was released." "Add a repo" not "A repo can be added."
+    - **Always prefer active voice**: Active voice is direct and clear. Passive voice feels bureaucratic. "We released a
+      new feature" not "A new feature was released." "Add a repo" not "A repo can be added."
     - **Use verbs, not verb-noun phrases**: "Search" not "Make a search." "Analyze" not "Perform an analysis."
     - **Don't use permissive language**: Give users confidence. "Add repos and start searching" not "Add repos and you
       can start searching."
@@ -37,19 +37,19 @@ Writing and code styles.
     - **Use ISO dates**: Use YYYY-MM-DD wherever it makes sense.
 - UI
     - Make **error messages** positive, actionable, and specific.
-    - **Success messages**: Talk about the user, not the action. Make success implicit and warm.
-      "You're in!" not "Login successful." "Repo added" not "The repository has been successfully added."
+    - **Success messages**: Talk about the user, not the action. Make success implicit and warm. "You're in!" not "Login
+      successful." "Repo added" not "The repository has been successfully added."
     - **Confirmation dialogs**: Title should be a verb+noun question ("Delete this repo?"). Body should be a plain
       irreversibility warning ("This can't be undone."). Buttons should be outcome verbs ("Delete" / "Keep"), never
       "Yes" / "No".
-    - **Empty states**: Say what belongs here and offer a next step.
-      "No repos yet. Add one to start tracking lines of code."
+    - **Empty states**: Say what belongs here and offer a next step. "No repos yet. Add one to start tracking lines of
+      code."
     - **Start UI actions with a verb**: This makes buttons and links more actionable. Use "Create user" instead of "New
       user".
-    - **Link the destination, not the sentence**: Only link text that describes where you'll go.
-      "Read the [style guide](...)." not "[Read the style guide](...)."
-    - **Helper text**: Only add helper text if users actually need it. Keep it short and specific.
-      "Must be a valid GitHub URL" not "Please enter the URL of the GitHub repository you would like to add."
+    - **Link the destination, not the sentence**: Only link text that describes where you'll go. "Read the
+      [style guide](...)." not "[Read the style guide](...)."
+    - **Helper text**: Only add helper text if users actually need it. Keep it short and specific. "Must be a valid
+      GitHub URL" not "Please enter the URL of the GitHub repository you would like to add."
     - **Give examples in placeholder text**: Use "Example: 2025-01-01" or "name@example.com" rather than an instruction
       like "Enter your email".
     - **Never write "something(s)"**: Always pluralize dynamically: "1 user" instead of "1 user(s)".
