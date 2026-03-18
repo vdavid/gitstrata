@@ -5,21 +5,24 @@
     interface Props {
         days: DayStats[]
         detectedLanguages: string[]
-        repoSizeBytes?: number | null
         onHighlightDate?: (date: string | null) => void
     }
 
-    let { days, repoSizeBytes, onHighlightDate }: Props = $props()
+    let { days, onHighlightDate }: Props = $props()
 
-    const formattedRepoSize = $derived.by(() => {
-        if (repoSizeBytes == null || repoSizeBytes <= 0) return null
-        return `${(repoSizeBytes / (1024 * 1024)).toFixed(1)} MB`
-    })
-
-    // --- Total lines ---
+    // --- Total size ---
     const totalLines = $derived(days.length > 0 ? days[days.length - 1].total : 0)
 
     const formattedTotal = $derived(totalLines.toLocaleString('en-US').replace(/,/g, '\u2009'))
+
+    /** Count commits from days that have actual commits (not gap-filled) */
+    const totalCommits = $derived(
+        days
+            .filter((d) => d.comments.length === 0 || d.comments[0] !== '-')
+            .reduce((sum, d) => sum + d.comments.length, 0),
+    )
+
+    const formattedCommits = $derived(totalCommits.toLocaleString('en-US').replace(/,/g, '\u2009'))
 
     // --- Prod / test split ---
     const prodTestSplit = $derived.by(() => {
@@ -73,10 +76,10 @@
         return Math.round((last.total - first.total) / daysBetween)
     })
 
-    const avgGrowthLast90 = $derived.by(() => {
+    const computeAvgGrowthForLastNDays = (n: number): number => {
         if (days.length < 2) return 0
         const lastDate = new Date(days[days.length - 1].date)
-        const cutoffStr = new Date(lastDate.getTime() - 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+        const cutoffStr = new Date(lastDate.getTime() - n * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
 
         // Find the first day at or after the cutoff
         let startIdx = 0
@@ -94,15 +97,18 @@
             (new Date(endDay.date).getTime() - new Date(startDay.date).getTime()) / (1000 * 60 * 60 * 24),
         )
         return Math.round((endDay.total - startDay.total) / daysBetween)
-    })
+    }
 
-    /** Show arrow only when the difference is significant (>20%) */
+    const avgGrowthLast90 = $derived(computeAvgGrowthForLastNDays(90))
+    const avgGrowthLast30 = $derived(computeAvgGrowthForLastNDays(30))
+
+    /** Show arrow only when the 30d growth differs significantly (>20%) from the 90d growth */
     const growthTrend = $derived.by(() => {
-        if (avgDailyGrowth === 0 && avgGrowthLast90 === 0) return 'neutral' as const
-        const base = Math.max(Math.abs(avgDailyGrowth), 1)
-        const ratio = Math.abs(avgGrowthLast90 - avgDailyGrowth) / base
+        if (avgGrowthLast90 === 0 && avgGrowthLast30 === 0) return 'neutral' as const
+        const base = Math.max(Math.abs(avgGrowthLast90), 1)
+        const ratio = Math.abs(avgGrowthLast30 - avgGrowthLast90) / base
         if (ratio <= 0.2) return 'neutral' as const
-        return avgGrowthLast90 > avgDailyGrowth ? ('up' as const) : ('down' as const)
+        return avgGrowthLast30 > avgGrowthLast90 ? ('up' as const) : ('down' as const)
     })
 
     // --- Age ---
@@ -260,29 +266,23 @@
     role="region"
     aria-label="Summary statistics"
 >
-    <!-- Total lines -->
+    <!-- Total size -->
     <div class="strata-card p-4">
         <p
             class="text-foreground-tertiary"
             style="font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.05em; text-transform: uppercase;"
         >
-            Total lines
+            Total size
         </p>
         <p
             class="mt-2 text-foreground"
             style="font-family: var(--font-mono); font-size: 1.125rem; font-weight: 500; letter-spacing: -0.01em;"
         >
-            {formattedTotal}
+            LoC: {formattedTotal}
         </p>
-        {#if formattedRepoSize}
-            <p
-                class="mt-1 text-foreground-secondary"
-                style="font-family: var(--font-mono); font-size: 0.75rem;"
-                title="It includes history"
-            >
-                Repo size: {formattedRepoSize}
-            </p>
-        {/if}
+        <p class="mt-1 text-foreground-secondary" style="font-family: var(--font-mono); font-size: 0.75rem;">
+            {totalCommits === 1 ? 'commit' : 'commits'}: {formattedCommits}
+        </p>
     </div>
 
     <!-- Prod / test split -->
@@ -355,14 +355,16 @@
                 class="text-foreground-secondary"
                 style="font-family: var(--font-mono); font-size: 0.75rem; white-space: nowrap;"
             >
-                Last 90d: {avgGrowthLast90 >= 0 ? '+' : ''}{formatNumber(avgGrowthLast90)}/day
+                Last 90d: {avgGrowthLast90 >= 0 ? '+' : ''}{formatNumber(avgGrowthLast90)}/d, 30d: {avgGrowthLast30 >= 0
+                    ? '+'
+                    : ''}{formatNumber(avgGrowthLast30)}/d
             </p>
             {#if growthTrend !== 'neutral'}
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" style="flex-shrink: 0;">
                     <title
                         >{growthTrend === 'up'
-                            ? 'Recent growth is higher than the average'
-                            : 'Recent growth is lower than the average'}</title
+                            ? '30-day growth is higher than the 90-day average'
+                            : '30-day growth is lower than the 90-day average'}</title
                     >
                     {#if growthTrend === 'up'}
                         <path

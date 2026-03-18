@@ -441,6 +441,7 @@
 
     /** Only days with actual commits (excludes gap-filled carry-forward days) */
     const commitDays = $derived(displayDays.filter((d) => d.comments.length === 0 || d.comments[0] !== '-'))
+    const totalCommitCount = $derived(commitDays.reduce((sum, d) => sum + d.comments.length, 0))
 
     const displayRepoSlug = $derived.by(() => {
         const input = result?.repoUrl ?? lastRepoInput
@@ -758,7 +759,6 @@
             <ResultsSummary
                 days={displayDays}
                 detectedLanguages={displayLanguages}
-                {repoSizeBytes}
                 onHighlightDate={(d) => (chartHighlightDate = d)}
             />
 
@@ -778,7 +778,8 @@
                         style="font-family: var(--font-mono); font-size: 0.875rem; letter-spacing: 0.02em; transition-duration: var(--duration-fast);"
                     >
                         Data table ({commitDays.length}
-                        {commitDays.length === 1 ? 'commit' : 'commits'})
+                        {commitDays.length === 1 ? 'day' : 'days'}, data from {totalCommitCount}
+                        {totalCommitCount === 1 ? 'commit' : 'commits'})
                     </summary>
                     <div class="mt-4">
                         <ResultsTable
