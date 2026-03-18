@@ -5,10 +5,16 @@
     interface Props {
         days: DayStats[]
         detectedLanguages: string[]
+        repoSizeBytes?: number | null
         onHighlightDate?: (date: string | null) => void
     }
 
-    let { days, onHighlightDate }: Props = $props()
+    let { days, repoSizeBytes, onHighlightDate }: Props = $props()
+
+    const formattedRepoSize = $derived.by(() => {
+        if (repoSizeBytes == null || repoSizeBytes <= 0) return null
+        return `${(repoSizeBytes / (1024 * 1024)).toFixed(1)} MB`
+    })
 
     // --- Total size ---
     const totalLines = $derived(days.length > 0 ? days[days.length - 1].total : 0)
@@ -278,11 +284,17 @@
             class="mt-2 text-foreground"
             style="font-family: var(--font-mono); font-size: 1.125rem; font-weight: 500; letter-spacing: -0.01em;"
         >
-            LoC: {formattedTotal}
+            LoC: {formattedTotal}, {totalCommits === 1 ? 'commit' : 'commits'}: {formattedCommits}
         </p>
-        <p class="mt-1 text-foreground-secondary" style="font-family: var(--font-mono); font-size: 0.75rem;">
-            {totalCommits === 1 ? 'commit' : 'commits'}: {formattedCommits}
-        </p>
+        {#if formattedRepoSize}
+            <p
+                class="mt-1 text-foreground-secondary"
+                style="font-family: var(--font-mono); font-size: 0.75rem;"
+                title="It includes history"
+            >
+                Repo size: {formattedRepoSize}
+            </p>
+        {/if}
     </div>
 
     <!-- Prod / test split -->

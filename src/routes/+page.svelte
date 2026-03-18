@@ -759,6 +759,7 @@
             <ResultsSummary
                 days={displayDays}
                 detectedLanguages={displayLanguages}
+                {repoSizeBytes}
                 onHighlightDate={(d) => (chartHighlightDate = d)}
             />
 
