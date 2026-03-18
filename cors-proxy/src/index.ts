@@ -309,7 +309,7 @@ app.all('*', async (c) => {
             const cache = caches.default
             const cacheKey = new Request(targetUrl)
             const cacheHeaders = new Headers(responseHeaders)
-            cacheHeaders.set('Cache-Control', 'public, max-age=43200')
+            cacheHeaders.set('Cache-Control', 'public, max-age=300')
             const cacheResponse = new Response(response.clone().body, {
                 status: response.status,
                 headers: cacheHeaders,
