@@ -6,7 +6,9 @@
     "packageManager": "pnpm@10.29.2",
     "scripts": {
         "preinstall": "node -e \"if(!/pnpm/.test(process.env.npm_config_user_agent))throw new Error('Use pnpm to install dependencies')\"",
-        "dev": "vite dev",
+        "dev": "concurrently -n app,proxy -c cyan,magenta --kill-others-on-fail 'pnpm dev:app' 'pnpm dev:cors-proxy'",
+        "dev:app": "vite dev",
+        "dev:cors-proxy": "pnpm -C cors-proxy dev",
         "build": "vite build",
         "preview": "vite preview",
         "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
@@ -28,6 +30,7 @@
         "@sveltejs/kit": "^2.52.0",
         "@sveltejs/vite-plugin-svelte": "^6.2.4",
         "@tailwindcss/vite": "^4.1.18",
+        "concurrently": "9.2.1",
         "eslint": "^10.0.0",
         "eslint-plugin-svelte": "^3.15.0",
         "globals": "^17.3.0",
