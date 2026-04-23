@@ -33,7 +33,7 @@
 
     // --- Phase definitions ---
 
-    type PhaseId = 'detect' | 'count' | 'compress' | 'receive' | 'resolve' | 'analyze'
+    type PhaseId = 'detect' | 'count' | 'compress' | 'receive' | 'index' | 'resolve' | 'analyze'
     type PhaseState = 'done' | 'active' | 'pending'
 
     interface PhaseDefinition {
@@ -47,7 +47,8 @@
         { id: 'detect', label: 'Detect branch', incrementalLabel: 'Fetch commits', determinate: false },
         { id: 'count', label: 'Count objects', determinate: false },
         { id: 'compress', label: 'Compress objects', determinate: true },
-        { id: 'receive', label: 'Receive objects', determinate: true },
+        { id: 'receive', label: 'Receive objects', determinate: false },
+        { id: 'index', label: 'Index objects', determinate: true },
         { id: 'resolve', label: 'Resolve deltas', determinate: true },
         { id: 'analyze', label: 'Analyze commits', determinate: true },
     ]
@@ -124,9 +125,22 @@ ${statBlock}`
                 }
 
                 return `<p>This is the actual download \u2014 bytes flowing from the server through a CORS proxy into the browser. Everything runs in a Web Worker so the page stays responsive while data streams in.</p>
-<p>The pack file contains all the compressed objects from the previous step. Once it arrives, the objects still need to be unpacked and reconstructed.</p>
+<p>The pack file contains all the compressed objects from the previous step. Once it arrives, the next steps unpack and reconstruct them.</p>
 <p>GitHub and other hosts often send data in bursts with long pauses between them \u2014 sometimes several minutes of silence. This is normal server behavior, not a connection problem.</p>
 ${sizeEstimateBlock}${statBlock}`
+            }
+
+            case 'index': {
+                const snap = snapshots['index']
+                const statBlock =
+                    snap && snap.total > 0
+                        ? `<span class="phase-info-stat"><span class="phase-info-stat-value">${formatNumber(snap.loaded)} / ${formatNumber(snap.total)}</span> objects indexed</span>`
+                        : snap && snap.loaded > 0
+                          ? `<span class="phase-info-stat"><span class="phase-info-stat-value">${formatNumber(snap.loaded)}</span> objects indexed</span>`
+                          : ''
+                return `<p>The downloaded pack is a single bundle containing every object in the repo. To look any of them up later, git needs an <strong>index</strong> \u2014 a map from each object\u2019s SHA hash to its position in the pack.</p>
+<p>This step scans the pack once to build that map and saves it alongside the pack as a <code>.idx</code> file. It\u2019s browser-side CPU work, no network involved \u2014 speed depends on the number of objects.</p>
+${statBlock}`
             }
 
             case 'resolve':
@@ -155,8 +169,8 @@ ${statBlock}`
         'Detecting default branch': 'detect',
         Counting: 'count',
         Compressing: 'compress',
-        Receiving: 'receive',
-        downloading: 'receive', // Lowercase — isomorphic-git's own label for HTTP byte transfer, unlike the capitalized git protocol phases
+        downloading: 'receive', // Our HTTP wrapper — bytes flowing in
+        Receiving: 'index', // isomorphic-git's pack parser — building the .idx after download
         Resolving: 'resolve',
         'Fetching new commits': 'detect',
     }
@@ -406,6 +420,13 @@ ${statBlock}`
                 return ''
 
             case 'compress':
+                if (state === 'active' && !cloneSubPhaseComplete && snap.total > 0)
+                    return `${formatNumber(snap.loaded)} / ${formatNumber(snap.total)} objects`
+                if (state === 'done' && snap.total > 0) return `${formatNumber(snap.total)} objects`
+                if (state === 'done' && snap.loaded > 0) return `${formatNumber(snap.loaded)} objects`
+                return ''
+
+            case 'index':
                 if (state === 'active' && !cloneSubPhaseComplete && snap.total > 0)
                     return `${formatNumber(snap.loaded)} / ${formatNumber(snap.total)} objects`
                 if (state === 'done' && snap.total > 0) return `${formatNumber(snap.total)} objects`
