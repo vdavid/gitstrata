@@ -5,10 +5,13 @@
     import { page } from '$app/state'
     import { env } from '$env/dynamic/public'
     import { parseRepoUrl, parseRepoFromPathname } from '$lib/url'
+    import { isSelfHostedProxy } from '$lib/cors-proxy'
+    import { githubTokenState } from '$lib/github-token.svelte'
     import { formatBytes, getResult, saveResult, deleteRepo } from '$lib/cache'
     import { fetchServerResult, uploadServerResult } from '$lib/server-cache'
     import { createAnalyzer, type AnalyzerHandle } from '$lib/worker/analyzer.api'
     import type { AnalysisResult, DayStats, ErrorKind, ProgressEvent } from '$lib/types'
+    import GithubKeyForm from '$lib/components/GithubKeyForm.svelte'
     import RepoInput from '$lib/components/RepoInput.svelte'
     import PipelineProgress from '$lib/components/PipelineProgress.svelte'
     import ResultsChart from '$lib/components/ResultsChart.svelte'
@@ -17,6 +20,11 @@
     import TigGitLogo from '$lib/components/TigGitLogo.svelte'
 
     const corsProxy = env.PUBLIC_CORS_PROXY_URL || 'https://cors.isomorphic-git.org'
+
+    // A stored GitHub token is only sent for github.com, and only through a self-hosted proxy
+    // (never a third-party one). It authenticates clones of the user's own private repos.
+    const tokenForHost = (host: string): string | undefined =>
+        host === 'github.com' && isSelfHostedProxy(corsProxy) ? githubTokenState.current?.token : undefined
 
     type Phase = 'idle' | 'cloning' | 'processing' | 'done' | 'error'
 
@@ -88,6 +96,13 @@
 
     // Focus management: reference to progress area
     let progressAreaEl: HTMLDivElement | undefined = $state()
+    let repoInputEl = $state<{ focus: () => void }>()
+
+    /** Return to the input and focus it — used when dismissing an error or the size gate. */
+    const dismissToInput = () => {
+        phase = 'idle'
+        requestAnimationFrame(() => repoInputEl?.focus())
+    }
 
     // Last repo input for retry
     let lastRepoInput = $state('')
@@ -371,7 +386,7 @@
                 progressAreaEl?.focus()
             })
 
-            await analyzer.analyze(repoInput, corsProxy, handleProgress)
+            await analyzer.analyze(repoInput, corsProxy, tokenForHost(parsed.host), handleProgress)
         } catch (e) {
             if (generation !== analysisGeneration) return
             stopTimer()
@@ -390,6 +405,7 @@
     const dismissSizeGate = () => {
         sizeGateBytes = 0
         updateUrl('')
+        requestAnimationFrame(() => repoInputEl?.focus())
     }
 
     let cancelCleanup: Promise<void> | undefined
@@ -500,6 +516,7 @@
     <!-- Input -->
     <div class="mx-auto max-w-2xl">
         <RepoInput
+            bind:this={repoInputEl}
             onsubmit={startAnalysis}
             disabled={phase === 'cloning' || phase === 'processing'}
             initialValue={initialRepo}
@@ -528,6 +545,11 @@
                 </svg>
                 <div class="min-w-0 flex-1">
                     <p class="text-sm text-error">{errorMessage}</p>
+                    {#if errorKind === 'auth-required'}
+                        <div class="mt-3 border-t border-border pt-3">
+                            <GithubKeyForm onsaved={() => startAnalysis(lastRepoInput, true)} />
+                        </div>
+                    {/if}
                     <div class="mt-3 flex items-center gap-3">
                         {#if retryable}
                             <button onclick={retry} class="btn-primary text-sm">
@@ -547,7 +569,7 @@
                                 Manage cache
                             </button>
                         {/if}
-                        <button onclick={() => (phase = 'idle')} class="btn-link text-sm">
+                        <button onclick={dismissToInput} class="btn-link text-sm">
                             {retryable ? 'Cancel' : 'Try another repo'}
                         </button>
                     </div>

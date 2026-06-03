@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import app from './index'
 
 vi.mock('./verify-head-commit', () => ({
@@ -223,5 +223,64 @@ describe('PUT /cache/v1/:repoHash', () => {
         // First 10 should succeed, 11th should be rate limited
         expect(results.slice(0, 10).every((s) => s === 200)).toBe(true)
         expect(results[10]).toBe(429)
+    })
+})
+
+// --- Proxy passthrough auth ---
+
+const noopExecutionCtx = { waitUntil: () => {}, passThroughOnException: () => {} }
+
+describe('proxy passthrough auth', () => {
+    afterEach(() => {
+        vi.unstubAllGlobals()
+    })
+
+    it('forwards Authorization upstream and does not cache authed /info/refs', async () => {
+        const putSpy = vi.fn(async () => {})
+        vi.stubGlobal('caches', { default: { match: vi.fn(async () => undefined), put: putSpy } })
+        let capturedHeaders: Headers | undefined
+        vi.stubGlobal(
+            'fetch',
+            vi.fn(async (_url: string, init: RequestInit) => {
+                capturedHeaders = new Headers(init.headers)
+                return new Response('refs', { status: 200 })
+            }),
+        )
+
+        const res = await app.request(
+            '/github.com/owner/repo.git/info/refs?service=git-upload-pack',
+            { method: 'GET', headers: { authorization: 'Bearer secret-token', accept: '*/*' } },
+            {},
+            noopExecutionCtx,
+        )
+
+        expect(res.status).toBe(200)
+        expect(res.headers.get('X-Cache')).toBe('NONE')
+        expect(putSpy).not.toHaveBeenCalled()
+        expect(capturedHeaders?.get('authorization')).toBe('Bearer secret-token')
+    })
+
+    it('caches unauthenticated /info/refs and omits Authorization upstream', async () => {
+        const putSpy = vi.fn(async () => {})
+        vi.stubGlobal('caches', { default: { match: vi.fn(async () => undefined), put: putSpy } })
+        let capturedHeaders: Headers | undefined
+        vi.stubGlobal(
+            'fetch',
+            vi.fn(async (_url: string, init: RequestInit) => {
+                capturedHeaders = new Headers(init.headers)
+                return new Response('refs', { status: 200 })
+            }),
+        )
+
+        const res = await app.request(
+            '/github.com/owner/repo.git/info/refs?service=git-upload-pack',
+            { method: 'GET', headers: { accept: '*/*' } },
+            {},
+            noopExecutionCtx,
+        )
+
+        expect(res.headers.get('X-Cache')).toBe('MISS')
+        expect(putSpy).toHaveBeenCalled()
+        expect(capturedHeaders?.get('authorization')).toBeNull()
     })
 })

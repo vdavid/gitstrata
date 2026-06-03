@@ -14,6 +14,16 @@ a Web Worker.
   inline test detection. `.h` defaults to C but reassigns to C++ when `.cpp`/`.cc`/`.cxx` files exist. Languages can set
   `noTestSplit: true` to skip prod/test breakdown (used for HTML, CSS, SQL, Shell, Svelte, Vue, Astro, Docs, Config).
 - `url.ts` — Repo URL parsing and normalization (GitHub/GitLab/Bitbucket, owner/repo shorthand)
+- `github-token.ts` — Pure (non-reactive) GitHub personal access token storage and verification. localStorage under
+  `gitstrata-github-token` (`{ token, account, addedAt }`). `verifyGithubToken` hits `api.github.com/user` directly
+  (CORS-enabled, no proxy) to confirm the token and capture the login. `maskToken` for display. The token is stored only
+  on the device; it is sent to GitHub through the CORS proxy solely to authenticate private-repo clones.
+- `github-token.svelte.ts` — Reactive singleton (`$state`) wrapping `github-token.ts`. Components read
+  `githubTokenState.current`; `saveGithubToken`/`deleteGithubToken` mutate it. The worker can't read localStorage, so
+  `+page.svelte` reads the token here and passes it into `analyze`. `Date` is constructed in the pure module
+  (`makeTokenEntry`) to avoid the `svelte/prefer-svelte-reactivity` lint in `.svelte.ts`.
+- `cors-proxy.ts` — `isSelfHostedProxy(corsProxy)` gates private-repo auth: a token is only sent when the deployment
+  runs its own proxy (a configured `PUBLIC_CORS_PROXY_URL`), never through the shared public `publicProxyUrl` default.
 - `cache.ts` — IndexedDB results cache using `idb`, with size tracking, LRU eviction (500 MB limit), and `formatBytes`
   helper. Uses a separate `results-meta` store for lightweight metadata (`repoUrl`, `analyzedAt`, `lastAccessed`,
   `sizeBytes`) so eviction, size checks, and listing never deserialize full results. The heavy `results` store is only
@@ -25,7 +35,10 @@ a Web Worker.
 - `git/clone.ts` — Clone/fetch using isomorphic-git + lightning-fs, default branch detection via `listServerRefs`
   (protocol v2), abortable HTTP wrapper for signal support, size-warning emission for repos >1 GB. A `StalenessMonitor`
   wraps the external abort signal with an adaptive timeout: 5 min base, extended to 20 min once 10+ MB of data has been
-  received (GitHub sends large packs in bursts). The UI detects silence internally via `PipelineProgress`.
+  received (GitHub sends large packs in bursts). The UI detects silence internally via `PipelineProgress`. An optional
+  `githubToken` threads through `detectDefaultBranch`/`cloneRepo`/`fetchRepo` (and the worker
+  `analyze`/`analyzeIncremental`) into isomorphic-git's `onAuth`, which fires on a 401 and retries with Basic auth
+  (`{ username: token, password: 'x-oauth-basic' }`) to clone private repos.
 - `git/history.ts` — Commit log grouped by date, consecutive date generation, gap filling. `CommitEntry` stores
   per-commit metadata (hash, author, message, timestamp, parentOids). `DailyCommit` includes an `authors` field with
   deduplicated `"Name <email>"` strings per day and a `commits: CommitEntry[]` array (sorted oldest-first) with every

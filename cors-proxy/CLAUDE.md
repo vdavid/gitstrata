@@ -14,8 +14,12 @@ responses; otherwise just a pass-through proxy.
   frontend. Override in `.dev.vars` for local dev. When unset, falls back to `*`.
 - **Host allowlist**: Only proxies to `github.com`, `gitlab.com`, and `bitbucket.org`. Rejects all other hosts.
 - Only allows git protocol paths (`/info/refs`, `/git-upload-pack`) — validated against `pathname`, not the full URL.
-- **Header allowlist**: Only forwards `content-type`, `content-length`, `accept`, `accept-encoding`, and `git-protocol`
-  to upstream. All other incoming headers (including `Authorization`, `Cookie`) are stripped.
+- **Header allowlist**: Only forwards `content-type`, `content-length`, `accept`, `accept-encoding`, `git-protocol`, and
+  `authorization` to upstream. All other incoming headers (including `Cookie`) are stripped. `authorization` is
+  forwarded so private repos can authenticate with a GitHub token; it only ever reaches the allowlisted git hosts. The
+  `WWW-Authenticate` response header is passed back through so isomorphic-git's 401→`onAuth` retry works.
+- **Never cache authed responses**: the `/info/refs` cache is keyed by URL only, so caching a private repo's refs would
+  leak them to the next requester of the same URL. `shouldCache` is gated on the absence of an `Authorization` header.
 - **Rate limiting**: Two layers. Cloudflare Rate Limiting (configured in the Cloudflare dashboard, not in code) enforces
   hard per-IP limits at the edge. In-memory counters (100 req/min, 10 writes/min) act as a best-effort secondary check
   within each Worker isolate. The in-memory layer is not durable (resets on cold start, per-isolate), so the Cloudflare

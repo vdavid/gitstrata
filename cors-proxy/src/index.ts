@@ -233,7 +233,10 @@ app.all('*', async (c) => {
     // branch detection then v1 for clone — caching v2 would poison v1 lookups.
     const isInfoRefsGet = c.req.method === 'GET' && targetUrl.includes('/info/refs')
     const gitProtocol = c.req.header('git-protocol')
-    const shouldCache = isInfoRefsGet && !gitProtocol
+    // Never cache authenticated responses: the cache is keyed by URL only, so caching a
+    // private repo's refs would leak them to the next requester of the same URL.
+    const hasAuthHeader = Boolean(c.req.header('authorization'))
+    const shouldCache = isInfoRefsGet && !gitProtocol && !hasAuthHeader
 
     if (shouldCache) {
         const cache = caches.default
@@ -266,6 +269,9 @@ app.all('*', async (c) => {
         'accept',
         'accept-encoding',
         'git-protocol',
+        // Forwarded so private repos can authenticate. Only ever reaches the allowlisted
+        // git hosts (github/gitlab/bitbucket). Authed responses are never cached (see above).
+        'authorization',
     ])
     const headers = new Headers()
     for (const [key, value] of c.req.raw.headers.entries()) {
@@ -293,6 +299,9 @@ app.all('*', async (c) => {
             const lower = key.toLowerCase()
             // Pass through content headers (but not cache-control — see below)
             if (lower === 'content-type' || lower === 'content-length' || lower === 'content-encoding') {
+                responseHeaders.set(key, value)
+            } else if (lower === 'www-authenticate') {
+                // Pass the auth challenge through so isomorphic-git retries the request with credentials.
                 responseHeaders.set(key, value)
             } else if (lower === 'cache-control' && !isInfoRefsGet) {
                 responseHeaders.set(key, value)

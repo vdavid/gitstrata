@@ -36,7 +36,7 @@ const classifyError = (error: unknown): { message: string; kind: ErrorKind } => 
 
     if (lower.includes('401') || lower.includes('403') || lower.includes('auth'))
         return {
-            message: 'This looks like a private repository. Git strata only supports public repos for now.',
+            message: 'This looks like a private repository. You need a GitHub token to analyze your private repos.',
             kind: 'auth-required',
         }
 
@@ -287,7 +287,12 @@ const analyzerApi = {
         await waitForBodyCleanups()
     },
 
-    async analyze(repoInput: string, corsProxy: string, onProgress: ProgressCallback): Promise<AnalysisResult> {
+    async analyze(
+        repoInput: string,
+        corsProxy: string,
+        githubToken: string | undefined,
+        onProgress: ProgressCallback,
+    ): Promise<AnalysisResult> {
         abortController = new AbortController()
         const signal = abortController.signal
         const parsed = parseRepoUrl(repoInput)
@@ -304,6 +309,7 @@ const analyzerApi = {
             const defaultBranch = await detectDefaultBranch({
                 url: parsed.url,
                 corsProxy,
+                githubToken,
                 signal,
             })
             logger.info('Detected branch: {branch}', { branch: defaultBranch })
@@ -325,6 +331,7 @@ const analyzerApi = {
                     dir,
                     url: parsed.url,
                     corsProxy,
+                    githubToken,
                     defaultBranch,
                     onProgress,
                     signal,
@@ -449,6 +456,7 @@ const analyzerApi = {
     async analyzeIncremental(
         repoInput: string,
         corsProxy: string,
+        githubToken: string | undefined,
         cachedResult: AnalysisResult,
         onProgress: ProgressCallback,
     ): Promise<AnalysisResult> {
@@ -468,7 +476,7 @@ const analyzerApi = {
                 url: parsed.url,
                 branch: defaultBranch,
             })
-            await fetchRepo({ fs, dir, url: parsed.url, corsProxy, defaultBranch, onProgress, signal })
+            await fetchRepo({ fs, dir, url: parsed.url, corsProxy, githubToken, defaultBranch, onProgress, signal })
             logger.info('Fetch complete')
 
             if (signal.aborted) {

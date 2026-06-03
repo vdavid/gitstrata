@@ -16,6 +16,12 @@
     let currentRepos = $state<{ owner: string; repo: string }[]>([])
     let currentPlaceholder = $state('Example: https://github.com/sveltejs/svelte')
     let genKey = $state(0)
+    let inputEl = $state<HTMLInputElement>()
+
+    /** Move focus to the URL field — used on load and when reopening from an error. */
+    export function focus() {
+        inputEl?.focus()
+    }
 
     $effect(() => {
         if (initialValue) {
@@ -27,6 +33,8 @@
         const repos = pickFeaturedRepos(3)
         currentRepos = repos
         currentPlaceholder = pickPlaceholder(repos)
+        // Focus the field on a fresh load (no deep-linked repo analyzing).
+        if (!initialValue && !disabled) inputEl?.focus()
     })
 
     const handleMore = () => {
@@ -92,6 +100,7 @@
     <div class="flex flex-col gap-3 sm:flex-row sm:items-start">
         <div class="relative flex-1">
             <input
+                bind:this={inputEl}
                 type="url"
                 bind:value={inputValue}
                 onkeydown={handleKeydown}

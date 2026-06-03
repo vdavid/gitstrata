@@ -114,9 +114,20 @@ interface CloneOptions {
     dir: string
     url: string
     corsProxy: string
+    githubToken?: string
     onProgress?: (event: ProgressEvent) => void
     signal?: AbortSignal
 }
+
+// isomorphic-git calls onAuth after a 401 and retries with the returned credentials.
+// A GitHub token authenticates as Basic auth (token as username). With NO token we attach no
+// callback at all (return undefined), so a 401 propagates as an auth error — surfaced to the user
+// as the "private repository" prompt with the add-key form. Returning `{ cancel: true }` instead
+// would make isomorphic-git throw a cancellation, which we'd mis-report as "Analysis cancelled".
+export const makeOnAuth = (
+    githubToken: string | undefined,
+): (() => { username: string; password: string }) | undefined =>
+    githubToken ? () => ({ username: githubToken, password: 'x-oauth-basic' }) : undefined
 
 // --- Staleness monitor: detects stuck connections and aborts after timeout ---
 
@@ -188,6 +199,7 @@ const defaultBranchTimeoutMs = 30_000
 export const detectDefaultBranch = async (options: {
     url: string
     corsProxy: string
+    githubToken?: string
     signal?: AbortSignal
 }): Promise<string> => {
     cloneLogger.info('Detecting default branch...')
@@ -198,6 +210,7 @@ export const detectDefaultBranch = async (options: {
         AbortSignal.timeout(defaultBranchTimeoutMs),
     ])
     const abortableHttp = makeAbortableHttp(signal)
+    const onAuth = makeOnAuth(options.githubToken)
     const refs = await git.listServerRefs({
         http: abortableHttp,
         corsProxy: options.corsProxy,
@@ -205,6 +218,7 @@ export const detectDefaultBranch = async (options: {
         prefix: 'HEAD',
         symrefs: true,
         protocolVersion: 2,
+        onAuth,
     })
     // Find HEAD's symref target (e.g. "refs/heads/main")
     const head = refs.find((r) => r.ref === 'HEAD')
@@ -219,6 +233,7 @@ export const detectDefaultBranch = async (options: {
         url: options.url,
         prefix: 'refs/heads/',
         protocolVersion: 2,
+        onAuth,
     })
     const branchNames = new Set(allRefs.map((r) => r.ref.replace(/^refs\/heads\//, '')))
     if (branchNames.has('main')) return 'main'
@@ -228,7 +243,7 @@ export const detectDefaultBranch = async (options: {
 }
 
 export const cloneRepo = async (options: CloneOptions & { defaultBranch: string }): Promise<void> => {
-    const { fs, dir, url, corsProxy, defaultBranch, onProgress, signal } = options
+    const { fs, dir, url, corsProxy, githubToken, defaultBranch, onProgress, signal } = options
 
     // Ensure directory exists (lightning-fs supports promises.mkdir)
     try {
@@ -296,7 +311,7 @@ export const cloneRepo = async (options: CloneOptions & { defaultBranch: string 
                     onProgress?.({ type: 'size-warning', estimatedBytes: total })
                 }
             },
-            onAuth: () => ({ cancel: true }),
+            onAuth: makeOnAuth(githubToken),
         })
     } catch (error) {
         if (monitor.wasTimeout()) {
@@ -310,7 +325,7 @@ export const cloneRepo = async (options: CloneOptions & { defaultBranch: string 
 }
 
 export const fetchRepo = async (options: CloneOptions & { defaultBranch: string }): Promise<void> => {
-    const { fs, dir, url, corsProxy, defaultBranch, onProgress, signal } = options
+    const { fs, dir, url, corsProxy, githubToken, defaultBranch, onProgress, signal } = options
 
     const monitor = createStalenessMonitor(signal, 'Fetch')
     const abortableHttp = makeAbortableHttp(monitor.signal)
@@ -361,7 +376,7 @@ export const fetchRepo = async (options: CloneOptions & { defaultBranch: string 
                     total,
                 })
             },
-            onAuth: () => ({ cancel: true }),
+            onAuth: makeOnAuth(githubToken),
         })
     } catch (error) {
         if (monitor.wasTimeout()) {

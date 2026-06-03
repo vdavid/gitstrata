@@ -3,6 +3,7 @@
     import { resolve } from '$app/paths'
     import { env } from '$env/dynamic/public'
     import ThemeToggle from '$lib/components/ThemeToggle.svelte'
+    import GithubKeyManager from '$lib/components/GithubKeyManager.svelte'
     import CacheManager from '$lib/components/CacheManager.svelte'
     import KeyboardHelp from '$lib/components/KeyboardHelp.svelte'
 
@@ -28,7 +29,7 @@
     </a>
 
     <header class="relative px-4 py-4 sm:px-6">
-        <div class="mx-auto flex max-w-5xl items-center justify-between 2xl:max-w-7xl">
+        <div class="mx-auto flex max-w-7xl items-center justify-between">
             <a href={resolve('/')} class="group flex items-center gap-3 text-foreground">
                 <!-- Strata icon: layered horizontal lines -->
                 <svg
@@ -81,18 +82,19 @@
                         />
                     </svg>
                 </a>
+                <GithubKeyManager />
                 <ThemeToggle />
             </div>
         </div>
-        <div class="strata-line mx-auto mt-4 max-w-5xl 2xl:max-w-7xl"></div>
+        <div class="strata-line mx-auto mt-4 max-w-7xl"></div>
     </header>
 
-    <main id="main-content" class="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10 2xl:max-w-7xl">
+    <main id="main-content" class="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
         {@render children()}
     </main>
 
     <footer class="px-4 py-8 sm:px-6">
-        <div class="mx-auto max-w-5xl 2xl:max-w-7xl">
+        <div class="mx-auto max-w-7xl">
             <div class="strata-line mb-6"></div>
             <div class="flex flex-col items-center gap-4">
                 <CacheManager id="cache-manager" />
