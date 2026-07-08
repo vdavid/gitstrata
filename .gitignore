@@ -10,6 +10,7 @@ scripts/loc-counter/
 coverage/
 *.log
 .DS_Store
+.wrangler/
 cors-proxy/.wrangler/
 cors-proxy/.dev.vars
 _ignored/

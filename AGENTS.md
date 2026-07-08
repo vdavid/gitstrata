@@ -27,6 +27,8 @@ Core structure:
     - `lib/types.ts` - Shared type definitions
     - `app.css` - Tailwind v4 import + CSS custom properties
 - `cors-proxy/` - Cloudflare Worker (Hono) — adds CORS headers, forwards bytes, zero compute
+- `functions/` - Cloudflare Pages Functions (same-origin as the frontend). `u/[[path]]` proxies the Umami tracker
+  first-party (`/u/*`) so adblockers don't strip it. See `functions/CLAUDE.md`.
 - `scripts/` - Go-based check runner (`scripts/check/`) and reference LoC counter (read-only)
 - `static/` - Static assets
 - `tests/` - Unit tests (Vitest) and end-to-end tests (Playwright)

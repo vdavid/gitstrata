@@ -34,6 +34,14 @@ Details: [`cors-proxy/CLAUDE.md`](../cors-proxy/CLAUDE.md)
 | Ref caching              | Caches v1 `/info/refs` responses at the edge (12 h TTL)                         |
 | Shared results cache     | Optional R2-backed cache for analysis results (`GET`/`PUT /cache/v1/:repoHash`) |
 
+## Pages Functions (`functions/`)
+
+Details: [`functions/CLAUDE.md`](../functions/CLAUDE.md)
+
+| Component    | Purpose                                                                                                   |
+| ------------ | --------------------------------------------------------------------------------------------------------- |
+| `u/[[path]]` | Same-origin proxy for the Umami tracker (`/u/mami` → `/script.js`, beacon → `/api/send`) to dodge adblock |
+
 ## Tooling
 
 | Directory  | Purpose                                                                                                     |

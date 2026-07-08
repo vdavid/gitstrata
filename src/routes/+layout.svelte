@@ -10,12 +10,11 @@
     let { children } = $props()
 
     const analyticsId = env.PUBLIC_ANALYTICS_ID
-    const analyticsUrl = env.PUBLIC_ANALYTICS_URL
 </script>
 
 <svelte:head>
-    {#if analyticsId && analyticsUrl}
-        <script defer data-website-id={analyticsId} src="{analyticsUrl}/script.js"></script>
+    {#if analyticsId}
+        <script defer data-website-id={analyticsId} src="/u/mami"></script>
     {/if}
 </svelte:head>
 
