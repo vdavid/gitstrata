@@ -1,0 +1,10 @@
+# This directory is a standalone pnpm project (its own package.json + pnpm-lock.yaml), not part of
+# the repo-root workspace. pnpm 11 uses the nearest `pnpm-workspace.yaml` as the workspace root, so
+# without this file `pnpm install` here walks up to the repo root and installs the frontend workspace
+# instead — leaving `cors-proxy/node_modules` (and `wrangler`) missing. This file marks cors-proxy as
+# its own root so its lockfile installs here.
+
+# esbuild (pulled in by wrangler) builds a native binary in a postinstall script. A global
+# `ignore-scripts` blocks that, so allow it explicitly, matching the repo-root workspace.
+allowBuilds:
+    esbuild: true

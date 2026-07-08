@@ -8,6 +8,11 @@ responses; otherwise just a pass-through proxy.
 - `pnpm dev` — local dev server via wrangler
 - `pnpm deploy` — deploy to Cloudflare Workers
 
+Run these from this directory. `cors-proxy/` is a standalone pnpm project (own `package.json` + `pnpm-lock.yaml`), not
+part of the repo-root workspace. Its own `pnpm-workspace.yaml` marks it as an independent workspace root — without it,
+pnpm 11 walks up to the repo-root `pnpm-workspace.yaml` and installs the frontend workspace instead, leaving
+`cors-proxy/node_modules` (and `wrangler`) missing, which breaks `pnpm deploy` and the CI deploy job.
+
 ## Key decisions
 
 - **CORS origin**: `ALLOWED_ORIGIN` in `wrangler.toml` restricts `Access-Control-Allow-Origin` to the production
