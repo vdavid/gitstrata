@@ -9,6 +9,14 @@
 A browser-native lines-of-code counter that visualizes how a public Git repository grows over time, broken down by
 language and prod/test. Zero server-side compute — everything runs in the browser.
 
+See it live at https://gitstrata.com
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/b44f3c9f-f152-40e4-ad62-9769071adff2">
+  <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/878c91d9-fd4e-4d23-a104-9648ce069d17">
+  <img alt="git strata chart of the Cmdr repo's growth over time" src="https://github.com/user-attachments/assets/878c91d9-fd4e-4d23-a104-9648ce069d17">
+</picture>
+
 ## Features
 
 - Paste any public repo URL (GitHub, GitLab, Bitbucket) and get a stacked area chart of LoC over time
@@ -20,6 +28,7 @@ language and prod/test. Zero server-side compute — everything runs in the brow
 - Sortable data table with CSV export
 - Shareable URLs via `?repo=` query parameter
 - Fully client-side — the only server component is a tiny CORS proxy that forwards bytes
+- \[NEW\] Now works with private repos, too!
 
 ## Quick start
 
