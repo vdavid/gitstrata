@@ -12,9 +12,9 @@ language and prod/test. Zero server-side compute — everything runs in the brow
 See it live at https://gitstrata.com
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/b44f3c9f-f152-40e4-ad62-9769071adff2">
-  <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/878c91d9-fd4e-4d23-a104-9648ce069d17">
-  <img alt="git strata chart of the Cmdr repo's growth over time" src="https://github.com/user-attachments/assets/878c91d9-fd4e-4d23-a104-9648ce069d17">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/cmdr-dark.webp">
+  <source media="(prefers-color-scheme: light)" srcset="docs/screenshots/cmdr-light.webp">
+  <img alt="git strata chart of the Cmdr repo's growth over time" src="docs/screenshots/cmdr-light.webp">
 </picture>
 
 ## Features
