@@ -7,7 +7,7 @@
     import { parseRepoUrl, parseRepoFromPathname } from '#lib/url.js'
     import { isSelfHostedProxy } from '#lib/cors-proxy.js'
     import { githubTokenState } from '#lib/github-token.svelte.js'
-    import { formatBytes, getResult, saveResult, deleteRepo } from '#lib/cache.js'
+    import { formatBytes, getResult, saveResult } from '#lib/cache.js'
     import { fetchServerResult, uploadServerResult } from '#lib/server-cache.js'
     import { createAnalyzer, type AnalyzerHandle } from '#lib/worker/analyzer.api.js'
     import type { AnalysisResult, DayStats, ErrorKind, ProgressEvent } from '#lib/types.js'
@@ -52,6 +52,11 @@
     let result = $state<AnalysisResult | undefined>()
     let cachedResult = $state<AnalysisResult | undefined>()
     let fromServerCache = $state(false)
+
+    // Roll-on: bringing the shown result up to date while its chart stays visible
+    let rollingOn = $state(false)
+    // Background (automatic) roll-ons fail quietly: the shown result is still valid, just not the newest
+    let rollOnSilent = false
 
     // Timer interval
     let timerInterval = $state<ReturnType<typeof setInterval> | undefined>()
@@ -197,6 +202,7 @@
         result = undefined
         cachedResult = undefined
         fromServerCache = false
+        rollingOn = false
         sizeWarningBytes = 0
         showSizeWarning = false
         sizeGateBytes = 0
@@ -260,6 +266,7 @@
                 if (repoSizeBytes != null) event.result.repoSizeBytes = repoSizeBytes
                 result = event.result
                 cachedResult = event.result
+                fromServerCache = false
                 phase = 'done'
                 void saveResult(event.result)
                 void uploadServerResult(event.result, {
@@ -270,6 +277,10 @@
                 stopTimer()
                 if (dayFlushTimeout) clearTimeout(dayFlushTimeout)
                 dayBuffer = []
+                if (rollingOn && rollOnSilent) {
+                    phase = 'done'
+                    break
+                }
                 phase = 'error'
                 errorMessage = event.message
                 errorKind = event.kind
@@ -345,6 +356,7 @@
                 result = cached
                 repoSizeBytes = cached.repoSizeBytes ?? null
                 phase = 'done'
+                void checkForNewCommits(cached, generation)
                 return
             }
 
@@ -433,12 +445,90 @@
         }
     }
 
-    const refresh = async () => {
-        if (!result) return
-        const repoUrl = result.repoUrl
-        // Wipe cache + LightningFS so the full re-analysis starts clean
-        await deleteRepo(repoUrl)
-        void startAnalysis(repoUrl)
+    /**
+     * Bring `base` up to the remote's HEAD while its chart stays visible. The worker fetches into the persisted clone
+     * (or clones when this device has none) and recounts only the days new commits affect.
+     */
+    const startRollOn = async (base: AnalysisResult, silent: boolean) => {
+        const isBusy = () => phase === 'cloning' || phase === 'processing'
+        if (isBusy()) return
+        const generation = analysisGeneration
+        if (cancelCleanup) {
+            await cancelCleanup
+            cancelCleanup = undefined
+        }
+        if (generation !== analysisGeneration || isBusy()) return
+        // A finished full analysis leaves its idle worker around; replace it
+        if (analyzer) {
+            analyzer.terminate()
+            analyzer = undefined
+        }
+
+        rollingOn = true
+        rollOnSilent = silent
+        phase = 'cloning'
+        startTimer('clone')
+        const handle = createAnalyzer()
+        analyzer = handle
+        try {
+            const host = parseRepoUrl(base.repoUrl).host
+            await handle.analyzeIncremental(
+                base.repoUrl,
+                corsProxy,
+                tokenForHost(host),
+                $state.snapshot(base),
+                handleProgress,
+            )
+        } catch (e) {
+            if (generation !== analysisGeneration) return
+            stopTimer()
+            if (silent) {
+                phase = 'done'
+            } else if ((phase as Phase) !== 'error') {
+                // handleProgress may have already reported a classified error
+                phase = 'error'
+                errorMessage = e instanceof Error ? e.message : 'Refresh failed'
+                errorKind = 'unknown'
+            }
+        } finally {
+            if (generation === analysisGeneration) rollingOn = false
+            if (analyzer === handle) {
+                analyzer = undefined
+                handle.terminate()
+            }
+        }
+    }
+
+    /** On a local cache hit, ask the remote for its HEAD and roll on automatically when it moved. */
+    const checkForNewCommits = async (cached: AnalysisResult, generation: number) => {
+        const checker = createAnalyzer()
+        try {
+            const host = parseRepoUrl(cached.repoUrl).host
+            const remoteHead = await checker.getRemoteHead(
+                cached.repoUrl,
+                corsProxy,
+                tokenForHost(host),
+                cached.defaultBranch,
+            )
+            if (generation !== analysisGeneration || !remoteHead || remoteHead === cached.headCommit) return
+            void startRollOn(cached, true)
+        } catch {
+            // Best-effort: the cached result stays on screen
+        } finally {
+            checker.terminate()
+        }
+    }
+
+    /** Stop a roll-on and keep showing the result it started from. */
+    const cancelRollOn = () => {
+        analysisGeneration++
+        cancel()
+        rollingOn = false
+        phase = 'done'
+    }
+
+    const refresh = () => {
+        if (result) void startRollOn(result, false)
     }
 
     const copyShareLink = async () => {
@@ -643,7 +733,7 @@
                     {processDate}
                     processElapsedMs={processElapsed}
                     {repoSizeBytes}
-                    oncancel={handleUserCancel}
+                    oncancel={rollingOn ? cancelRollOn : handleUserCancel}
                 />
             </div>
         {/if}
@@ -721,9 +811,15 @@
                                 10,
                             )} ({relativeDate(cachedResult.analyzedAt)})
                         </span>
-                        <button onclick={refresh} aria-label="Refresh analysis with latest commits" class="btn-link">
-                            Refresh
-                        </button>
+                        {#if !rollingOn}
+                            <button
+                                onclick={refresh}
+                                aria-label="Refresh analysis with latest commits"
+                                class="btn-link"
+                            >
+                                Refresh
+                            </button>
+                        {/if}
                     {/if}
                     <div class="flex items-center gap-3">
                         <button
