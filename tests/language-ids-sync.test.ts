@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { getLanguages } from '$lib/languages'
+import { getLanguages } from '#lib/languages.js'
 import { validLanguageIds } from '../shared/language-ids'
 
 describe('language ID sync', () => {

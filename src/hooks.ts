@@ -1,4 +1,4 @@
-import type { Reroute } from '@sveltejs/kit'
+import type { Reroute } from '@sveltejs/kit/hooks'
 
 /** Route all paths to the root page — repo is read from the pathname client-side. */
 export const reroute: Reroute = ({ url }) => {

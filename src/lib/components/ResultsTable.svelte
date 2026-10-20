@@ -1,6 +1,6 @@
 <script lang="ts">
-    import { getLanguages } from '$lib/languages'
-    import type { DayStats } from '$lib/types'
+    import { getLanguages } from '#lib/languages.js'
+    import type { DayStats } from '#lib/types.js'
 
     interface Props {
         days: DayStats[]

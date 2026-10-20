@@ -1,25 +1,25 @@
 <script lang="ts">
-    import { browser } from '$app/environment'
+    import { browser } from '$app/env'
     import { goto } from '$app/navigation'
     import { resolve } from '$app/paths'
     import { page } from '$app/state'
-    import { env } from '$env/dynamic/public'
-    import { parseRepoUrl, parseRepoFromPathname } from '$lib/url'
-    import { isSelfHostedProxy } from '$lib/cors-proxy'
-    import { githubTokenState } from '$lib/github-token.svelte'
-    import { formatBytes, getResult, saveResult, deleteRepo } from '$lib/cache'
-    import { fetchServerResult, uploadServerResult } from '$lib/server-cache'
-    import { createAnalyzer, type AnalyzerHandle } from '$lib/worker/analyzer.api'
-    import type { AnalysisResult, DayStats, ErrorKind, ProgressEvent } from '$lib/types'
-    import GithubKeyForm from '$lib/components/GithubKeyForm.svelte'
-    import RepoInput from '$lib/components/RepoInput.svelte'
-    import PipelineProgress from '$lib/components/PipelineProgress.svelte'
-    import ResultsChart from '$lib/components/ResultsChart.svelte'
-    import ResultsSummary from '$lib/components/ResultsSummary.svelte'
-    import ResultsTable from '$lib/components/ResultsTable.svelte'
-    import TigGitLogo from '$lib/components/TigGitLogo.svelte'
+    import { PUBLIC_CORS_PROXY_URL } from '$app/env/public'
+    import { parseRepoUrl, parseRepoFromPathname } from '#lib/url.js'
+    import { isSelfHostedProxy } from '#lib/cors-proxy.js'
+    import { githubTokenState } from '#lib/github-token.svelte.js'
+    import { formatBytes, getResult, saveResult, deleteRepo } from '#lib/cache.js'
+    import { fetchServerResult, uploadServerResult } from '#lib/server-cache.js'
+    import { createAnalyzer, type AnalyzerHandle } from '#lib/worker/analyzer.api.js'
+    import type { AnalysisResult, DayStats, ErrorKind, ProgressEvent } from '#lib/types.js'
+    import GithubKeyForm from '#lib/components/GithubKeyForm.svelte'
+    import RepoInput from '#lib/components/RepoInput.svelte'
+    import PipelineProgress from '#lib/components/PipelineProgress.svelte'
+    import ResultsChart from '#lib/components/ResultsChart.svelte'
+    import ResultsSummary from '#lib/components/ResultsSummary.svelte'
+    import ResultsTable from '#lib/components/ResultsTable.svelte'
+    import TigGitLogo from '#lib/components/TigGitLogo.svelte'
 
-    const corsProxy = env.PUBLIC_CORS_PROXY_URL || 'https://cors.isomorphic-git.org'
+    const corsProxy = PUBLIC_CORS_PROXY_URL || 'https://cors.isomorphic-git.org'
 
     // A stored GitHub token is only sent for github.com, and only through a self-hosted proxy
     // (never a third-party one). It authenticates clones of the user's own private repos.
@@ -206,7 +206,7 @@
 
     const updateUrl = (repo: string) => {
         if (!repo) {
-            goto(resolve('/'), { replaceState: true, keepFocus: true })
+            goto(resolve('/'), { replace: true, reset: false })
             return
         }
         try {
@@ -217,11 +217,11 @@
             const isSamePath = page.url.pathname === targetPath
             // eslint-disable-next-line svelte/no-navigation-without-resolve -- resolve('/') is embedded in template
             goto(targetPath, {
-                replaceState: isSamePath,
-                keepFocus: true,
+                replace: isSamePath,
+                reset: false,
             })
         } catch {
-            goto(resolve('/'), { replaceState: true, keepFocus: true })
+            goto(resolve('/'), { replace: true, reset: false })
         }
     }
 

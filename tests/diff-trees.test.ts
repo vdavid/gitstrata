@@ -3,7 +3,7 @@ import git from 'isomorphic-git'
 import * as nodeFs from 'node:fs'
 import * as path from 'node:path'
 import * as os from 'node:os'
-import { diffTreesDetailed, computeCommitContribution } from '$lib/git/count'
+import { diffTreesDetailed, computeCommitContribution } from '#lib/git/count.js'
 
 /**
  * Helper: creates a temporary directory, initialises a git repo,

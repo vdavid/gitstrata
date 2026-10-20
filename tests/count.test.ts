@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { countLines, shouldSkip, shouldSkipDir, LruMap } from '$lib/git/count'
+import { countLines, shouldSkip, shouldSkipDir, LruMap } from '#lib/git/count.js'
 
 describe('countLines', () => {
     it('counts lines ending with newline', () => {

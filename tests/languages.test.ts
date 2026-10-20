@@ -8,7 +8,7 @@ import {
     isInTestDir,
     countRustInlineTestLines,
     countZigInlineTestLines,
-} from '$lib/languages'
+} from '#lib/languages.js'
 
 describe('getLanguageByExtension', () => {
     it('maps .ts to TypeScript', () => {

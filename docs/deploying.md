@@ -154,8 +154,9 @@ third-party analytics domain and the well-known `/script.js` filename, both on a
 `ANALYTICS_UPSTREAM` on the Pages project (Cloudflare dashboard > **Settings > Environment variables**) to point `/u/*`
 at your own Umami host.
 
-Frontend variables are set at build time in CI (see the `deploy-frontend` job in `ci.yml`). For local development,
-create a `.env` file in the repo root:
+Frontend variables are declared in `src/env.ts` (SvelteKit's `defineEnvVars`) as static, so their values get inlined
+into the bundle at build time. CI sets them in the `deploy-frontend` job in `ci.yml`. To add one, declare it in
+`src/env.ts` and import it from `$app/env/public`. For local development, create a `.env` file in the repo root:
 
 ```bash
 PUBLIC_CORS_PROXY_URL=https://your-proxy.workers.dev

@@ -1,8 +1,8 @@
-import { env } from '$env/dynamic/public'
+import { PUBLIC_SHARED_CACHE_URL, PUBLIC_CACHE_WRITE_TOKEN } from '$app/env/public'
 import type { AnalysisResult, SharedCacheEntry } from './types'
 
-const getBaseUrl = (): string | undefined => env.PUBLIC_SHARED_CACHE_URL || undefined
-const getWriteToken = (): string | undefined => env.PUBLIC_CACHE_WRITE_TOKEN || undefined
+const getBaseUrl = (): string | undefined => PUBLIC_SHARED_CACHE_URL
+const getWriteToken = (): string | undefined => PUBLIC_CACHE_WRITE_TOKEN
 
 /** SHA-256 hash a string, returned as hex */
 const sha256 = async (input: string): Promise<string> => {

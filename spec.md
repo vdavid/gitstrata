@@ -476,12 +476,12 @@ Build with SvelteKit's static adapter → output is plain HTML/CSS/JS → deploy
 pnpm build    # outputs to build/
 ```
 
-Configure in `svelte.config.js`:
+Configure via the `sveltekit()` plugin in `vite.config.ts` (SvelteKit 3 has no `svelte.config.js`):
 
-```js
+```ts
 import adapter from '@sveltejs/adapter-static'
 
-export default { kit: { adapter: adapter() } }
+export default defineConfig({ plugins: [sveltekit({ adapter: adapter() })] })
 ```
 
 ### CORS proxy
@@ -552,8 +552,7 @@ For local dev, `PUBLIC_CORS_PROXY_URL` defaults to `https://cors.isomorphic-git.
 │       └── analyze.test.ts             # Playwright: enter URL → see chart (use small test repo)
 ├── package.json
 ├── pnpm-lock.yaml
-├── svelte.config.js
-├── vite.config.ts
+├── vite.config.ts                      # Vite + SvelteKit config (adapter, paths)
 ├── tsconfig.json
 ├── .env.example                        # PUBLIC_CORS_PROXY_URL=https://cors.isomorphic-git.org
 ├── spec.md                             # This file

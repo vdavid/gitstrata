@@ -1,7 +1,7 @@
 <script lang="ts">
-    import { browser } from '$app/environment'
-    import { getLanguages } from '$lib/languages'
-    import type { DayStats } from '$lib/types'
+    import { browser } from '$app/env'
+    import { getLanguages } from '#lib/languages.js'
+    import type { DayStats } from '#lib/types.js'
     import type { Chart as ChartType, ChartConfiguration, ChartDataset } from 'chart.js'
     import { areaLabelsPlugin } from './chart-area-labels-plugin'
     import { crosshairPlugin } from './chart-crosshair-plugin'

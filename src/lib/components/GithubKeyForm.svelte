@@ -1,7 +1,7 @@
 <script lang="ts">
-    import { env } from '$env/dynamic/public'
-    import { isSelfHostedProxy, publicProxyUrl } from '$lib/cors-proxy'
-    import { saveGithubToken } from '$lib/github-token.svelte'
+    import { PUBLIC_CORS_PROXY_URL } from '$app/env/public'
+    import { isSelfHostedProxy, publicProxyUrl } from '#lib/cors-proxy.js'
+    import { saveGithubToken } from '#lib/github-token.svelte.js'
 
     interface Props {
         compact?: boolean
@@ -10,7 +10,7 @@
 
     let { compact = false, onsaved }: Props = $props()
 
-    const corsProxy = env.PUBLIC_CORS_PROXY_URL || publicProxyUrl
+    const corsProxy = PUBLIC_CORS_PROXY_URL || publicProxyUrl
     const selfHosted = isSelfHostedProxy(corsProxy)
 
     const createTokenUrl = 'https://github.com/settings/personal-access-tokens/new'

@@ -1,7 +1,7 @@
 // Reactive singleton wrapping the GitHub token storage. Components read `githubTokenState.current`
 // to update live; the page reads it to pass the token into the worker.
 
-import { browser } from '$app/environment'
+import { browser } from '$app/env'
 import {
     readStoredToken,
     writeStoredToken,

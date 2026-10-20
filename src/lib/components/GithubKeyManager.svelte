@@ -1,6 +1,6 @@
 <script lang="ts">
-    import { maskToken } from '$lib/github-token'
-    import { githubTokenState, deleteGithubToken } from '$lib/github-token.svelte'
+    import { maskToken } from '#lib/github-token.js'
+    import { githubTokenState, deleteGithubToken } from '#lib/github-token.svelte.js'
     import GithubKeyForm from './GithubKeyForm.svelte'
 
     let open = $state(false)

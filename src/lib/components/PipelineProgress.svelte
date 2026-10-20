@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { formatBytes } from '$lib/cache'
+    import { formatBytes } from '#lib/cache.js'
 
     interface Props {
         repoSlug?: string

@@ -1,3 +1,5 @@
+import adapter from '@sveltejs/adapter-static'
+import { vitePreprocess } from '@sveltejs/vite-plugin-svelte'
 import { fileURLToPath } from 'node:url'
 import devtoolsJson from 'vite-plugin-devtools-json'
 import { sveltekit } from '@sveltejs/kit/vite'
@@ -5,7 +7,15 @@ import tailwindcss from '@tailwindcss/vite'
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
-    plugins: [tailwindcss(), sveltekit(), devtoolsJson()],
+    plugins: [
+        tailwindcss(),
+        sveltekit({
+            preprocess: vitePreprocess(),
+            adapter: adapter({ fallback: '200.html' }),
+            paths: { relative: false },
+        }),
+        devtoolsJson(),
+    ],
     build: { sourcemap: true },
     worker: { format: 'es', rollupOptions: { output: { sourcemap: true } } },
     // Vite 8 (Rolldown) no longer rewrites bare `global` to `globalThis` in worker bundles, breaking UMD polyfills like `fast-text-encoding` (pulled in by `lightning-fs`) that probe `typeof global`.

@@ -1,7 +1,7 @@
 <script lang="ts">
     import { onMount } from 'svelte'
-    import { parseRepoUrl } from '$lib/url'
-    import { pickFeaturedRepos, pickPlaceholder } from '$lib/featured-repos'
+    import { parseRepoUrl } from '#lib/url.js'
+    import { pickFeaturedRepos, pickPlaceholder } from '#lib/featured-repos.js'
 
     interface Props {
         onsubmit: (repoUrl: string) => void

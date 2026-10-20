@@ -1,8 +1,15 @@
 <script lang="ts">
-    import { browser } from '$app/environment'
+    import { browser } from '$app/env'
     import { resolve } from '$app/paths'
-    import { listCachedRepos, deleteRepo, clearAll, getTotalSize, formatBytes, type CachedRepoInfo } from '$lib/cache'
-    import { parseRepoUrl } from '$lib/url'
+    import {
+        listCachedRepos,
+        deleteRepo,
+        clearAll,
+        getTotalSize,
+        formatBytes,
+        type CachedRepoInfo,
+    } from '#lib/cache.js'
+    import { parseRepoUrl } from '#lib/url.js'
 
     interface Props {
         id?: string

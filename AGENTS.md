@@ -25,7 +25,9 @@ Core structure:
     - `lib/cache.ts` - IndexedDB results cache
     - `lib/url.ts` - Repo URL parsing and normalization
     - `lib/types.ts` - Shared type definitions
+    - `env.ts` - Declares the `PUBLIC_*` env vars (static, inlined at build); import them from `$app/env/public`
     - `app.css` - Tailwind v4 import + CSS custom properties
+- `vite.config.ts` - Vite config, which also holds the SvelteKit config (SvelteKit 3 has no `svelte.config.js`)
 - `cors-proxy/` - Cloudflare Worker (Hono) — adds CORS headers, forwards bytes, zero compute
 - `functions/` - Cloudflare Pages Functions (same-origin as the frontend). `u/[[path]]` proxies the Umami tracker
   first-party (`/u/*`) so adblockers don't strip it. See `functions/CLAUDE.md`.
@@ -83,6 +85,9 @@ Always do a last round of checks before finishing up:
 
 ## TypeScript
 
+- Import from `src/lib` via the `#lib` subpath import (declared in `package.json` `imports`), with an explicit
+  extension: `#lib/url.js` for `url.ts`, `#lib/github-token.svelte.js` for `github-token.svelte.ts`, and
+  `#lib/components/Foo.svelte` for components. SvelteKit 3 dropped `$lib`.
 - Prefer functional programming (map, reduce, some, forEach) and pure functions wherever it makes sense.
 - Use `const` for everything, unless it makes the code unnecessarily verbose.
 - Start function names with a verb, unless unidiomatic in the specific case.

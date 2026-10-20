@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { parseMailmap, createMailmapLookup, readMailmapFromRepo } from '$lib/git/mailmap'
+import { parseMailmap, createMailmapLookup, readMailmapFromRepo } from '#lib/git/mailmap.js'
 
 describe('parseMailmap', () => {
     it('parses form 1: Proper Name <commit@email>', () => {
