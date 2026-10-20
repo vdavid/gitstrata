@@ -1,7 +1,7 @@
 module gitstrata/scripts/check
 
-go 1.25
+go 1.27
 
-require golang.org/x/term v0.39.0
+require golang.org/x/term v0.47.0
 
-require golang.org/x/sys v0.40.0 // indirect
+require golang.org/x/sys v0.49.0 // indirect
