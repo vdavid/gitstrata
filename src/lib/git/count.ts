@@ -575,9 +575,9 @@ export const diffTreesDetailed = async (options: {
             }
         }
 
-        // Process deletions (in prev but not in curr)
+        // Process deletions (in prev but not in curr, or switched between file and folder)
         for (const entry of prevEntries) {
-            if (currMap.has(entry.path)) continue
+            if (currMap.get(entry.path)?.type === entry.type) continue
             const fullPath = basePath ? `${basePath}/${entry.path}` : entry.path
             if (entry.type === 'blob') {
                 results.push({ type: 'deleted', path: fullPath, oldOid: entry.oid })

@@ -253,6 +253,51 @@ describe('diffTreesDetailed', () => {
     })
 })
 
+describe('diffTreesDetailed with a path switching between file and folder', () => {
+    const repo = createTestRepo()
+
+    let fileTree: string
+    let folderTree: string
+
+    beforeAll(async () => {
+        await repo.initRepo()
+        const { fs, dir } = repo
+        const fileBlob = await git.writeBlob({ fs, dir, blob: new TextEncoder().encode('a\nb\n') })
+        const innerBlob = await git.writeBlob({ fs, dir, blob: new TextEncoder().encode('c\n') })
+        // `docs` is a file in one tree and a folder holding `docs/inner.ts` in the other
+        fileTree = await git.writeTree({
+            fs,
+            dir,
+            tree: [{ mode: '100644', path: 'docs', oid: fileBlob, type: 'blob' }],
+        })
+        const innerTree = await git.writeTree({
+            fs,
+            dir,
+            tree: [{ mode: '100644', path: 'inner.ts', oid: innerBlob, type: 'blob' }],
+        })
+        folderTree = await git.writeTree({
+            fs,
+            dir,
+            tree: [{ mode: '040000', path: 'docs', oid: innerTree, type: 'tree' }],
+        })
+    })
+
+    const diff = (prevTreeOid: string, currTreeOid: string) =>
+        diffTreesDetailed({ fs: repo.fs, dir: repo.dir, prevTreeOid, currTreeOid, treeCache: new Map() })
+
+    it('deletes the old file when the path becomes a folder', async () => {
+        const result = await diff(fileTree, folderTree)
+        expect(result).toContainEqual(expect.objectContaining({ type: 'deleted', path: 'docs' }))
+        expect(result).toContainEqual(expect.objectContaining({ type: 'added', path: 'docs/inner.ts' }))
+    })
+
+    it('deletes the old folder contents when the path becomes a file', async () => {
+        const result = await diff(folderTree, fileTree)
+        expect(result).toContainEqual(expect.objectContaining({ type: 'deleted', path: 'docs/inner.ts' }))
+        expect(result).toContainEqual(expect.objectContaining({ type: 'added', path: 'docs' }))
+    })
+})
+
 // ─── computeCommitContribution ──────────────────────────────────────
 
 describe('computeCommitContribution', () => {
