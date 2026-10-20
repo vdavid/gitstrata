@@ -103,20 +103,20 @@ earlier design is in git history (`docs/specs/peer-verified-cache-plan.md`, comm
 ### Milestone 1: trusted-device sharing
 
 - [x] Create the R2 bucket `git-strata-results`; set `WRITE_KEY_HASHES`; store David's key in sops
-- [ ] Worker: key-gated PUT with header checks and unparsed streaming to R2; remove body validation and the old token
-- [ ] Client: write key storage, `#write-key=` handoff, popup row, upload gating, no uploads for private repos
-- [ ] CI: drop `PUBLIC_CACHE_WRITE_TOKEN`, set `PUBLIC_SHARED_CACHE_URL`
-- [ ] Tests, docs (`cors-proxy/CLAUDE.md`, `src/lib/CLAUDE.md`, `docs/deploying.md`)
+- [x] Worker: key-gated PUT with header checks and unparsed streaming to R2; remove body validation and the old token
+- [x] Client: write key storage, `#write-key=` handoff, popup row, upload gating, no uploads for private repos
+- [x] CI: drop `PUBLIC_CACHE_WRITE_TOKEN`, set `PUBLIC_SHARED_CACHE_URL`
+- [x] Tests, docs (`cors-proxy/CLAUDE.md`, `src/lib/CLAUDE.md`, `docs/deploying.md`)
 
 ### Milestone 2: exact incremental refresh
 
-- [ ] Rewind-based `analyzeIncremental` with ancestry, `.mailmap`, and engine-version fallbacks
-- [ ] Shared processing function for full and seeded runs
-- [ ] Refresh uses it, cloning first when there's no local clone; auto roll-on when the remote HEAD moved
-- [ ] Equivalence test: incremental after new commits (including a back-dated merge) equals a full analysis
-- [ ] Docs (`src/lib/CLAUDE.md`)
+- [x] Rewind-based `analyzeIncremental` with ancestry, `.mailmap`, and engine-version fallbacks
+- [x] Shared processing function for full and seeded runs
+- [x] Refresh uses it, cloning first when there's no local clone; auto roll-on when the remote HEAD moved
+- [x] Equivalence test: incremental after new commits (including a back-dated merge) equals a full analysis
+- [x] Docs (`src/lib/CLAUDE.md`)
 
 ### Milestone 3: land and verify
 
-- [ ] Merge both branches, run the narrow checks, push, and confirm CI deploys the frontend and the proxy
+- [x] Merge both branches, run the narrow checks, push, and confirm CI deploys the frontend and the proxy
 - [ ] Hand off the key to the laptop and phone; check that the phone gets `vdavid/cmdr` instantly
