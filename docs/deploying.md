@@ -51,23 +51,40 @@ The shared cache lets users benefit from each other's analyses. It's optional bu
     pnpm exec wrangler r2 bucket create git-strata-results
     ```
 
-3. **Uncomment the R2 binding** in `cors-proxy/wrangler.toml` (remove the `#` from the three `[[r2_buckets]]` lines).
+    The `RESULTS` binding to this bucket is already on in `cors-proxy/wrangler.toml`, so create the bucket before the
+    next proxy deploy: deploying with a binding to a missing bucket fails.
 
-4. **Set a cache write token** to prevent unauthorized cache writes:
+3. **Mint write keys for your trusted devices.** Everyone can read the shared cache, but only devices holding a personal
+   write key upload results (your laptop, your phone, a few friends). Anonymous visitors never upload. Mint one key per
+   person or device:
+
+    ```bash
+    KEY=$(openssl rand -hex 24)
+    printf %s "$KEY" | shasum -a 256   # the hash goes into the secret below
+    ```
+
+4. **Store the key hashes as a Worker secret**, comma-separated (only hashes live on the server):
 
     ```bash
     cd cors-proxy
-    pnpm exec wrangler secret put CACHE_WRITE_TOKEN
+    pnpm exec wrangler secret put WRITE_KEY_HASHES
     ```
 
-    Enter a random secret when prompted (for example, generate one with `openssl rand -hex 32`). The frontend must send
-    this token as a Bearer header on cache uploads — see the environment variables table below.
+    Paste for example `3f1c…a9,72be…04` when prompted. To add or revoke a key later, run the same command with the
+    updated list. Without this secret, every cache upload gets 403.
 
-5. **Re-deploy the CORS proxy** so it picks up the R2 binding and secret:
+5. **Hand each key off** by opening this link on the device: `https://gitstrata.com/#write-key=KEY`. The app saves the
+   key in that browser's localStorage and removes it from the URL. The key popup (key icon, top right) then shows
+   "Sharing key: on" with a **Remove** button. Results analyzed with a GitHub token (private repos) are never uploaded.
+
+6. **Re-deploy the CORS proxy** so it picks up the R2 binding and secret:
 
     ```bash
     pnpm run deploy
     ```
+
+The proxy stores uploads without parsing them (the free Workers plan allows 10 ms CPU per request), so it trusts key
+holders for the content. See `cors-proxy/CLAUDE.md` for the checks it does run.
 
 ## Step 4: Create the Cloudflare Pages project (frontend)
 
@@ -134,19 +151,16 @@ Once these are set, every push to `main` that passes CI will auto-deploy both th
 
 ## Environment variables
 
-| Variable                   | Where                        | Default                           | Purpose                                                                                    |
-| -------------------------- | ---------------------------- | --------------------------------- | ------------------------------------------------------------------------------------------ |
-| `PUBLIC_CORS_PROXY_URL`    | Frontend (`.env`)            | `https://cors.isomorphic-git.org` | URL of your deployed CORS proxy                                                            |
-| `PUBLIC_SHARED_CACHE_URL`  | Frontend (`.env`)            | _(none)_                          | URL of shared cache API (same as CORS proxy when R2 is enabled)                            |
-| `PUBLIC_CACHE_WRITE_TOKEN` | Frontend (`.env` / `ci.yml`) | _(none)_                          | Bearer token for cache writes (must match worker secret below)                             |
-| `ALLOWED_ORIGIN`           | Worker (`wrangler.toml`)     | `https://gitstrata.com`           | CORS origin restriction — override in `.dev.vars` for local dev                            |
-| `CACHE_WRITE_TOKEN`        | Worker secret / `.dev.vars`  | _(none)_                          | Server-side token that cache PUT requests are checked against                              |
-| `PUBLIC_ANALYTICS_ID`      | Frontend (`.env`)            | _(none)_                          | Umami website ID (UUID from your Umami dashboard) — set to enable tracking                 |
-| `ANALYTICS_UPSTREAM`       | Pages Function (runtime var) | git strata's Umami instance       | Your Umami server URL that `/u/*` proxies to (for example, `https://umami.yourdomain.com`) |
+| Variable                  | Where                        | Default                           | Purpose                                                                                    |
+| ------------------------- | ---------------------------- | --------------------------------- | ------------------------------------------------------------------------------------------ |
+| `PUBLIC_CORS_PROXY_URL`   | Frontend (`.env`)            | `https://cors.isomorphic-git.org` | URL of your deployed CORS proxy                                                            |
+| `PUBLIC_SHARED_CACHE_URL` | Frontend (`.env`)            | _(none)_                          | URL of shared cache API (same as CORS proxy when R2 is enabled)                            |
+| `ALLOWED_ORIGIN`          | Worker (`wrangler.toml`)     | `https://gitstrata.com`           | CORS origin restriction — override in `.dev.vars` for local dev                            |
+| `WRITE_KEY_HASHES`        | Worker secret / `.dev.vars`  | _(none)_                          | Comma-separated SHA-256 hex digests of the personal write keys (see step 3)                |
+| `PUBLIC_ANALYTICS_ID`     | Frontend (`.env`)            | _(none)_                          | Umami website ID (UUID from your Umami dashboard) — set to enable tracking                 |
+| `ANALYTICS_UPSTREAM`      | Pages Function (runtime var) | git strata's Umami instance       | Your Umami server URL that `/u/*` proxies to (for example, `https://umami.yourdomain.com`) |
 
-`PUBLIC_CACHE_WRITE_TOKEN` and `CACHE_WRITE_TOKEN` must have the same value. The frontend token is hard-coded in
-`ci.yml` for production builds. The worker token is set via `wrangler secret put` (production) or `cors-proxy/.dev.vars`
-(local dev).
+Cache writes need no frontend variable: each trusted device holds its own write key (see step 3).
 
 Set `PUBLIC_ANALYTICS_ID` to enable analytics. When it's missing, no tracking script is loaded. The tracker loads
 first-party from the Pages Function at `/u/*` (see `functions/CLAUDE.md`) so adblockers don't strip it — this dodges the
@@ -161,14 +175,14 @@ into the bundle at build time. CI sets them in the `deploy-frontend` job in `ci.
 ```bash
 PUBLIC_CORS_PROXY_URL=https://your-proxy.workers.dev
 # PUBLIC_SHARED_CACHE_URL=https://your-proxy.workers.dev
-PUBLIC_CACHE_WRITE_TOKEN=your-token-here
 # PUBLIC_ANALYTICS_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 ```
 
 For local proxy dev, create `cors-proxy/.dev.vars`:
 
 ```bash
-CACHE_WRITE_TOKEN=your-token-here
+# Hash of a local test key, to try cache writes against `wrangler dev`
+WRITE_KEY_HASHES=<sha256 hex of your test key>
 ```
 
 ## Local development
