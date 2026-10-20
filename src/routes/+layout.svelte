@@ -6,8 +6,13 @@
     import GithubKeyManager from '#lib/components/GithubKeyManager.svelte'
     import CacheManager from '#lib/components/CacheManager.svelte'
     import KeyboardHelp from '#lib/components/KeyboardHelp.svelte'
+    import { adoptWriteKeyFromUrl } from '#lib/write-key.svelte.js'
+    import { onMount } from 'svelte'
 
     let { children } = $props()
+
+    // Trusted-device handoff: a `#write-key=KEY` link stores the key on this device and drops it from the URL.
+    onMount(adoptWriteKeyFromUrl)
 
     const analyticsId = PUBLIC_ANALYTICS_ID
 </script>

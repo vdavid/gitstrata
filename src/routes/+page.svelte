@@ -262,7 +262,9 @@
                 cachedResult = event.result
                 phase = 'done'
                 void saveResult(event.result)
-                void uploadServerResult(event.result)
+                void uploadServerResult(event.result, {
+                    usedGithubToken: tokenForHost(new URL(event.result.repoUrl).hostname) !== undefined,
+                })
                 break
             case 'error':
                 stopTimer()

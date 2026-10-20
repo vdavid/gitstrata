@@ -30,8 +30,17 @@ a Web Worker.
   read by `getResult`. DB version 2 added the meta store with a thin backfill migration. Writes are wrapped in try/catch
   to handle QuotaExceededError gracefully (caching is best-effort).
 - `server-cache.ts` — Shared server cache client. Opt-in via `PUBLIC_SHARED_CACHE_URL` env var; all functions no-op when
-  unset. Exports `fetchServerResult(repoUrl)` and `uploadServerResult(result)`. Errors are caught internally and never
-  propagate. Uses SHA-256 for repo URL hashing and CompressionStream for gzip upload.
+  unset. Exports `fetchServerResult(repoUrl)` (anyone reads) and `uploadServerResult(result, { usedGithubToken })`,
+  which only uploads from a trusted device (a write key is stored, see `write-key.ts`) and never when the analysis used
+  a GitHub token (may be a private repo). The upload sends `Authorization: Bearer <write key>`, `X-Repo-Url`, and
+  `X-Head-Commit` headers plus the gzip body: the proxy never parses the body (free-plan CPU budget, see
+  `cors-proxy/CLAUDE.md`), so the headers are what it checks. Errors are caught internally and never propagate. Uses
+  SHA-256 for repo URL hashing and CompressionStream for gzip upload.
+- `write-key.ts` — Pure storage for the personal shared-cache write key (localStorage `gitstrata-write-key`, every
+  storage access in try/catch) and `takeWriteKeyFromHash`, which parses a `#write-key=KEY` handoff link.
+  `write-key.svelte.ts` is the reactive wrapper (`writeKeyState.current`, `deleteWriteKey`, `adoptWriteKeyFromUrl`).
+  `+layout.svelte` calls `adoptWriteKeyFromUrl` on mount: it saves the key and strips it from the URL with
+  `history.replaceState`. `GithubKeyManager.svelte` shows a "Sharing key: on" row with **Remove** when a key is set.
 - `git/clone.ts` — Clone/fetch using isomorphic-git + lightning-fs, default branch detection via `listServerRefs`
   (protocol v2), abortable HTTP wrapper for signal support, size-warning emission for repos >1 GB. A `StalenessMonitor`
   wraps the external abort signal with an adaptive timeout: 5 min base, extended to 20 min once 10+ MB of data has been

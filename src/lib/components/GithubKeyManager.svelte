@@ -1,6 +1,7 @@
 <script lang="ts">
     import { maskToken } from '#lib/github-token.js'
     import { githubTokenState, deleteGithubToken } from '#lib/github-token.svelte.js'
+    import { writeKeyState, deleteWriteKey } from '#lib/write-key.svelte.js'
     import GithubKeyForm from './GithubKeyForm.svelte'
 
     let open = $state(false)
@@ -127,6 +128,19 @@
                     </button>
                 {:else}
                     <GithubKeyForm compact />
+                {/if}
+                {#if writeKeyState.current}
+                    <div
+                        class="mt-3 flex items-center justify-between gap-3 border-t border-border pt-3 text-xs"
+                        style="font-family: var(--font-sans);"
+                    >
+                        <span class="text-foreground-tertiary">
+                            Sharing key: <span class="text-foreground">on</span>
+                        </span>
+                        <button onclick={() => deleteWriteKey()} class="btn-ghost px-3 py-1.5 text-xs text-error">
+                            Remove
+                        </button>
+                    </div>
                 {/if}
             </div>
             <!-- Caret pointing up to the key button. Painted in front of the card (later in DOM + z-10)

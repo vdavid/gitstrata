@@ -1,8 +1,8 @@
-import { PUBLIC_SHARED_CACHE_URL, PUBLIC_CACHE_WRITE_TOKEN } from '$app/env/public'
+import { PUBLIC_SHARED_CACHE_URL } from '$app/env/public'
+import { readWriteKey } from './write-key'
 import type { AnalysisResult, SharedCacheEntry } from './types'
 
 const getBaseUrl = (): string | undefined => PUBLIC_SHARED_CACHE_URL
-const getWriteToken = (): string | undefined => PUBLIC_CACHE_WRITE_TOKEN
 
 /** SHA-256 hash a string, returned as hex */
 const sha256 = async (input: string): Promise<string> => {
@@ -52,12 +52,17 @@ export const fetchServerResult = async (repoUrl: string): Promise<SharedCacheEnt
 }
 
 /**
- * Upload a result to the shared server cache.
- * No-ops silently on error or when the cache is disabled.
+ * Upload a result to the shared server cache. Only trusted devices (holding a write key) upload, and never a result
+ * analyzed with a GitHub token, since that may be a private repo.
+ * No-ops silently on error, without a key, or when the cache is disabled.
  */
-export const uploadServerResult = async (result: AnalysisResult): Promise<void> => {
+export const uploadServerResult = async (
+    result: AnalysisResult,
+    { usedGithubToken }: { usedGithubToken: boolean },
+): Promise<void> => {
     const baseUrl = getBaseUrl()
-    if (!baseUrl) return
+    const writeKey = readWriteKey()
+    if (!baseUrl || !writeKey || usedGithubToken) return
 
     try {
         const entry: SharedCacheEntry = {
@@ -71,18 +76,16 @@ export const uploadServerResult = async (result: AnalysisResult): Promise<void> 
         const repoHash = await sha256(result.repoUrl)
         const compressed = await gzipCompress(JSON.stringify(entry))
 
-        const headers: Record<string, string> = {
-            'Content-Type': 'application/json',
-            'Content-Encoding': 'gzip',
-        }
-        const writeToken = getWriteToken()
-        if (writeToken) {
-            headers['Authorization'] = `Bearer ${writeToken}`
-        }
-
+        // The proxy never parses the body (CPU budget), so the headers tell it what this upload is.
         await fetch(`${baseUrl}/cache/v1/${repoHash}`, {
             method: 'PUT',
-            headers,
+            headers: {
+                Authorization: `Bearer ${writeKey}`,
+                'X-Repo-Url': result.repoUrl,
+                'X-Head-Commit': result.headCommit,
+                'Content-Type': 'application/json',
+                'Content-Encoding': 'gzip',
+            },
             body: compressed,
         })
     } catch {

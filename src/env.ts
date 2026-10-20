@@ -8,6 +8,5 @@ const optionalPublic = (description: string) =>
 export const variables = defineEnvVars({
     PUBLIC_CORS_PROXY_URL: optionalPublic('CORS proxy for git requests. Falls back to the shared public proxy.'),
     PUBLIC_SHARED_CACHE_URL: optionalPublic('Shared results cache endpoint. Unset disables the shared cache.'),
-    PUBLIC_CACHE_WRITE_TOKEN: optionalPublic('Token for uploading results to the shared cache.'),
     PUBLIC_ANALYTICS_ID: optionalPublic('Umami website ID. Unset disables analytics.'),
 })
