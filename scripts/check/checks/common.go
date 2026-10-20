@@ -261,6 +261,11 @@ func FindAllGoModules(rootDir string) (map[string][]string, error) {
 
 // EnsurePnpmDependencies runs pnpm install to ensure all dependencies are installed.
 // In CI mode, uses --frozen-lockfile to fail if lockfile is out of sync.
+//
+// It then runs `svelte-kit sync`, which generates `node_modules/$app/` (the tsconfig that
+// `tsconfig.json` extends, plus types). A fresh install doesn't have it, and knip, vitest, and
+// eslint all fail on the missing tsconfig. The package's `prepare` script also syncs, but a
+// global `ignore-scripts` skips that, so the runner doesn't rely on it.
 func EnsurePnpmDependencies(ctx *CheckContext) error {
 	args := []string{"install"}
 	if ctx.CI {
@@ -272,6 +277,12 @@ func EnsurePnpmDependencies(ctx *CheckContext) error {
 	output, err := RunCommand(cmd, true)
 	if err != nil {
 		return fmt.Errorf("pnpm install failed:\n%s", indentOutput(output))
+	}
+
+	syncCmd := exec.Command("pnpm", "exec", "svelte-kit", "sync")
+	syncCmd.Dir = ctx.RootDir
+	if output, err := RunCommand(syncCmd, true); err != nil {
+		return fmt.Errorf("svelte-kit sync failed:\n%s", indentOutput(output))
 	}
 	return nil
 }
