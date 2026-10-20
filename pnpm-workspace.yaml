@@ -5,11 +5,6 @@
 allowBuilds:
     esbuild: true
 
-# vite-plugin-devtools-json declares a narrower vite peer range; we run vite 8.
-peerDependencyRules:
-    allowedVersions:
-        vite-plugin-devtools-json>vite: '8'
-
 # pnpm 11's `pnpm exec`/`pnpm run` print an "Already up to date / Done in …" install summary by
 # default. The check runner parses `pnpm exec prettier --list-different` stdout as a file list, so
 # that noise reads as "unformatted files". Disabling the pre-run verification keeps stdout clean.
