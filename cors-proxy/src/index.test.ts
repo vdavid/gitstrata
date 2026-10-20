@@ -51,7 +51,8 @@ function mockR2Bucket(store: Map<string, ArrayBuffer | Uint8Array> = new Map()) 
                 }),
             }
         }),
-        put: vi.fn(async (key: string, value: ArrayBuffer | Uint8Array, _options?: unknown) => {
+        // The third tuple slot types R2's `options` argument for the `toHaveBeenCalledWith` assertions.
+        put: vi.fn(async (...[key, value]: [string, ArrayBuffer | Uint8Array, unknown?]) => {
             store.set(key, value)
         }),
     }
