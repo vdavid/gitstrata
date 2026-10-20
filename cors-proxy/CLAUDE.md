@@ -46,24 +46,29 @@ pnpm (11+) walks up to the repo-root `pnpm-workspace.yaml` and installs the fron
   bytes. Timeout/staleness logic lives client-side (`StalenessMonitor` in `clone.ts`). Source:
   https://developers.cloudflare.com/workers/platform/limits/
 - For local frontend development, use `https://cors.isomorphic-git.org` instead — no need to run this worker locally.
-- **Shared results cache (optional)**: When an R2 bucket binding (`RESULTS`) is present, two cache routes activate.
-  Without the binding, they return 404 and the proxy behaves as before.
-    - `GET /cache/v1/:repoHash` — returns gzip-compressed JSON from R2, 5-min edge cache.
-    - `PUT /cache/v1/:repoHash` — accepts gzip-compressed `SharedCacheEntry` JSON. Requires `Authorization: Bearer`
-      token matching the `CACHE_WRITE_TOKEN` secret (set via `wrangler secret put`). In production (when
-      `ALLOWED_ORIGIN` is set), cache writes are rejected with 403 if the token is not configured — fail-closed. In dev
-      (no `ALLOWED_ORIGIN`), writes are open. Full PUT validation pipeline:
-        1. Auth check (Bearer token)
-        2. Rate limit (100 req/min general, 10 writes/min)
-        3. Size guard + gzip decompress + JSON parse (10 MB compressed, 50 MB decompressed)
-        4. `validateCacheEntry` (`validate-cache-entry.ts`) — shape, repoUrl format, headCommit hex, day caps, date
-           format, number invariants, language ID allowlist, comment types
-        5. Repo hash check (SHA-256 of repoUrl must match `:repoHash`)
-        6. `verifyHeadCommit` (`verify-head-commit.ts`) — fetches `/info/refs?service=git-upload-pack` from the real git
-           host and confirms the submitted headCommit OID exists in the response (5 s timeout, fail-closed)
-        7. R2 put
-    - R2 object key: `results/v1/{sha256(repoUrl)}.json.gz`.
-    - The R2 binding is commented out in `wrangler.toml` by default — uncomment to enable.
-- **Shared language IDs** (`shared/language-ids.ts`): Single source of truth for all valid language IDs, imported by
-  both the Cloudflare Worker (for cache entry validation) and the frontend. A drift-detection test
-  (`tests/language-ids-sync.test.ts`) ensures `validLanguageIds` stays in sync with `src/lib/languages.ts`.
+- **Shared results cache**: Active when the R2 binding `RESULTS` is present (it's on in `wrangler.toml`, bucket
+  `git-strata-results`). Without the binding, both routes return 404.
+    - `GET /cache/v1/:repoHash` — anyone can read. Returns the stored gzip JSON with `Content-Encoding: gzip`, 5-min
+      edge cache.
+    - `PUT /cache/v1/:repoHash` — only "trusted devices" write: the owner's devices and a few friends, each holding a
+      personal write key (`Authorization: Bearer <key>`). The Worker secret `WRITE_KEY_HASHES` holds comma-separated
+      lowercase SHA-256 hex digests of the valid keys; the presented key is hashed with `crypto.subtle` and compared in
+      constant time against every hash. Missing secret, missing key, or unknown key → 403, in dev too (fail closed; put
+      a hash in `.dev.vars` to test writes locally). Anonymous visitors never upload.
+    - **Decision/Why — no body parsing**: the Worker is on the free plan (10 ms CPU per request, and it stays there).
+      Gunzip + `JSON.parse` + shape validation of a multi-MB result can't fit, so the PUT stores the gzip body as-is and
+      trusts the key holder for the content. The client declares what it uploads in headers: `X-Repo-Url` and
+      `X-Head-Commit`.
+    - PUT pipeline (`cache-write-checks.ts` holds the small pure checks): rate limit (100 req/min, 10 writes/min) → key
+      check → `X-Repo-Url` format (`https://(github.com|gitlab.com|bitbucket.org)/<owner>/<repo>`) and `X-Head-Commit`
+      (40 lowercase hex) → `sha256(X-Repo-Url)` must equal `:repoHash` → `Content-Length` required (411) and ≤ 10 MB
+      (413) → `verifyHeadCommit` (`verify-head-commit.ts`: fetches the host's `/info/refs` and checks the OID is
+      advertised; I/O, not CPU; 5 s timeout, fail-closed) → body read with a 10 MB stream cap (`Content-Length` can lie)
+      → R2 put.
+    - R2 object: `results/v1/{sha256(repoUrl)}.json.gz`, `httpMetadata` (`application/json`, gzip), `customMetadata`
+      (`repoUrl`, `headCommit`, `updatedAt`).
+    - CORS: the preflight allows `PUT` and the headers `Authorization`, `X-Repo-Url`, `X-Head-Commit`,
+      `Content-Encoding`, `Content-Type`.
+- **Gotcha/Why — `ALLOWED_ORIGIN` isn't applied**: it sits as a top-level key in `wrangler.toml`, which wrangler ignores
+  ("Unexpected fields found in top-level field"); it would need a `[vars]` table. So production currently answers
+  `Access-Control-Allow-Origin: *`. Nothing in the cache write path relies on it.

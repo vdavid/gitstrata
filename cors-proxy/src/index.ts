@@ -1,10 +1,17 @@
 import { Hono } from 'hono'
-import { validateCacheEntry } from './validate-cache-entry'
+import {
+    isValidCommit,
+    isValidRepoUrl,
+    isValidWriteKey,
+    parseKeyHashes,
+    readBodyWithLimit,
+    sha256Hex,
+} from './cache-write-checks'
 import { verifyHeadCommit } from './verify-head-commit'
 
 type Bindings = {
     RESULTS?: R2Bucket
-    CACHE_WRITE_TOKEN?: string
+    WRITE_KEY_HASHES?: string
     ALLOWED_ORIGIN?: string
 }
 
@@ -19,7 +26,8 @@ function getCorsHeaders(c: { env: Bindings; req: { header: (name: string) => str
     return {
         'Access-Control-Allow-Origin': allowOrigin,
         'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Git-Protocol, Authorization',
+        'Access-Control-Allow-Headers':
+            'Content-Type, Content-Encoding, Git-Protocol, Authorization, X-Repo-Url, X-Head-Commit',
         'Access-Control-Expose-Headers': 'Content-Type, Content-Length',
     }
 }
@@ -73,14 +81,7 @@ function isAllowedTarget(url: string): boolean {
     }
 }
 
-async function sha256Hex(input: string): Promise<string> {
-    const encoded = new TextEncoder().encode(input)
-    const hashBuffer = await crypto.subtle.digest('SHA-256', encoded)
-    return [...new Uint8Array(hashBuffer)].map((b) => b.toString(16).padStart(2, '0')).join('')
-}
-
 const maxBodySize = 10 * 1024 * 1024 // 10 MB
-const maxDecompressedSize = 50 * 1024 * 1024 // 50 MB — guards against gzip bombs
 
 // --- Cache routes (only active when R2 binding RESULTS is present) ---
 
@@ -116,20 +117,6 @@ app.put('/cache/v1/:repoHash', async (c) => {
         return c.text('Not found', 404, getCorsHeaders(c))
     }
 
-    const writeToken = c.env.CACHE_WRITE_TOKEN
-    if (!writeToken) {
-        if (c.env.ALLOWED_ORIGIN) {
-            return c.text('Cache writes are disabled (missing server config).', 403, getCorsHeaders(c))
-        }
-    } else {
-        // Plain equality is fine — the token is public (shipped in client-side env vars),
-        // so there's no secret to protect via constant-time comparison.
-        const auth = c.req.header('authorization') ?? ''
-        if (auth !== `Bearer ${writeToken}`) {
-            return c.text('Unauthorized', 401, getCorsHeaders(c))
-        }
-    }
-
     const ip = c.req.header('cf-connecting-ip') ?? 'unknown'
 
     if (isRateLimited(ip)) {
@@ -139,65 +126,58 @@ app.put('/cache/v1/:repoHash', async (c) => {
         return c.text('Write rate limit exceeded. Max 10 writes per minute.', 429, getCorsHeaders(c))
     }
 
-    // Reject oversized payloads before buffering the body
-    const contentLength = parseInt(c.req.header('content-length') ?? '', 10)
+    // Only holders of a personal write key may upload. No configured keys means no writes (fail closed).
+    const keyHashes = parseKeyHashes(c.env.WRITE_KEY_HASHES)
+    if (keyHashes.length === 0) {
+        return c.text('Cache writes are disabled (no write keys configured).', 403, getCorsHeaders(c))
+    }
+    const key = (c.req.header('authorization') ?? '').match(/^Bearer (.+)$/)?.[1] ?? ''
+    if (!(await isValidWriteKey(key, keyHashes))) {
+        return c.text('Missing or invalid write key.', 403, getCorsHeaders(c))
+    }
+
+    // The body is never parsed: gunzip + JSON.parse of a multi-MB result doesn't fit the free plan's 10 ms CPU.
+    // The client states what it's uploading in headers instead.
+    const repoUrl = c.req.header('x-repo-url') ?? ''
+    const headCommit = c.req.header('x-head-commit') ?? ''
+    if (!isValidRepoUrl(repoUrl)) {
+        return c.text(
+            'X-Repo-Url must match https://(github.com|gitlab.com|bitbucket.org)/<owner>/<repo>.',
+            400,
+            getCorsHeaders(c),
+        )
+    }
+    if (!isValidCommit(headCommit)) {
+        return c.text('X-Head-Commit must be a 40-character lowercase hex string.', 400, getCorsHeaders(c))
+    }
+
+    const repoHash = c.req.param('repoHash')
+    if ((await sha256Hex(repoUrl)) !== repoHash) {
+        return c.text('X-Repo-Url hash does not match path.', 400, getCorsHeaders(c))
+    }
+
+    const contentLength = Number(c.req.header('content-length') ?? NaN)
+    if (!Number.isInteger(contentLength) || contentLength < 0) {
+        return c.text('Content-Length is required.', 411, getCorsHeaders(c))
+    }
     if (contentLength > maxBodySize) {
         return c.text('Request body too large. Max 10 MB.', 413, getCorsHeaders(c))
     }
 
-    const body = await c.req.arrayBuffer()
-    if (body.byteLength > maxBodySize) {
-        return c.text('Request body too large. Max 10 MB.', 413, getCorsHeaders(c))
-    }
-
-    // Decompress gzip with a size limit to guard against gzip bombs
-    const decompressedStream = new Blob([body]).stream().pipeThrough(new DecompressionStream('gzip'))
-    const reader = decompressedStream.getReader()
-    const chunks: Uint8Array[] = []
-    let totalDecompressedSize = 0
-    try {
-        for (;;) {
-            const { done, value } = await reader.read()
-            if (done) break
-            totalDecompressedSize += value.byteLength
-            if (totalDecompressedSize > maxDecompressedSize) {
-                void reader.cancel()
-                return c.text('Decompressed payload too large. Max 50 MB.', 413, getCorsHeaders(c))
-            }
-            chunks.push(value)
-        }
-    } catch {
-        return c.text('Invalid gzip or JSON payload.', 400, getCorsHeaders(c))
-    }
-
-    let parsed: unknown
-    try {
-        const text = await new Blob(chunks).text()
-        parsed = JSON.parse(text)
-    } catch {
-        return c.text('Invalid gzip or JSON payload.', 400, getCorsHeaders(c))
-    }
-
-    const validationError = validateCacheEntry(parsed)
-    if (validationError) {
-        return c.text(validationError, 400, getCorsHeaders(c))
-    }
-
-    const entry = parsed as { repoUrl: string; headCommit: string }
-
-    const repoHash = c.req.param('repoHash')
-    const expectedHash = await sha256Hex(entry.repoUrl)
-    if (expectedHash !== repoHash) {
-        return c.text('repoUrl hash does not match path.', 400, getCorsHeaders(c))
-    }
-
-    const commitError = await verifyHeadCommit(entry.repoUrl, entry.headCommit)
+    const commitError = await verifyHeadCommit(repoUrl, headCommit)
     if (commitError) {
         return c.text(commitError, 400, getCorsHeaders(c))
     }
 
+    // Content-Length can lie, so cap the stream too.
+    const body = await readBodyWithLimit(c.req.raw.body, maxBodySize)
+    if (!body) {
+        return c.text('Request body too large. Max 10 MB.', 413, getCorsHeaders(c))
+    }
+
     await bucket.put(`results/v1/${repoHash}.json.gz`, body, {
         httpMetadata: { contentType: 'application/json', contentEncoding: 'gzip' },
+        customMetadata: { repoUrl, headCommit, updatedAt: new Date().toISOString() },
     })
 
     return c.text('Stored', 200, getCorsHeaders(c))

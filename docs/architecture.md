@@ -44,11 +44,10 @@ Details: [`functions/CLAUDE.md`](../functions/CLAUDE.md)
 
 ## Tooling
 
-| Directory  | Purpose                                                                                                     |
-| ---------- | ----------------------------------------------------------------------------------------------------------- |
-| `scripts/` | Go-based check runner                                                                                       |
-| `tests/`   | Vitest (unit) + Playwright (e2e)                                                                            |
-| `shared/`  | `language-ids.ts` — single source of truth for valid language IDs, imported by both frontend and CORS proxy |
+| Directory  | Purpose                          |
+| ---------- | -------------------------------- |
+| `scripts/` | Go-based check runner            |
+| `tests/`   | Vitest (unit) + Playwright (e2e) |
 
 ## Cross-cutting patterns
 

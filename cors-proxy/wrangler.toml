@@ -2,15 +2,13 @@ name = "git-strata-cors-proxy"
 main = "src/index.ts"
 compatibility_date = "2025-01-01"
 
-# Uncomment after enabling R2 and creating the bucket (see docs/deploying.md step 3)
-# [[r2_buckets]]
-# binding = "RESULTS"
-# bucket_name = "git-strata-results"
-
 # CORS origin restriction: rejects cross-origin requests from other websites.
 # Override locally via .dev.vars.
 ALLOWED_ORIGIN = "https://gitstrata.com"
 
-# Cache write auth: set via `wrangler secret put CACHE_WRITE_TOKEN`
-# The frontend sends this as a Bearer token on cache PUT requests.
-# Required in prod — cache writes are rejected (403) when ALLOWED_ORIGIN is set but this token is missing.
+# Shared results cache. Create the bucket first (see docs/deploying.md step 3).
+# Cache writes need the `WRITE_KEY_HASHES` secret (`wrangler secret put WRITE_KEY_HASHES`): comma-separated SHA-256
+# hex digests of the personal write keys. Without it, every cache PUT gets 403.
+[[r2_buckets]]
+binding = "RESULTS"
+bucket_name = "git-strata-results"
