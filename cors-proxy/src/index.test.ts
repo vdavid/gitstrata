@@ -228,7 +228,7 @@ describe('PUT /cache/v1/:repoHash', () => {
 
 // --- Proxy passthrough auth ---
 
-const noopExecutionCtx = { waitUntil: () => {}, passThroughOnException: () => {} }
+const noopExecutionCtx = { waitUntil: () => {}, passThroughOnException: () => {}, props: {} }
 
 describe('proxy passthrough auth', () => {
     afterEach(() => {

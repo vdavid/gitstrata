@@ -2,7 +2,7 @@
     "name": "git-strata-cors-proxy",
     "private": true,
     "type": "module",
-    "packageManager": "pnpm@10.29.2",
+    "packageManager": "pnpm@12.14.0",
     "scripts": {
         "preinstall": "node -e \"if(!/pnpm/.test(process.env.npm_config_user_agent))throw new Error('Use pnpm to install dependencies')\"",
         "dev": "wrangler dev",
@@ -10,11 +10,11 @@
         "test": "vitest run"
     },
     "dependencies": {
-        "hono": "^4.11.9"
+        "hono": "^4.13.13"
     },
     "devDependencies": {
-        "@cloudflare/workers-types": "^4.20260214.0",
-        "vitest": "^4.0.18",
-        "wrangler": "^4.65.0"
+        "@cloudflare/workers-types": "^5.20261016.1",
+        "vitest": "^5.0.5",
+        "wrangler": "^4.151.1"
     }
 }

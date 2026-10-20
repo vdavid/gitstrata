@@ -4,7 +4,9 @@
 # instead — leaving `cors-proxy/node_modules` (and `wrangler`) missing. This file marks cors-proxy as
 # its own root so its lockfile installs here.
 
-# esbuild (pulled in by wrangler) builds a native binary in a postinstall script. A global
-# `ignore-scripts` blocks that, so allow it explicitly, matching the repo-root workspace.
+# esbuild and workerd (both pulled in by wrangler) set up native binaries in postinstall scripts.
+# A global `ignore-scripts` blocks that, and pnpm 12 fails the install on unapproved build scripts,
+# so allow both explicitly.
 allowBuilds:
     esbuild: true
+    workerd: true
