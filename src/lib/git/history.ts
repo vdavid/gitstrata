@@ -1,7 +1,7 @@
 import git, { type FsClient, type ReadCommitResult } from 'isomorphic-git'
 
 /** A single commit with its metadata */
-export interface CommitEntry {
+interface CommitEntry {
     hash: string
     author: string // "Name <email>" (mailmap-normalized)
     message: string

@@ -33,12 +33,7 @@
 
     // --- Tig↔git interactive hover swap ---
     type SwapPhase =
-        | 'initial'
-        | 'showing-git'
-        | 'hover-pending'
-        | 'animating-to-tig'
-        | 'showing-tig'
-        | 'animating-to-git'
+        'initial' | 'showing-git' | 'hover-pending' | 'animating-to-tig' | 'showing-tig' | 'animating-to-git'
 
     let swapPhase: SwapPhase = 'initial'
     let swapNeedsFreshEnter = true
