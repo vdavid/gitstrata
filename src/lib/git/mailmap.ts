@@ -119,6 +119,19 @@ export function createMailmapLookup(entries: MailmapEntry[]): (name: string, ema
     }
 }
 
+/** Blob OID of `.mailmap` in the repo root tree at `headRef`, or `''` when there's none. */
+export async function readMailmapOid(fs: FsClient, dir: string, headRef: string, gitCache?: object): Promise<string> {
+    try {
+        // readCommit takes an OID only, so a branch name must be resolved first (resolveRef passes OIDs through)
+        const oid = await git.resolveRef({ fs, dir, ref: headRef })
+        const { commit } = await git.readCommit({ fs, dir, oid, cache: gitCache })
+        const tree = await git.readTree({ fs, dir, oid: commit.tree, cache: gitCache })
+        return tree.tree.find((e) => e.path === '.mailmap' && e.type === 'blob')?.oid ?? ''
+    } catch {
+        return ''
+    }
+}
+
 /** Read .mailmap from the repo root tree. Returns [] if not found. */
 export async function readMailmapFromRepo(
     fs: FsClient,
@@ -127,13 +140,10 @@ export async function readMailmapFromRepo(
     gitCache?: object,
 ): Promise<MailmapEntry[]> {
     try {
-        const { commit } = await git.readCommit({ fs, dir, oid: headRef, cache: gitCache })
-        const tree = await git.readTree({ fs, dir, oid: commit.tree, cache: gitCache })
+        const mailmapOid = await readMailmapOid(fs, dir, headRef, gitCache)
+        if (!mailmapOid) return []
 
-        const mailmapEntry = tree.tree.find((e) => e.path === '.mailmap')
-        if (!mailmapEntry) return []
-
-        const { blob } = await git.readBlob({ fs, dir, oid: mailmapEntry.oid, cache: gitCache })
+        const { blob } = await git.readBlob({ fs, dir, oid: mailmapOid, cache: gitCache })
         const content = new TextDecoder().decode(blob)
         return parseMailmap(content)
     } catch {

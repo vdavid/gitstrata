@@ -16,6 +16,12 @@ export interface AnalyzerHandle {
         cachedResult: AnalysisResult,
         onProgress: (event: ProgressEvent) => void,
     ) => Promise<AnalysisResult>
+    getRemoteHead: (
+        repoInput: string,
+        corsProxy: string,
+        githubToken: string | undefined,
+        branch: string,
+    ) => Promise<string | undefined>
     cancel: () => Promise<void>
     terminate: () => void
 }
@@ -35,6 +41,8 @@ export const createAnalyzer = (): AnalyzerHandle => {
         analyzeIncremental: async (repoInput, corsProxy, githubToken, cachedResult, onProgress) => {
             return api.analyzeIncremental(repoInput, corsProxy, githubToken, cachedResult, Comlink.proxy(onProgress))
         },
+        getRemoteHead: (repoInput, corsProxy, githubToken, branch) =>
+            api.getRemoteHead(repoInput, corsProxy, githubToken, branch),
         cancel: () => api.cancel(),
         terminate: () => {
             worker.terminate()

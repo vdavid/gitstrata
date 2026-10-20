@@ -242,6 +242,30 @@ export const detectDefaultBranch = async (options: {
     throw new Error('Could not detect default branch')
 }
 
+/** OID at the tip of `branch` on the remote: one small refs request, no pack transfer. */
+export const getRemoteBranchHead = async (options: {
+    url: string
+    corsProxy: string
+    branch: string
+    githubToken?: string
+    signal?: AbortSignal
+}): Promise<string | undefined> => {
+    const signal = AbortSignal.any([
+        ...(options.signal ? [options.signal] : []),
+        AbortSignal.timeout(defaultBranchTimeoutMs),
+    ])
+    const ref = `refs/heads/${options.branch}`
+    const refs = await git.listServerRefs({
+        http: makeAbortableHttp(signal),
+        corsProxy: options.corsProxy,
+        url: options.url,
+        prefix: ref,
+        protocolVersion: 2,
+        onAuth: makeOnAuth(options.githubToken),
+    })
+    return refs.find((r) => r.ref === ref)?.oid
+}
+
 export const cloneRepo = async (options: CloneOptions & { defaultBranch: string }): Promise<void> => {
     const { fs, dir, url, corsProxy, githubToken, defaultBranch, onProgress, signal } = options
 

@@ -6,12 +6,9 @@ import * as Comlink from 'comlink'
 import git from 'isomorphic-git'
 import LightningFS from '@isomorphic-git/lightning-fs'
 import { configureSync, getConsoleSink, getLogger } from '@logtape/logtape'
-import type { AnalysisResult, DayStats, ErrorKind, ProgressEvent } from '../types'
-import { cloneRepo, detectDefaultBranch, fetchRepo, waitForBodyCleanups } from '../git/clone'
-import { fillDateGaps, getCommitsByDate, type DailyCommit } from '../git/history'
-import { countLinesForCommit, countLinesForCommitIncremental, LruMap, computeCommitContribution } from '../git/count'
-import type { FileState } from '../git/count'
-import { readMailmapFromRepo, createMailmapLookup } from '../git/mailmap'
+import type { AnalysisResult, ErrorKind, ProgressEvent } from '../types'
+import { cloneRepo, detectDefaultBranch, fetchRepo, getRemoteBranchHead, waitForBodyCleanups } from '../git/clone'
+import { analyzeLocalRepo, rollOnAnalysis, type LocalRepo } from '../git/pipeline'
 import { parseRepoUrl, repoToDir, repoToFsName } from '../url'
 
 // Configure LogTape for the worker context
@@ -75,208 +72,37 @@ const classifyError = (error: unknown): { message: string; kind: ErrorKind } => 
     return { message: raw, kind: 'unknown' }
 }
 
-const processDays = async (params: {
-    fs: LightningFS
-    dir: string
-    dayEntries: Array<{ date: string; commit: DailyCommit | undefined }>
-    blobCache: Map<string, { lines: number; testLines: number; languageId: string | undefined }>
-    contentCache: Map<string, string>
-    treeCache: Map<string, { path: string; oid: string; type: string }[]>
-    gitCache: object
-    signal: AbortSignal
-    onProgress: ProgressCallback
-    prevCommitOid: string | undefined
-    prevDay: DayStats | undefined
-    fileStateMap: Map<string, FileState>
-    allExtensions: Set<string>
-    authorLineTotals: Map<string, number>
-}): Promise<DayStats[]> => {
-    const {
-        fs,
-        dir,
-        dayEntries,
-        blobCache,
-        contentCache,
-        treeCache,
-        gitCache,
-        signal,
-        onProgress,
-        fileStateMap,
-        allExtensions,
-        authorLineTotals,
-    } = params
-    let { prevCommitOid, prevDay } = params
-    const totalDays = dayEntries.length
-    const days: DayStats[] = []
+const throwIfAborted = (signal: AbortSignal) => {
+    if (signal.aborted) throw new Error('Cancelled')
+}
 
-    for (let i = 0; i < dayEntries.length; i++) {
-        if (signal.aborted) throw new Error('Cancelled')
-
-        const { date, commit } = dayEntries[i]
-
-        onProgress({ type: 'process', current: i + 1, total: totalDays, date })
-
-        let dayStats: DayStats | undefined
-
-        if (commit) {
-            if (commit.commits && commit.commits.length > 0) {
-                // Multi-commit path: iterate each commit to attribute line deltas to authors
-                const dayLanguageAdded: Record<string, number> = {}
-                const dayLanguageRemoved: Record<string, number> = {}
-                const dayContributorAdded: Record<string, number> = {}
-                const dayContributorRemoved: Record<string, number> = {}
-
-                for (const ce of commit.commits) {
-                    if (prevCommitOid) {
-                        dayStats = await countLinesForCommitIncremental(
-                            {
-                                fs,
-                                dir,
-                                commitOid: ce.hash,
-                                prevCommitOid,
-                                blobCache,
-                                contentCache,
-                                treeCache,
-                                gitCache,
-                                signal,
-                            },
-                            fileStateMap,
-                            allExtensions,
-                            date,
-                            commit.messages,
-                        )
-                    } else {
-                        dayStats = await countLinesForCommit(
-                            {
-                                fs,
-                                dir,
-                                commitOid: ce.hash,
-                                blobCache,
-                                contentCache,
-                                fileStateMap,
-                                allExtensions,
-                                treeCache,
-                                gitCache,
-                                signal,
-                            },
-                            date,
-                            commit.messages,
-                        )
-                    }
-
-                    // Parent-based attribution via computeCommitContribution
-                    if (ce.parentOids.length <= 1) {
-                        // Normal commit (1 parent) or root commit (0 parents); skip merge commits (>1 parent)
-                        const parentOid = ce.parentOids.length === 1 ? ce.parentOids[0] : undefined
-                        const contribution = await computeCommitContribution({
-                            fs,
-                            dir,
-                            commitOid: ce.hash,
-                            parentOid,
-                            blobCache,
-                            contentCache,
-                            treeCache,
-                            allExtensions,
-                            gitCache,
-                        })
-
-                        authorLineTotals.set(
-                            ce.author,
-                            (authorLineTotals.get(ce.author) ?? 0) + contribution.totalDelta,
-                        )
-
-                        for (const [lang, value] of Object.entries(contribution.languageAdded)) {
-                            dayLanguageAdded[lang] = (dayLanguageAdded[lang] ?? 0) + value
-                        }
-                        for (const [lang, value] of Object.entries(contribution.languageRemoved)) {
-                            dayLanguageRemoved[lang] = (dayLanguageRemoved[lang] ?? 0) + value
-                        }
-                        dayContributorAdded[ce.author] = (dayContributorAdded[ce.author] ?? 0) + contribution.totalAdded
-                        dayContributorRemoved[ce.author] =
-                            (dayContributorRemoved[ce.author] ?? 0) + contribution.totalRemoved
-                    }
-
-                    contentCache.clear()
-                    prevCommitOid = ce.hash
-                }
-
-                // dayStats from last iteration = latest commit state (correct for language chart)
-                // Loop always runs (commit.commits.length > 0), so dayStats is assigned
-                if (dayStats) {
-                    dayStats.authors = commit.authors
-                    dayStats.contributors = Object.fromEntries(authorLineTotals)
-                    dayStats.languageAdded = dayLanguageAdded
-                    dayStats.languageRemoved = dayLanguageRemoved
-                    dayStats.contributorAdded = dayContributorAdded
-                    dayStats.contributorRemoved = dayContributorRemoved
-                }
-            } else {
-                // Backward compat: old data without commits array — single-commit behavior
-                if (prevCommitOid) {
-                    dayStats = await countLinesForCommitIncremental(
-                        {
-                            fs,
-                            dir,
-                            commitOid: commit.hash,
-                            prevCommitOid,
-                            blobCache,
-                            contentCache,
-                            treeCache,
-                            gitCache,
-                            signal,
-                        },
-                        fileStateMap,
-                        allExtensions,
-                        date,
-                        commit.messages,
-                    )
-                } else {
-                    dayStats = await countLinesForCommit(
-                        {
-                            fs,
-                            dir,
-                            commitOid: commit.hash,
-                            blobCache,
-                            contentCache,
-                            fileStateMap,
-                            allExtensions,
-                            treeCache,
-                            gitCache,
-                            signal,
-                        },
-                        date,
-                        commit.messages,
-                    )
-                }
-                dayStats.authors = commit.authors
-                contentCache.clear()
-                prevCommitOid = commit.hash
-            }
-            if (dayStats) prevDay = dayStats
-        } else if (prevDay) {
-            // Gap day: carry forward previous stats
-            dayStats = {
-                date,
-                total: prevDay.total,
-                languages: Object.fromEntries(Object.entries(prevDay.languages).map(([k, v]) => [k, { ...v }])),
-                comments: ['-'],
-                authors: [],
-                contributors: prevDay.contributors ? { ...prevDay.contributors } : undefined,
-                languageAdded: {},
-                languageRemoved: {},
-                contributorAdded: {},
-                contributorRemoved: {},
-            }
-        } else {
-            continue
-        }
-
-        if (!dayStats) continue
-        days.push(dayStats)
-        onProgress({ type: 'day-result', day: dayStats })
+/** Clone into LightningFS, wiping the database on failure so a retry doesn't read half-written pack files. */
+const cloneFresh = async (options: Parameters<typeof cloneRepo>[0] & { fsName: string }): Promise<void> => {
+    const { fsName, ...cloneOptions } = options
+    options.onProgress?.({ type: 'clone', phase: 'Counting objects', loaded: 0, total: 0 })
+    logger.info('Starting: clone {url} ({branch})', { url: options.url, branch: options.defaultBranch })
+    try {
+        await cloneRepo(cloneOptions)
+    } catch (cloneError) {
+        logger.warning('Clone failed, wiping LightningFS database "{fsName}"', { fsName })
+        new LightningFS(fsName, { wipe: true })
+        throw cloneError
     }
+    logger.info('Clone complete')
+}
 
-    return days
+/** Run a pipeline step, reporting failures as classified `error` progress events. */
+const reportErrors = async (onProgress: ProgressCallback, run: () => Promise<AnalysisResult>) => {
+    try {
+        const result = await run()
+        onProgress({ type: 'done', result })
+        return result
+    } catch (error) {
+        const classified = classifyError(error)
+        logger.error('Pipeline error: {kind} — {message}', { kind: classified.kind, message: classified.message })
+        onProgress({ type: 'error', message: classified.message, kind: classified.kind })
+        throw error
+    }
 }
 
 let abortController: AbortController | undefined
@@ -297,162 +123,32 @@ const analyzerApi = {
         const signal = abortController.signal
         const parsed = parseRepoUrl(repoInput)
         const dir = repoToDir(parsed)
-
-        // Initialize lightning-fs with a unique name for persistence
         const fsName = repoToFsName(parsed)
         const fs = new LightningFS(fsName)
 
-        try {
-            // Step 1: Detect default branch
+        return reportErrors(onProgress, async () => {
             onProgress({ type: 'clone', phase: 'Detecting default branch...', loaded: 0, total: 0 })
             logger.info('Starting: detect default branch for {url}', { url: parsed.url })
-            const defaultBranch = await detectDefaultBranch({
-                url: parsed.url,
-                corsProxy,
-                githubToken,
-                signal,
-            })
+            const defaultBranch = await detectDefaultBranch({ url: parsed.url, corsProxy, githubToken, signal })
             logger.info('Detected branch: {branch}', { branch: defaultBranch })
+            throwIfAborted(signal)
 
-            if (signal.aborted) {
-                // noinspection ExceptionCaughtLocallyJS
-                throw new Error('Cancelled')
-            }
+            const cloneOptions = { fs, dir, url: parsed.url, corsProxy, githubToken, defaultBranch, onProgress, signal }
+            await cloneFresh({ ...cloneOptions, fsName })
+            throwIfAborted(signal)
 
-            // Step 2: Clone — emit a transition so the UI advances past "Detect branch"
-            onProgress({ type: 'clone', phase: 'Counting objects', loaded: 0, total: 0 })
-            logger.info('Starting: clone {url} ({branch})', {
-                url: parsed.url,
-                branch: defaultBranch,
-            })
-            try {
-                await cloneRepo({
-                    fs,
-                    dir,
-                    url: parsed.url,
-                    corsProxy,
-                    githubToken,
-                    defaultBranch,
-                    onProgress,
-                    signal,
-                })
-            } catch (cloneError) {
-                // Wipe partially-written git objects so the next retry starts clean.
-                // Without this, a failed clone leaves corrupt data in IndexedDB and
-                // subsequent attempts read half-written pack files.
-                logger.warning('Clone failed, wiping LightningFS database "{fsName}"', { fsName })
-                new LightningFS(fsName, { wipe: true })
-                throw cloneError
-            }
-            logger.info('Clone complete')
-
-            if (signal.aborted) {
-                // noinspection ExceptionCaughtLocallyJS
-                throw new Error('Cancelled')
-            }
-
-            // Resolve HEAD OID for freshness checking
-            const headCommit = await git.resolveRef({ fs, dir, ref: defaultBranch })
-
-            // Step 3: Read mailmap and get commit history grouped by date
-            onProgress({ type: 'process', current: 0, total: 0, date: 'Loading history...' })
-            const gitCache = {}
-            const mailmapEntries = await readMailmapFromRepo(fs, dir, defaultBranch, gitCache)
-            const normalizeAuthor = createMailmapLookup(mailmapEntries)
-
-            const dailyCommits = await getCommitsByDate({
-                fs,
-                dir,
-                ref: defaultBranch,
-                gitCache,
-                signal,
-                normalizeAuthor,
-                onProgress: (processed) => {
-                    onProgress({
-                        type: 'process',
-                        current: 0,
-                        total: 0,
-                        date: `Loading history... (${processed.toLocaleString()} commits)`,
-                    })
-                },
-            })
-
-            if (dailyCommits.length === 0) {
-                // noinspection ExceptionCaughtLocallyJS
-                throw new Error('No commits found in repository')
-            }
-
-            // Step 4: Fill date gaps
-            const allDays = fillDateGaps(dailyCommits)
-            const totalDays = allDays.length
-
-            // Step 5: Process each day
-            logger.info('Starting: analyze ({totalDays} days)', { totalDays })
-            const blobCache = new LruMap<string, { lines: number; testLines: number; languageId: string | undefined }>(
-                100_000,
-            )
-            const contentCache = new Map<string, string>() // Cleared per commit, no LRU needed
-            const treeCache = new LruMap<string, { path: string; oid: string; type: string }[]>(10_000)
-            const fileStateMap = new Map<string, FileState>()
-            const allExtensions = new Set<string>()
-            const authorLineTotals = new Map<string, number>()
-
-            const days = await processDays({
-                fs,
-                dir,
-                dayEntries: allDays,
-                blobCache,
-                contentCache,
-                treeCache,
-                gitCache,
-                signal,
-                onProgress,
-                prevCommitOid: undefined,
-                prevDay: undefined,
-                fileStateMap,
-                allExtensions,
-                authorLineTotals,
-            })
-
-            logger.info('Analysis complete ({count} days)', { count: days.length })
-
-            // Step 6: Determine detected languages sorted by final-day line count
-            const lastDay = days[days.length - 1]
-            const detectedLanguages = Object.entries(lastDay.languages)
-                .sort(([, a], [, b]) => b.total - a.total)
-                .map(([id]) => id)
-
-            // Compute total distinct contributors across all days
-            const allAuthors = new Set<string>()
-            for (const day of days) {
-                for (const author of day.authors) {
-                    allAuthors.add(author)
-                }
-            }
-
-            const result: AnalysisResult = {
-                repoUrl: parsed.url,
-                defaultBranch,
-                headCommit,
-                analyzedAt: new Date().toISOString(),
-                detectedLanguages,
-                days,
-                totalContributors: allAuthors.size,
-            }
-
-            onProgress({ type: 'done', result })
+            const headOid = await git.resolveRef({ fs, dir, ref: defaultBranch })
+            const repo: LocalRepo = { fs, dir, repoUrl: parsed.url, defaultBranch, headOid, signal, onProgress }
+            const result = await analyzeLocalRepo(repo)
+            logger.info('Analysis complete ({count} days)', { count: result.days.length })
             return result
-        } catch (error) {
-            const classified = classifyError(error)
-            logger.error('Pipeline error: {kind} — {message}', {
-                kind: classified.kind,
-                message: classified.message,
-            })
-            onProgress({ type: 'error', message: classified.message, kind: classified.kind })
-            throw error
-        }
+        })
     },
 
+    /**
+     * Bring a cached result up to the remote's current HEAD. Fetches into the persisted clone (or clones when this
+     * device has none), then recounts only the days that new commits affect. See `rollOnAnalysis`.
+     */
     async analyzeIncremental(
         repoInput: string,
         corsProxy: string,
@@ -467,179 +163,48 @@ const analyzerApi = {
         const fsName = repoToFsName(parsed)
         const fs = new LightningFS(fsName)
         const defaultBranch = cachedResult.defaultBranch
+        const localBranchRef = `refs/heads/${defaultBranch}`
 
-        try {
-            // Step 1: Fetch new commits (incremental, not a full clone)
-            onProgress({ type: 'clone', phase: 'Fetching new commits', loaded: 0, total: 0 })
-            onProgress({ type: 'clone', phase: 'Counting objects', loaded: 0, total: 0 })
-            logger.info('Starting: fetch {url} ({branch})', {
-                url: parsed.url,
-                branch: defaultBranch,
-            })
-            await fetchRepo({ fs, dir, url: parsed.url, corsProxy, githubToken, defaultBranch, onProgress, signal })
-            logger.info('Fetch complete')
-
-            if (signal.aborted) {
-                // noinspection ExceptionCaughtLocallyJS
-                throw new Error('Cancelled')
-            }
-
-            // Resolve HEAD OID for freshness checking
-            const headCommit = await git.resolveRef({ fs, dir, ref: defaultBranch })
-
-            // Step 2: Read mailmap and get full commit history
-            onProgress({ type: 'process', current: 0, total: 0, date: 'Loading history...' })
-            const gitCache = {}
-            const mailmapEntries = await readMailmapFromRepo(fs, dir, defaultBranch, gitCache)
-            const normalizeAuthor = createMailmapLookup(mailmapEntries)
-
-            const dailyCommits = await getCommitsByDate({
-                fs,
-                dir,
-                ref: defaultBranch,
-                gitCache,
-                signal,
-                normalizeAuthor,
-                onProgress: (processed) => {
-                    onProgress({
-                        type: 'process',
-                        current: 0,
-                        total: 0,
-                        date: `Loading history... (${processed.toLocaleString()} commits)`,
-                    })
-                },
-            })
-
-            if (dailyCommits.length === 0) {
-                // noinspection ExceptionCaughtLocallyJS
-                throw new Error('No commits found in repository')
-            }
-
-            // Step 3: Find last cached date
-            const lastCachedDate =
-                cachedResult.days.length > 0 ? cachedResult.days[cachedResult.days.length - 1].date : ''
-
-            // Step 4: Fill date gaps for full history
-            const allDays = fillDateGaps(dailyCommits)
-
-            // Step 5: Only process days after the last cached date
-            const newDayEntries = allDays.filter((d) => d.date > lastCachedDate)
-
-            if (newDayEntries.length === 0) {
-                // No new commits — return cached result with updated timestamp
-                const result: AnalysisResult = {
-                    ...cachedResult,
-                    headCommit,
-                    analyzedAt: new Date().toISOString(),
-                }
-                onProgress({ type: 'done', result })
-                return result
-            }
-
-            // Step 6: Process only new days
-            logger.info('Starting: analyze incremental ({totalDays} new days)', {
-                totalDays: newDayEntries.length,
-            })
-            const blobCache = new LruMap<string, { lines: number; testLines: number; languageId: string | undefined }>(
-                100_000,
+        return reportErrors(onProgress, async () => {
+            const cloneOptions = { fs, dir, url: parsed.url, corsProxy, githubToken, defaultBranch, onProgress, signal }
+            const hasLocalClone = await git.resolveRef({ fs, dir, ref: localBranchRef }).then(
+                () => true,
+                () => false,
             )
-            const contentCache = new Map<string, string>() // Cleared per commit, no LRU needed
-            const treeCache = new LruMap<string, { path: string; oid: string; type: string }[]>(10_000)
-            const fileStateMap = new Map<string, FileState>()
-            const allExtensions = new Set<string>()
 
-            // Bootstrap authorLineTotals from the last cached day
-            const authorLineTotals = new Map<string, number>()
-            const lastCachedDay = cachedResult.days.at(-1)
-            if (lastCachedDay?.contributors) {
-                for (const [author, lines] of Object.entries(lastCachedDay.contributors)) {
-                    authorLineTotals.set(author, lines)
-                }
+            if (hasLocalClone) {
+                onProgress({ type: 'clone', phase: 'Fetching new commits', loaded: 0, total: 0 })
+                logger.info('Starting: fetch {url} ({branch})', { url: parsed.url, branch: defaultBranch })
+                await fetchRepo(cloneOptions)
+                logger.info('Fetch complete')
+                // git.fetch only moves the remote-tracking ref; point the local branch at it too
+                const fetchedOid = await git.resolveRef({ fs, dir, ref: `refs/remotes/origin/${defaultBranch}` })
+                await git.writeRef({ fs, dir, ref: localBranchRef, value: fetchedOid, force: true })
+            } else {
+                await cloneFresh({ ...cloneOptions, fsName })
             }
+            throwIfAborted(signal)
 
-            // Initialize from last cached commit so the first new commit
-            // uses incremental tree diffing instead of a full tree walk
-            const lastCachedCommitEntry = allDays.filter((d) => d.date <= lastCachedDate && d.commit).at(-1)
-            let prevCommitOid: string | undefined
-            if (lastCachedCommitEntry?.commit) {
-                await countLinesForCommit(
-                    {
-                        fs,
-                        dir,
-                        commitOid: lastCachedCommitEntry.commit.hash,
-                        blobCache,
-                        contentCache,
-                        fileStateMap,
-                        allExtensions,
-                        treeCache,
-                        gitCache,
-                        signal,
-                    },
-                    lastCachedCommitEntry.date,
-                    [],
-                )
-                contentCache.clear()
-                prevCommitOid = lastCachedCommitEntry.commit.hash
-            }
-
-            // Use last cached day as prevDay for gap-filling
-            const prevDay: DayStats | undefined =
-                cachedResult.days.length > 0 ? cachedResult.days[cachedResult.days.length - 1] : undefined
-
-            const newDays = await processDays({
-                fs,
-                dir,
-                dayEntries: newDayEntries,
-                blobCache,
-                contentCache,
-                treeCache,
-                gitCache,
-                signal,
-                onProgress,
-                prevCommitOid,
-                prevDay,
-                fileStateMap,
-                allExtensions,
-                authorLineTotals,
-            })
-
-            logger.info('Analysis complete ({count} days)', { count: newDays.length })
-
-            // Step 7: Merge cached days with new days
-            const mergedDays = [...cachedResult.days, ...newDays]
-            const lastDay = mergedDays[mergedDays.length - 1]
-            const detectedLanguages = Object.entries(lastDay.languages)
-                .sort(([, a], [, b]) => b.total - a.total)
-                .map(([id]) => id)
-
-            // Compute total distinct contributors across all days
-            const allAuthors = new Set<string>()
-            for (const day of mergedDays) {
-                for (const author of day.authors ?? []) {
-                    allAuthors.add(author)
-                }
-            }
-
-            const result: AnalysisResult = {
-                repoUrl: parsed.url,
-                defaultBranch,
-                headCommit,
-                analyzedAt: new Date().toISOString(),
-                detectedLanguages,
-                days: mergedDays,
-                totalContributors: allAuthors.size,
-            }
-
-            onProgress({ type: 'done', result })
+            const headOid = await git.resolveRef({ fs, dir, ref: localBranchRef })
+            const repo: LocalRepo = { fs, dir, repoUrl: parsed.url, defaultBranch, headOid, signal, onProgress }
+            const result = await rollOnAnalysis(repo, cachedResult)
+            logger.info('Roll-on complete ({count} days)', { count: result.days.length })
             return result
+        })
+    },
+
+    /** Cheap freshness check: the remote's current tip of `branch`, or undefined when it can't be read. */
+    async getRemoteHead(
+        repoInput: string,
+        corsProxy: string,
+        githubToken: string | undefined,
+        branch: string,
+    ): Promise<string | undefined> {
+        try {
+            return await getRemoteBranchHead({ url: parseRepoUrl(repoInput).url, corsProxy, branch, githubToken })
         } catch (error) {
-            const classified = classifyError(error)
-            logger.error('Pipeline error: {kind} — {message}', {
-                kind: classified.kind,
-                message: classified.message,
-            })
-            onProgress({ type: 'error', message: classified.message, kind: classified.kind })
-            throw error
+            logger.warning('Remote HEAD check failed: {error}', { error: String(error) })
+            return undefined
         }
     },
 }

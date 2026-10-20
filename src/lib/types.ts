@@ -37,6 +37,10 @@ export interface AnalysisResult {
     repoSizeBytes?: number
     /** Distinct authors across all commits. Undefined for cached results from before this field existed. */
     totalContributors?: number
+    /** Blob OID of the root `.mailmap` at `headCommit`, `''` when absent. A change forces a full recompute. */
+    mailmapOid?: string
+    /** `countingEngineVersion` that produced this result. A mismatch forces a full recompute. */
+    engineVersion?: number
 }
 
 /** Payload stored in the shared server cache (R2) */

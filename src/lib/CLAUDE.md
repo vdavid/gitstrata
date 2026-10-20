@@ -8,8 +8,8 @@ a Web Worker.
 - `types.ts` — Shared interfaces: LanguageDefinition, LanguageCount, DayStats (includes `authors` per day, optional
   `contributors` map of per-author cumulative line counts, and optional velocity fields
   `languageAdded`/`languageRemoved` /`contributorAdded`/`contributorRemoved` for per-day activity breakdown),
-  AnalysisResult (includes `headCommit` for freshness checking and optional `totalContributors`), SharedCacheEntry,
-  ProgressEvent
+  AnalysisResult (includes `headCommit` for freshness checking, optional `totalContributors`, and the roll-on guards
+  `mailmapOid` (root `.mailmap` blob OID, `''` when absent) and `engineVersion`), SharedCacheEntry, ProgressEvent
 - `languages.ts` — Language registry (~35 languages), extension mapping, test file/dir pattern matching, Rust and Zig
   inline test detection. `.h` defaults to C but reassigns to C++ when `.cpp`/`.cc`/`.cxx` files exist. Languages can set
   `noTestSplit: true` to skip prod/test breakdown (used for HTML, CSS, SQL, Shell, Svelte, Vue, Astro, Docs, Config).
@@ -55,11 +55,14 @@ a Web Worker.
   memory on large repos and accepts an optional `normalizeAuthor(name, email)` callback for mailmap normalization. A
   `CompactOidSet` deduplicates commits across batches — stores OIDs as 20-byte binary values in a flat Uint8Array-backed
   hash set (~4x smaller than `Set<string>` for 40-char hex OIDs). Supports `signal` for cancellation and `onProgress`
-  for reporting processed commit counts.
+  for reporting processed commit counts. `collectAncestorOids` shares the same batched walk and returns the
+  `CompactOidSet` of everything reachable from a ref (roll-on uses it to find new commits).
 - `git/mailmap.ts` — Lightweight .mailmap parser supporting all 4 forms (name-only, email-only, both by email, both by
   name+email). Exports `parseMailmap(content)`, `createMailmapLookup(entries)` (returns normalized "Name <email>" with
   most-specific-form-wins priority), and `readMailmapFromRepo(fs, dir, headRef, gitCache?)` which reads `.mailmap` from
-  the repo root tree (returns `[]` if not found).
+  the repo root tree (returns `[]` if not found). `readMailmapOid` returns the blob OID (`''` if none). Both resolve
+  `headRef` first. Gotcha/Why: `git.readCommit` takes an OID only, so passing a branch name used to throw inside the try
+  and silently disable `.mailmap`.
 - `git/count.ts` — Line counting per commit tree, prod/test classification, blob dedup caching. Also exports `LruMap`, a
   Map subclass with LRU eviction used to bound cache memory. Files with unrecognized extensions are counted under the
   `'other'` bucket (with test-dir detection). Blob reads are parallelized with a concurrency limit of 8 using an inline
@@ -75,15 +78,22 @@ a Web Worker.
   and relevant OIDs. `countLinesForCommitIncremental` delegates to `diffTreesDetailed` internally.
   `computeCommitContribution` (exported) computes per-language lines added/removed for a single commit vs its git parent
   (not the previous commit in timestamp order), returning `languageAdded`, `languageRemoved`, and totals.
-- `worker/analyzer.worker.ts` — Web Worker entry point (Comlink), orchestrates full pipeline and incremental refresh
-  (`analyzeIncremental` fetches only new commits, processes new days, merges). Both `analyze` and `analyzeIncremental`
-  read `.mailmap` via `readMailmapFromRepo` and pass a `normalizeAuthor` callback to `getCommitsByDate`. `processDays`
-  iterates individual commits within each day (via `DailyCommit.commits`), running incremental tree diffs per commit.
-  Attribution uses `computeCommitContribution` to diff each commit against its git parent (not the previous commit in
-  timestamp order), fixing incorrect deltas from interleaved branch commits. Merge commits (>1 parent) are skipped.
-  Per-day velocity fields (`languageAdded`, `languageRemoved`, `contributorAdded`, `contributorRemoved`) are accumulated
-  from individual commit contributions and written to `DayStats`. Gap days get empty velocity maps. Both pipelines
-  compute `totalContributors` by collecting all unique authors across all days.
+- `git/pipeline.ts` — Analysis of an already cloned repo on any `FsClient` (node fs in tests, LightningFS in the
+  worker). `analyzeLocalRepo` runs the full history; `rollOnAnalysis` rolls a cached result forward (see "Roll-on
+  refresh" below). Both share one `processDays` with a seedable `ProcessingState`. Reads `.mailmap` via
+  `readMailmapFromRepo` and passes a `normalizeAuthor` callback to `getCommitsByDate`. `countingEngineVersion` (bump it
+  whenever counting rules change) is stored on every result. Tests: `tests/roll-on.test.ts`.
+- `worker/analyzer.worker.ts` — Web Worker entry point (Comlink): network and LightningFS around `git/pipeline.ts`.
+  `analyze` detects the branch, clones, then `analyzeLocalRepo`. `analyzeIncremental` fetches into the persisted clone
+  (or clones when this device has none), moves the local branch ref to the fetched `refs/remotes/origin/<branch>`
+  (`git.fetch` alone only moves the remote-tracking ref), then `rollOnAnalysis`. `getRemoteHead` is the cheap freshness
+  check (`getRemoteBranchHead` in `clone.ts`: one `listServerRefs` request). `processDays` iterates individual commits
+  within each day (via `DailyCommit.commits`), running incremental tree diffs per commit. Attribution uses
+  `computeCommitContribution` to diff each commit against its git parent (not the previous commit in timestamp order),
+  fixing incorrect deltas from interleaved branch commits. Merge commits (>1 parent) are skipped. Per-day velocity
+  fields (`languageAdded`, `languageRemoved`, `contributorAdded`, `contributorRemoved`) are accumulated from individual
+  commit contributions and written to `DayStats`. Gap days get empty velocity maps. Both pipelines compute
+  `totalContributors` by collecting all unique authors across all days.
 - `worker/analyzer.api.ts` — Comlink wrapper for main thread consumption
 
 ## Key patterns
@@ -110,7 +120,23 @@ a Web Worker.
 - `noTestSplit` languages have no prod/test split (LanguageCount.prod/test stay undefined). All other languages get test
   directory detection via `defaultTestDirPatterns`, even without explicit heuristics.
 - `classifyFile` order: noTestSplit → test dir → test file pattern → inline detection → default prod
-- Incremental refresh: `analyzeIncremental` uses `git.fetch` + processes only days after last cached date
+- Roll-on refresh (`rollOnAnalysis`), exact by design (equals a full analysis of the new history):
+    - Same HEAD as cached: return the cached result (new `analyzedAt`).
+    - Full recompute from the local clone (no re-clone) when `engineVersion` differs or is missing, the cached HEAD is
+      not an ancestor of the new HEAD (force push, or missing objects), or `mailmapOid` differs or is missing (a
+      `.mailmap` change rewrites past authors).
+    - Otherwise, new commits = reachable from new HEAD but not from cached HEAD. Days are bucketed by AUTHOR date, so a
+      merged branch can add commits to days long before the last cached day. The first day bucket holding a new commit
+      is the earliest affected day; the bucket before it is the seed. Cached days up to the seed are kept verbatim; the
+      seed's last commit gets one full tree count (`fileStateMap`, `allExtensions`), contributors are seeded from the
+      cached seed day, and `processDays` recounts everything after the seed (including gap days).
+    - Known limit: `allExtensions` is seeded from the seed tree only, while a full run accumulates extensions of every
+      file ever seen. That only matters for `.h` C/C++ resolution when `.cpp`-style files existed earlier and were
+      deleted before the seed day.
+- `+page.svelte` wiring: Refresh calls `analyzeIncremental` with the shown result. On a local cache hit, the page checks
+  the remote HEAD in the background (`getRemoteHead`) and starts a silent roll-on when it moved; the chart stays visible
+  with `PipelineProgress` above it, failures keep the cached chart, and the `done` event saves to IndexedDB and uploads
+  to the shared cache like a full run.
 
 ## Components
 

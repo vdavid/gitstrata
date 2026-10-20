@@ -140,6 +140,76 @@ export class CompactOidSet {
 const commitBatchSize = 5000
 
 /**
+ * Visit every commit reachable from `ref` exactly once, in batches to bound peak memory on large repos.
+ * Returns the set of visited OIDs.
+ */
+const walkHistory = async (options: {
+    fs: FsClient
+    dir: string
+    ref: string
+    gitCache?: object
+    signal?: AbortSignal
+    onBatch?: (processedCommits: number) => void
+    visit: (commit: ReadCommitResult) => void
+}): Promise<CompactOidSet> => {
+    const { fs, dir, ref, gitCache, signal, onBatch, visit } = options
+    const seenOids = new CompactOidSet()
+    let currentRef: string = ref
+
+    while (true) {
+        if (signal?.aborted) throw new Error('Cancelled')
+
+        const batch: ReadCommitResult[] = await git.log({
+            fs,
+            dir,
+            ref: currentRef,
+            depth: commitBatchSize,
+            cache: gitCache,
+        })
+
+        if (batch.length === 0) break
+
+        for (const commit of batch) {
+            if (seenOids.has(commit.oid)) continue
+            seenOids.add(commit.oid)
+            visit(commit)
+        }
+
+        onBatch?.(seenOids.size)
+
+        // Stop if this batch was smaller than requested (end of history)
+        if (batch.length < commitBatchSize) break
+
+        // Find any unvisited parent to continue from. git.log does a full DAG
+        // traversal from the starting ref, so one entry point is enough — it will
+        // fan out and discover commits reachable from other frontier parents too.
+        let nextRef: string | undefined
+        for (const commit of batch) {
+            for (const parentOid of commit.commit.parent) {
+                if (!seenOids.has(parentOid)) {
+                    nextRef = parentOid
+                    break
+                }
+            }
+            if (nextRef) break
+        }
+        if (!nextRef) break
+        currentRef = nextRef
+    }
+
+    return seenOids
+}
+
+/** Collect the OIDs of every commit reachable from `ref` (including `ref` itself). */
+export const collectAncestorOids = (options: {
+    fs: FsClient
+    dir: string
+    ref: string
+    gitCache?: object
+    signal?: AbortSignal
+}): Promise<CompactOidSet> => walkHistory({ ...options, visit: () => {} })
+
+/**
  * Get the commit log for a branch and group by date.
  * Returns entries in chronological order (oldest first).
  * Keeps the latest commit hash per day but collects all messages.
@@ -160,28 +230,15 @@ export const getCommitsByDate = async (options: {
 
     const byDate = new Map<string, DailyCommit>()
     const authorSets = new Map<string, Set<string>>()
-    const seenOids = new CompactOidSet()
-    let currentRef: string = ref
-    let totalProcessed = 0
 
-    while (true) {
-        if (signal?.aborted) throw new Error('Cancelled')
-
-        const batch: ReadCommitResult[] = await git.log({
-            fs,
-            dir,
-            ref: currentRef,
-            depth: commitBatchSize,
-            cache: gitCache,
-        })
-
-        if (batch.length === 0) break
-
-        for (const commit of batch) {
-            if (seenOids.has(commit.oid)) continue
-            seenOids.add(commit.oid)
-            totalProcessed++
-
+    await walkHistory({
+        fs,
+        dir,
+        ref,
+        gitCache,
+        signal,
+        onBatch: onProgress,
+        visit: (commit) => {
             const date = formatDate(commit.commit.author.timestamp)
             const authorStr = normalizeAuthor(commit.commit.author.name, commit.commit.author.email)
             const message = commit.commit.message.trim()
@@ -205,29 +262,8 @@ export const getCommitsByDate = async (options: {
                 const existingAuthors = authorSets.get(date)
                 if (existingAuthors) existingAuthors.add(authorStr)
             }
-        }
-
-        onProgress?.(totalProcessed)
-
-        // Stop if this batch was smaller than requested (end of history)
-        if (batch.length < commitBatchSize) break
-
-        // Find any unvisited parent to continue from. git.log does a full DAG
-        // traversal from the starting ref, so one entry point is enough — it will
-        // fan out and discover commits reachable from other frontier parents too.
-        let nextRef: string | undefined
-        for (const commit of batch) {
-            for (const parentOid of commit.commit.parent) {
-                if (!seenOids.has(parentOid)) {
-                    nextRef = parentOid
-                    break
-                }
-            }
-            if (nextRef) break
-        }
-        if (!nextRef) break
-        currentRef = nextRef
-    }
+        },
+    })
 
     // Populate deduplicated authors from Sets and sort commits oldest-first
     for (const [date, entry] of byDate) {
