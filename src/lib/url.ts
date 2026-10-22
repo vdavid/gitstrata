@@ -29,9 +29,12 @@ export const parseRepoUrl = (input: string): ParsedRepo => {
         }
     }
 
+    // A host without a protocol, like github.com/owner/repo
+    const withProtocol = /^[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)+\//.test(trimmed) ? `https://${trimmed}` : trimmed
+
     let url: URL
     try {
-        url = new URL(trimmed)
+        url = new URL(withProtocol)
     } catch {
         throw new Error(`Invalid repository URL: ${trimmed}`)
     }
@@ -40,7 +43,7 @@ export const parseRepoUrl = (input: string): ParsedRepo => {
         throw new Error(`Unsupported protocol: ${url.protocol}`)
     }
 
-    const host = url.hostname.toLowerCase()
+    const host = url.hostname.toLowerCase().replace(/^www\./, '')
     if (!supportedHosts.includes(host)) {
         throw new Error(`Unsupported host: ${host}. Supported: ${supportedHosts.join(', ')}`)
     }
@@ -70,12 +73,18 @@ export const repoToDir = (parsed: ParsedRepo): string => {
     return `/${parsed.host}/${parsed.owner}/${parsed.repo}`
 }
 
-/** Extract a repo from a URL pathname like /github.com/owner/repo. Returns null if invalid. */
+/**
+ * Extract a repo from a URL pathname like /github.com/owner/repo, or /owner/repo (assumes GitHub).
+ * Returns null if invalid.
+ */
 export const parseRepoFromPathname = (pathname: string): ParsedRepo | null => {
     const trimmed = pathname.replace(/^\//, '')
     if (!trimmed) return null
+    const segments = trimmed.split('/').filter(Boolean)
+    const hasHost = segments[0].includes('.')
+    if (!hasHost && segments.length !== 2) return null
     try {
-        return parseRepoUrl(`https://${trimmed}`)
+        return parseRepoUrl(`https://${hasHost ? trimmed : `github.com/${trimmed}`}`)
     } catch {
         return null
     }

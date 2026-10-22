@@ -18,7 +18,8 @@ Details: [`src/lib/CLAUDE.md`](../src/lib/CLAUDE.md)
 | `languages.ts`    | Language registry (~35 languages), extension mapping, inline test detection                                       |
 | `cache.ts`        | IndexedDB results cache — LRU eviction, 500 MB limit, separate meta store                                         |
 | `server-cache.ts` | Shared server cache client (opt-in via `PUBLIC_SHARED_CACHE_URL`)                                                 |
-| `url.ts`          | Repo URL parsing and normalization (GitHub/GitLab/Bitbucket, owner/repo shorthand)                                |
+| `url.ts`          | Repo URL parsing and normalization (GitHub/GitLab/Bitbucket, owner/repo and protocol-less shorthands)             |
+| `recent-repos.ts` | Frecency ranking for the input's `recent:` row (localStorage visit log)                                           |
 
 The SvelteKit app itself lives in `src/routes/` (single page) with global styles in `src/app.css` (Tailwind v4 + CSS
 custom properties).

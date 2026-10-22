@@ -8,6 +8,7 @@
     import { isSelfHostedProxy } from '#lib/cors-proxy.js'
     import { githubTokenState } from '#lib/github-token.svelte.js'
     import { formatBytes, getResult, saveResult } from '#lib/cache.js'
+    import { saveVisit } from '#lib/recent-repos.js'
     import { fetchServerResult, uploadServerResult } from '#lib/server-cache.js'
     import { countingEngineVersion } from '#lib/engine-version.js'
     import { pickRefreshPlan } from '#lib/refresh-plan.js'
@@ -249,9 +250,9 @@
         try {
             const parsed = parseRepoUrl(repo)
             const targetPath = `${resolve('/')}${parsed.host}/${parsed.owner}/${parsed.repo}`
-            // Push a new history entry when navigating to a different repo,
-            // but replace when confirming the current URL (initial load, back button)
-            const isSamePath = page.url.pathname === targetPath
+            // Push a new history entry when navigating to a different repo, but replace when
+            // confirming the current URL (initial load, back button) or canonicalizing /owner/repo
+            const isSamePath = parseRepoFromPathname(page.url.pathname)?.url === parsed.url
             // eslint-disable-next-line svelte/no-navigation-without-resolve -- resolve('/') is embedded in template
             goto(targetPath, {
                 replace: isSamePath,
@@ -373,6 +374,7 @@
             const parsed = parseRepoUrl(repoInput)
             suppressedRepo = parsed.url // Prevent the URL-watching effect from re-triggering
             updateUrl(repoInput)
+            saveVisit(parsed.url)
 
             // Fetch repo size for display (fire-and-forget, non-blocking).
             // Guarded by generation to avoid setting size for the wrong repo.

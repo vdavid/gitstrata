@@ -14,7 +14,15 @@ a Web Worker.
   inline test detection. `.h` is C, or C++ when the CURRENT commit tree holds a `.cpp`/`.cc`/`.cxx` file
   (`resolveHeaderLanguage(treeHasCppSources)` returns one of two prebuilt maps). Languages can set `noTestSplit: true`
   to skip prod/test breakdown (used for HTML, CSS, SQL, Shell, Svelte, Vue, Astro, Docs, Config).
-- `url.ts` — Repo URL parsing and normalization (GitHub/GitLab/Bitbucket, owner/repo shorthand)
+- `url.ts` — Repo URL parsing and normalization (GitHub/GitLab/Bitbucket). Input accepts full URLs, `host/owner/repo`
+  without a protocol (a leading `www.` is dropped), and `owner/repo` (GitHub). Page paths accept `/host/owner/repo` and
+  `/owner/repo` (GitHub, exactly two segments); `+page.svelte` replaces a short path with the canonical one.
+- `recent-repos.ts` — "Recent favorite" ranking for the input's `recent:` row (`RepoInput.svelte`, replaces the featured
+  `try:` row once the browser has cached results). Frecency with exponential decay: each visit adds 1, the score halves
+  every 3 days, and visits within an hour of the last one don't count (so 1,000 reopens in an afternoon weigh like one).
+  Visits live in localStorage `gitstrata-repo-visits`, recorded in `startAnalysis`; the listed repos are the ones in the
+  `results-meta` store, so evicted or deleted repos drop out, and repos cached before visit tracking count as one visit
+  at their `lastAccessed`. Tests: `tests/recent-repos.test.ts`.
 - `github-token.ts` — Pure (non-reactive) GitHub personal access token storage and verification. localStorage under
   `gitstrata-github-token` (`{ token, account, addedAt }`). `verifyGithubToken` hits `api.github.com/user` directly
   (CORS-enabled, no proxy) to confirm the token and capture the login. `maskToken` for display. The token is stored only

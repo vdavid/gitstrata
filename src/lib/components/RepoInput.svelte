@@ -2,6 +2,8 @@
     import { onMount } from 'svelte'
     import { parseRepoUrl } from '#lib/url.js'
     import { pickFeaturedRepos, pickPlaceholder } from '#lib/featured-repos.js'
+    import { listCachedRepos } from '#lib/cache.js'
+    import { loadVisitLog, rankRecentRepos } from '#lib/recent-repos.js'
 
     interface Props {
         onsubmit: (repoUrl: string) => void
@@ -17,6 +19,34 @@
     let currentPlaceholder = $state('Example: https://github.com/sveltejs/svelte')
     let genKey = $state(0)
     let inputEl = $state<HTMLInputElement>()
+
+    // Repos this browser has analyzed, best "recent favorite" first. Replaces the featured row when non-empty.
+    let recentRepoUrls = $state<string[]>([])
+    let showAllRecent = $state(false)
+    const recentCollapsedCount = 3
+    const visibleRecentRepoUrls = $derived(
+        showAllRecent ? recentRepoUrls : recentRepoUrls.slice(0, recentCollapsedCount),
+    )
+
+    const loadRecentRepos = async () => {
+        try {
+            const cached = await listCachedRepos()
+            recentRepoUrls = rankRecentRepos(
+                cached.map((c) => c.repoUrl),
+                Object.fromEntries(cached.map((c) => [c.repoUrl, c.lastAccessed])),
+                loadVisitLog(),
+                Date.now(),
+            )
+        } catch {
+            // IndexedDB unavailable: keep the featured row
+        }
+    }
+
+    /** "owner/repo" for GitHub (the shorthand the input accepts), "host/owner/repo" elsewhere */
+    const formatRepoLabel = (repoUrl: string): string => {
+        const label = repoUrl.replace(/^https?:\/\//, '')
+        return label.startsWith('github.com/') ? label.slice('github.com/'.length) : label
+    }
 
     /** Move focus to the URL field — used on load and when reopening from an error. */
     export function focus() {
@@ -35,6 +65,11 @@
         currentPlaceholder = pickPlaceholder(repos)
         // Focus the field on a fresh load (no deep-linked repo analyzing).
         if (!initialValue && !disabled) inputEl?.focus()
+
+        void loadRecentRepos()
+        const handleCacheChange = () => void loadRecentRepos()
+        window.addEventListener('cache-changed', handleCacheChange)
+        return () => window.removeEventListener('cache-changed', handleCacheChange)
     })
 
     const handleMore = () => {
@@ -140,36 +175,66 @@
         class="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-foreground-tertiary"
         style="font-family: var(--font-mono); letter-spacing: 0.02em;"
     >
-        <span>try:</span>
-        {#key genKey}
-            {#each currentRepos as repo, i (`${repo.owner}/${repo.repo}`)}
+        {#if recentRepoUrls.length > 0}
+            <span>recent:</span>
+            {#each visibleRecentRepoUrls as repoUrl, i (repoUrl)}
                 {#if i > 0}
                     <span class="text-border-strong">/</span>
                 {/if}
                 <button
-                    onclick={() => handleExample(`${repo.owner}/${repo.repo}`)}
+                    onclick={() => handleExample(formatRepoLabel(repoUrl))}
                     {disabled}
-                    class="strata-fade-in cursor-pointer text-foreground-secondary transition-colors
+                    class="cursor-pointer text-foreground-secondary transition-colors
 						hover:text-accent
 						disabled:cursor-not-allowed disabled:opacity-50"
-                    style="transition-duration: var(--duration-fast); animation-delay: {i * 60}ms;"
+                    style="transition-duration: var(--duration-fast);"
                 >
-                    {repo.owner}/{repo.repo}
+                    {formatRepoLabel(repoUrl)}
                 </button>
             {/each}
-        {/key}
-        {#if currentRepos.length > 0}
-            <span class="text-border-strong">/</span>
-            <button
-                onclick={handleMore}
-                {disabled}
-                class="cursor-pointer text-foreground-tertiary transition-colors
+            {#if recentRepoUrls.length > recentCollapsedCount}
+                <span class="text-border-strong">/</span>
+                <button
+                    onclick={() => (showAllRecent = !showAllRecent)}
+                    class="cursor-pointer text-foreground-tertiary transition-colors hover:text-accent"
+                    style="transition-duration: var(--duration-fast);"
+                    aria-expanded={showAllRecent}
+                >
+                    {showAllRecent ? 'less' : 'more'}
+                </button>
+            {/if}
+        {:else}
+            <span>try:</span>
+            {#key genKey}
+                {#each currentRepos as repo, i (`${repo.owner}/${repo.repo}`)}
+                    {#if i > 0}
+                        <span class="text-border-strong">/</span>
+                    {/if}
+                    <button
+                        onclick={() => handleExample(`${repo.owner}/${repo.repo}`)}
+                        {disabled}
+                        class="strata-fade-in cursor-pointer text-foreground-secondary transition-colors
+						hover:text-accent
+						disabled:cursor-not-allowed disabled:opacity-50"
+                        style="transition-duration: var(--duration-fast); animation-delay: {i * 60}ms;"
+                    >
+                        {repo.owner}/{repo.repo}
+                    </button>
+                {/each}
+            {/key}
+            {#if currentRepos.length > 0}
+                <span class="text-border-strong">/</span>
+                <button
+                    onclick={handleMore}
+                    {disabled}
+                    class="cursor-pointer text-foreground-tertiary transition-colors
 					hover:text-accent
 					disabled:cursor-not-allowed disabled:opacity-50"
-                style="transition-duration: var(--duration-fast);"
-            >
-                more
-            </button>
+                    style="transition-duration: var(--duration-fast);"
+                >
+                    more
+                </button>
+            {/if}
         {/if}
     </div>
 </div>

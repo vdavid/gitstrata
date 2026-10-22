@@ -93,6 +93,32 @@ describe('parseRepoFromPathname', () => {
     it('returns null for invalid path', () => {
         expect(parseRepoFromPathname('/not-a-host/owner/repo')).toBeNull()
     })
+
+    it('assumes GitHub for /owner/repo', () => {
+        expect(parseRepoFromPathname('/serial-ata/lofty-rs')?.url).toBe('https://github.com/serial-ata/lofty-rs')
+    })
+
+    it('returns null for a single segment', () => {
+        expect(parseRepoFromPathname('/serial-ata')).toBeNull()
+    })
+})
+
+describe('parseRepoUrl without a protocol', () => {
+    it('accepts github.com/owner/repo', () => {
+        expect(parseRepoUrl('github.com/serial-ata/lofty-rs').url).toBe('https://github.com/serial-ata/lofty-rs')
+    })
+
+    it('accepts gitlab.com/owner/repo', () => {
+        expect(parseRepoUrl('gitlab.com/owner/project').url).toBe('https://gitlab.com/owner/project')
+    })
+
+    it('accepts www.github.com/owner/repo', () => {
+        expect(parseRepoUrl('www.github.com/owner/repo').url).toBe('https://github.com/owner/repo')
+    })
+
+    it('still rejects unsupported hosts', () => {
+        expect(() => parseRepoUrl('example.com/owner/repo')).toThrow('Unsupported host')
+    })
 })
 
 describe('repoToDir', () => {
