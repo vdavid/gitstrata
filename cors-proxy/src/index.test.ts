@@ -143,7 +143,7 @@ describe('PUT /cache/v1/:repoHash', () => {
                 }),
             }),
         )
-        const stored = bucket.put.mock.calls[0][1] as Uint8Array
+        const stored = bucket.put.mock.calls[0]?.[1] as Uint8Array
         expect([...stored]).toEqual([...new Uint8Array(body)])
     })
 
@@ -295,5 +295,116 @@ describe('proxy passthrough auth', () => {
         expect(res.headers.get('X-Cache')).toBe('MISS')
         expect(putSpy).toHaveBeenCalled()
         expect(capturedHeaders?.get('authorization')).toBeNull()
+    })
+})
+
+// --- Origin restriction ---
+
+describe('origin restriction', () => {
+    const allowedOrigins = 'https://gitstrata.com,https://*.git-strata.pages.dev'
+    const originEnv = () => ({ RESULTS: mockR2Bucket(), ALLOWED_ORIGINS: allowedOrigins })
+    const getCache = (origin?: string) =>
+        app.request(
+            '/cache/v1/nonexistent',
+            { method: 'GET', headers: { 'cf-connecting-ip': '10.1.0.1', ...(origin ? { origin } : {}) } },
+            originEnv(),
+        )
+
+    afterEach(() => {
+        vi.unstubAllGlobals()
+    })
+
+    it('echoes an allowed exact origin with Vary: Origin', async () => {
+        const res = await getCache('https://gitstrata.com')
+        expect(res.status).toBe(404)
+        expect(res.headers.get('Access-Control-Allow-Origin')).toBe('https://gitstrata.com')
+        expect(res.headers.get('Vary')).toContain('Origin')
+    })
+
+    it('echoes an allowed preview subdomain', async () => {
+        for (const origin of ['https://3f2a1b9c.git-strata.pages.dev', 'https://my-branch.git-strata.pages.dev']) {
+            const res = await getCache(origin)
+            expect(res.status).toBe(404)
+            expect(res.headers.get('Access-Control-Allow-Origin')).toBe(origin)
+        }
+    })
+
+    it('rejects a disallowed origin with 403 and no ACAO', async () => {
+        const res = await getCache('https://evil.example')
+        expect(res.status).toBe(403)
+        expect(res.headers.get('Access-Control-Allow-Origin')).toBeNull()
+    })
+
+    it('rejects lookalike origins', async () => {
+        for (const origin of [
+            'https://evilgitstrata.com',
+            'https://gitstrata.com.evil.com',
+            'http://gitstrata.com',
+            'https://gitstrata.com:8443',
+            'https://x.git-strata.pages.dev.evil.com',
+            'https://git-strata.pages.dev',
+            'https://a.b.git-strata.pages.dev',
+            'http://x.git-strata.pages.dev',
+            'https://xgit-strata.pages.dev',
+            'null',
+        ]) {
+            const res = await getCache(origin)
+            expect(res.status, origin).toBe(403)
+            expect(res.headers.get('Access-Control-Allow-Origin'), origin).toBeNull()
+        }
+    })
+
+    it('rejects a disallowed origin on the git proxy route without calling upstream', async () => {
+        const fetchSpy = vi.fn(async () => new Response('refs', { status: 200 }))
+        vi.stubGlobal('fetch', fetchSpy)
+        vi.stubGlobal('caches', { default: { match: vi.fn(async () => undefined), put: vi.fn(async () => {}) } })
+        const res = await app.request(
+            '/github.com/owner/repo.git/info/refs?service=git-upload-pack',
+            { method: 'GET', headers: { origin: 'https://evilgitstrata.com', 'cf-connecting-ip': '10.1.0.2' } },
+            { ALLOWED_ORIGINS: allowedOrigins },
+            noopExecutionCtx,
+        )
+        expect(res.status).toBe(403)
+        expect(res.headers.get('Access-Control-Allow-Origin')).toBeNull()
+        expect(fetchSpy).not.toHaveBeenCalled()
+    })
+
+    it('rejects a disallowed origin on cache PUT before touching R2', async () => {
+        const bucket = mockR2Bucket()
+        const { hash, init } = await makePut({
+            headers: { origin: 'https://gitstrata.com.evil.com', 'cf-connecting-ip': '10.1.0.3' },
+        })
+        const res = await app.request(`/cache/v1/${hash}`, init, {
+            ...(await makeWriteEnv(bucket)),
+            ALLOWED_ORIGINS: allowedOrigins,
+        })
+        expect(res.status).toBe(403)
+        expect(bucket.put).not.toHaveBeenCalled()
+    })
+
+    it('answers a preflight from a disallowed origin without ACAO', async () => {
+        const res = await app.request(
+            '/cache/v1/x',
+            { method: 'OPTIONS', headers: { origin: 'https://evil.example' } },
+            { ALLOWED_ORIGINS: allowedOrigins },
+        )
+        expect(res.status).toBe(204)
+        expect(res.headers.get('Access-Control-Allow-Origin')).toBeNull()
+    })
+
+    it('serves requests without an Origin header', async () => {
+        const res = await getCache()
+        expect(res.status).toBe(404)
+        expect(res.headers.get('Access-Control-Allow-Origin')).toBeNull()
+    })
+
+    it('allows any origin when ALLOWED_ORIGINS is unset', async () => {
+        const res = await app.request(
+            '/cache/v1/nonexistent',
+            { method: 'GET', headers: { origin: 'http://localhost:15173', 'cf-connecting-ip': '10.1.0.4' } },
+            { RESULTS: mockR2Bucket() },
+        )
+        expect(res.status).toBe(404)
+        expect(res.headers.get('Access-Control-Allow-Origin')).toBe('*')
     })
 })

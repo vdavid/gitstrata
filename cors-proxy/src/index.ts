@@ -7,29 +7,47 @@ import {
     readBodyWithLimit,
     sha256Hex,
 } from './cache-write-checks'
+import { isOriginAllowed, parseAllowedOrigins } from './allowed-origins'
 import { verifyHeadCommit } from './verify-head-commit'
 
 type Bindings = {
     RESULTS?: R2Bucket
     WRITE_KEY_HASHES?: string
-    ALLOWED_ORIGIN?: string
+    /** Comma-separated origin allowlist (see `allowed-origins.ts`). Unset or empty allows any origin. */
+    ALLOWED_ORIGINS?: string
 }
+
+type RequestContext = { env: Bindings; req: { header: (name: string) => string | undefined } }
 
 const app = new Hono<{ Bindings: Bindings }>()
 
-function getCorsHeaders(c: { env: Bindings; req: { header: (name: string) => string | undefined } }) {
-    const allowed = c.env.ALLOWED_ORIGIN
+/** True when the request carries an `Origin` header that the allowlist rejects. */
+function hasDisallowedOrigin(c: RequestContext): boolean {
     const origin = c.req.header('origin')
-    // When ALLOWED_ORIGIN is set, only reflect it if the request origin matches.
-    // When unset (local dev), allow any origin.
-    const allowOrigin = !allowed ? '*' : origin === allowed ? allowed : 'null'
-    return {
-        'Access-Control-Allow-Origin': allowOrigin,
+    const rules = parseAllowedOrigins(c.env.ALLOWED_ORIGINS)
+    return origin !== undefined && rules !== null && !isOriginAllowed(origin, rules)
+}
+
+function getCorsHeaders(c: RequestContext): Record<string, string> {
+    const headers: Record<string, string> = {
         'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
         'Access-Control-Allow-Headers':
             'Content-Type, Content-Encoding, Git-Protocol, Authorization, X-Repo-Url, X-Head-Commit',
         'Access-Control-Expose-Headers': 'Content-Type, Content-Length',
     }
+    const rules = parseAllowedOrigins(c.env.ALLOWED_ORIGINS)
+    if (rules === null) {
+        // No allowlist configured (local dev): any origin.
+        headers['Access-Control-Allow-Origin'] = '*'
+        return headers
+    }
+    // The response depends on the request's Origin, so caches must key on it.
+    headers['Vary'] = 'Origin'
+    const origin = c.req.header('origin')
+    if (origin !== undefined && isOriginAllowed(origin, rules)) {
+        headers['Access-Control-Allow-Origin'] = origin
+    }
+    return headers
 }
 
 type RateLimitEntry = { count: number; resetAt: number }
@@ -82,6 +100,16 @@ function isAllowedTarget(url: string): boolean {
 }
 
 const maxBodySize = 10 * 1024 * 1024 // 10 MB
+
+// Browsers enforce CORS only on reading the response, so a disallowed site could still make the proxy do the work
+// (fetch upstream, write the cache). Refuse it outright. Preflights pass through and get no ACAO header instead.
+// Requests without an Origin (curl, server-to-server) aren't affected.
+app.use('*', async (c, next) => {
+    if (c.req.method !== 'OPTIONS' && hasDisallowedOrigin(c)) {
+        return c.text('Forbidden origin.', 403, getCorsHeaders(c))
+    }
+    await next()
+})
 
 // --- Cache routes (only active when R2 binding RESULTS is present) ---
 
@@ -313,7 +341,8 @@ app.all('*', async (c) => {
             headers: responseHeaders,
         })
     } catch (error) {
-        if (c.env.ALLOWED_ORIGIN) {
+        // A configured origin allowlist marks production: hide upstream error details there.
+        if (parseAllowedOrigins(c.env.ALLOWED_ORIGINS) !== null) {
             return c.text('Unknown error', 502, getCorsHeaders(c))
         }
         const message = error instanceof Error ? error.message : 'Unknown error'

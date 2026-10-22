@@ -15,8 +15,19 @@ pnpm (11+) walks up to the repo-root `pnpm-workspace.yaml` and installs the fron
 
 ## Key decisions
 
-- **CORS origin**: `ALLOWED_ORIGIN` in `wrangler.toml` restricts `Access-Control-Allow-Origin` to the production
-  frontend. Override in `.dev.vars` for local dev. When unset, falls back to `*`.
+- **CORS origin allowlist**: `ALLOWED_ORIGINS` under `[vars]` in `wrangler.toml` (a top-level key is silently ignored by
+  wrangler, which once left production on `*`). Comma-separated; each entry is an exact origin or `<scheme>://*.<host>`,
+  where `*` matches exactly one DNS label (no dots). Production: `https://gitstrata.com,https://*.git-strata.pages.dev`,
+  the wildcard covering Cloudflare Pages preview (`<hash>.git-strata.pages.dev`) and branch-alias builds. Logic in
+  `allowed-origins.ts`: plain prefix/suffix string checks, no regex built from config.
+    - Allowed origin → echoed in `Access-Control-Allow-Origin`, with `Vary: Origin` (the `/cache` GET is edge-cached).
+    - Disallowed `Origin` on any non-`OPTIONS` request → 403 with no ACAO, before any upstream fetch or R2 access
+      (middleware in `index.ts`). **Why:** browsers only block reading the response, so without the 403 any site could
+      still make the proxy do the work. Disallowed preflights get 204 with no ACAO, so the browser stops there.
+    - No `Origin` header (curl, server-to-server) → served normally, no ACAO.
+    - Unset or empty → any origin (`*`), and 502s include the upstream error message. `wrangler dev` reads `[vars]` too,
+      so set `ALLOWED_ORIGINS` in `.dev.vars` to your local frontend origin (or to an empty string) when testing the
+      worker locally.
 - **Host allowlist**: Only proxies to `github.com`, `gitlab.com`, and `bitbucket.org`. Rejects all other hosts.
 - Only allows git protocol paths (`/info/refs`, `/git-upload-pack`) — validated against `pathname`, not the full URL.
 - **Header allowlist**: Only forwards `content-type`, `content-length`, `accept`, `accept-encoding`, `git-protocol`, and
@@ -68,7 +79,5 @@ pnpm (11+) walks up to the repo-root `pnpm-workspace.yaml` and installs the fron
     - R2 object: `results/v1/{sha256(repoUrl)}.json.gz`, `httpMetadata` (`application/json`, gzip), `customMetadata`
       (`repoUrl`, `headCommit`, `updatedAt`).
     - CORS: the preflight allows `PUT` and the headers `Authorization`, `X-Repo-Url`, `X-Head-Commit`,
-      `Content-Encoding`, `Content-Type`.
-- **Gotcha/Why — `ALLOWED_ORIGIN` isn't applied**: it sits as a top-level key in `wrangler.toml`, which wrangler ignores
-  ("Unexpected fields found in top-level field"); it would need a `[vars]` table. So production currently answers
-  `Access-Control-Allow-Origin: *`. Nothing in the cache write path relies on it.
+      `Content-Encoding`, `Content-Type`. A PUT from a disallowed origin gets 403 before the key check (see the origin
+      allowlist above); the write key stays the real access control, since non-browser clients send no `Origin`.
