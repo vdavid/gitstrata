@@ -26,6 +26,7 @@ export const pickRefreshPlan = ({
 
     const localEngineMatches = local.engineVersion === engineVersion
     const serverEngineMatches = server.engineVersion === engineVersion
-    if (localEngineMatches !== serverEngineMatches) return localEngineMatches ? 'roll-on-from-local' : 'roll-on-from-server'
+    if (localEngineMatches !== serverEngineMatches)
+        return localEngineMatches ? 'roll-on-from-local' : 'roll-on-from-server'
     return server.analyzedAt > local.analyzedAt ? 'roll-on-from-server' : 'roll-on-from-local'
 }
