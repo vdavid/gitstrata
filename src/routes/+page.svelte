@@ -9,6 +9,8 @@
     import { githubTokenState } from '#lib/github-token.svelte.js'
     import { formatBytes, getResult, saveResult } from '#lib/cache.js'
     import { fetchServerResult, uploadServerResult } from '#lib/server-cache.js'
+    import { countingEngineVersion } from '#lib/engine-version.js'
+    import { pickRefreshPlan } from '#lib/refresh-plan.js'
     import { createAnalyzer, type AnalyzerHandle } from '#lib/worker/analyzer.api.js'
     import type { AnalysisResult, DayStats, ErrorKind, ProgressEvent } from '#lib/types.js'
     import GithubKeyForm from '#lib/components/GithubKeyForm.svelte'
@@ -57,6 +59,8 @@
     let rollingOn = $state(false)
     // Background (automatic) roll-ons fail quietly: the shown result is still valid, just not the newest
     let rollOnSilent = false
+    // Refresh is asking the remote and the shared cache which way to go
+    let refreshChecking = $state(false)
 
     // Timer interval
     let timerInterval = $state<ReturnType<typeof setInterval> | undefined>()
@@ -499,23 +503,59 @@
         }
     }
 
-    /** On a local cache hit, ask the remote for its HEAD and roll on automatically when it moved. */
-    const checkForNewCommits = async (cached: AnalysisResult, generation: number) => {
+    /** The remote branch's HEAD OID, or undefined when the check fails. One cheap `listServerRefs` request. */
+    const fetchRemoteHead = async (shown: AnalysisResult): Promise<string | undefined> => {
         const checker = createAnalyzer()
         try {
-            const host = parseRepoUrl(cached.repoUrl).host
-            const remoteHead = await checker.getRemoteHead(
-                cached.repoUrl,
-                corsProxy,
-                tokenForHost(host),
-                cached.defaultBranch,
-            )
-            if (generation !== analysisGeneration || !remoteHead || remoteHead === cached.headCommit) return
-            void startRollOn(cached, true)
+            const host = parseRepoUrl(shown.repoUrl).host
+            return await checker.getRemoteHead(shown.repoUrl, corsProxy, tokenForHost(host), shown.defaultBranch)
         } catch {
-            // Best-effort: the cached result stays on screen
+            return undefined
         } finally {
             checker.terminate()
+        }
+    }
+
+    /**
+     * Bring the shown result up to `remoteHead` the cheapest way: adopt a shared result that another device already
+     * brought there, else roll on locally from the fresher of (shown, shared).
+     */
+    const refreshFromBestSource = async (
+        shown: AnalysisResult,
+        remoteHead: string | undefined,
+        silent: boolean,
+        generation: number,
+    ) => {
+        const serverEntry = await fetchServerResult(shown.repoUrl)
+        if (generation !== analysisGeneration) return
+        const server = serverEntry?.result
+        const plan = pickRefreshPlan({ local: shown, server, remoteHead, engineVersion: countingEngineVersion })
+        if (plan === 'adopt-server' && server) {
+            result = server
+            cachedResult = server
+            repoSizeBytes = server.repoSizeBytes ?? repoSizeBytes
+            fromServerCache = true
+            void saveResult(server)
+        } else if (plan === 'up-to-date') {
+            if (silent) return
+            // Nothing new: record that the shown result was confirmed current just now
+            const confirmed = { ...$state.snapshot(shown), analyzedAt: new Date().toISOString() }
+            result = confirmed
+            cachedResult = confirmed
+            void saveResult(confirmed)
+        } else {
+            await startRollOn(plan === 'roll-on-from-server' && server ? server : shown, silent)
+        }
+    }
+
+    /** On a local cache hit, ask the remote for its HEAD and bring the result up to date when it moved. */
+    const checkForNewCommits = async (cached: AnalysisResult, generation: number) => {
+        try {
+            const remoteHead = await fetchRemoteHead(cached)
+            if (generation !== analysisGeneration || !remoteHead || remoteHead === cached.headCommit) return
+            await refreshFromBestSource(cached, remoteHead, true, generation)
+        } catch {
+            // Best-effort: the cached result stays on screen
         }
     }
 
@@ -527,8 +567,18 @@
         phase = 'done'
     }
 
-    const refresh = () => {
-        if (result) void startRollOn(result, false)
+    const refresh = async () => {
+        if (!result || refreshChecking) return
+        const shown = result
+        const generation = analysisGeneration
+        refreshChecking = true
+        try {
+            const remoteHead = await fetchRemoteHead(shown)
+            if (generation !== analysisGeneration) return
+            await refreshFromBestSource(shown, remoteHead, false, generation)
+        } finally {
+            refreshChecking = false
+        }
     }
 
     const copyShareLink = async () => {
@@ -814,6 +864,7 @@
                         {#if !rollingOn}
                             <button
                                 onclick={refresh}
+                                disabled={refreshChecking}
                                 aria-label="Refresh analysis with latest commits"
                                 class="btn-link"
                             >

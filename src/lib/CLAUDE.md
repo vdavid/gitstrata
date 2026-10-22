@@ -81,8 +81,8 @@ a Web Worker.
 - `git/pipeline.ts` — Analysis of an already cloned repo on any `FsClient` (node fs in tests, LightningFS in the
   worker). `analyzeLocalRepo` runs the full history; `rollOnAnalysis` rolls a cached result forward (see "Roll-on
   refresh" below). Both share one `processDays` with a seedable `ProcessingState`. Reads `.mailmap` via
-  `readMailmapFromRepo` and passes a `normalizeAuthor` callback to `getCommitsByDate`. `countingEngineVersion` (bump it
-  whenever counting rules change) is stored on every result. Tests: `tests/roll-on.test.ts`.
+  `readMailmapFromRepo` and passes a `normalizeAuthor` callback to `getCommitsByDate`. `countingEngineVersion` (from
+  `engine-version.ts`) is stored on every result. Tests: `tests/roll-on.test.ts`.
 - `worker/analyzer.worker.ts` — Web Worker entry point (Comlink): network and LightningFS around `git/pipeline.ts`.
   `analyze` detects the branch, clones, then `analyzeLocalRepo`. `analyzeIncremental` fetches into the persisted clone
   (or clones when this device has none), moves the local branch ref to the fetched `refs/remotes/origin/<branch>`
@@ -133,10 +133,18 @@ a Web Worker.
     - Known limit: `allExtensions` is seeded from the seed tree only, while a full run accumulates extensions of every
       file ever seen. That only matters for `.h` C/C++ resolution when `.cpp`-style files existed earlier and were
       deleted before the seed day.
-- `+page.svelte` wiring: Refresh calls `analyzeIncremental` with the shown result. On a local cache hit, the page checks
-  the remote HEAD in the background (`getRemoteHead`) and starts a silent roll-on when it moved; the chart stays visible
-  with `PipelineProgress` above it, failures keep the cached chart, and the `done` event saves to IndexedDB and uploads
-  to the shared cache like a full run.
+- `+page.svelte` wiring: On a local cache hit, the page checks the remote HEAD in the background (`getRemoteHead`); when
+  it moved, it goes through `refreshFromBestSource`, as does the Refresh button (which fetches the remote HEAD first).
+  That fetches the shared entry and asks `pickRefreshPlan` (`refresh-plan.ts`, pure, tested in
+  `tests/refresh-plan.test.ts`): adopt a shared result already at the remote HEAD with the current `engineVersion` (show
+  it, save locally, no roll-on, no upload), else roll on (`analyzeIncremental`) from the fresher of (shown, shared),
+  preferring a current-engine base. Decision/Why: a phone with an old local copy used to roll on itself, often with a
+  full clone, while the laptop had already uploaded the fresh result. A server hit on a local miss shows the entry
+  without auto-cloning even when it's stale; Refresh then rolls it on. During a roll-on the chart stays visible with
+  `PipelineProgress` above it, silent failures keep the cached chart, and the `done` event saves to IndexedDB and
+  uploads to the shared cache like a full run.
+- `engine-version.ts` — `countingEngineVersion` (bump whenever counting rules change). Separate from `git/pipeline.ts`
+  so the page reads it without bundling isomorphic-git.
 
 ## Components
 

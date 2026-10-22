@@ -9,12 +9,7 @@ import {
     type FileState,
 } from './count'
 import { createMailmapLookup, readMailmapFromRepo, readMailmapOid } from './mailmap'
-
-/**
- * Bump whenever counting rules change (languages, skip lists, attribution) so cached results get a full recompute
- * instead of a roll-on that would mix old and new rules in one chart.
- */
-const countingEngineVersion = 1
+import { countingEngineVersion } from '../engine-version'
 
 type ProgressCallback = (event: ProgressEvent) => void
 
