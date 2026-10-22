@@ -155,7 +155,7 @@ Once these are set, every push to `main` that passes CI will auto-deploy both th
 | ------------------------- | ---------------------------- | --------------------------------- | ------------------------------------------------------------------------------------------ |
 | `PUBLIC_CORS_PROXY_URL`   | Frontend (`.env`)            | `https://cors.isomorphic-git.org` | URL of your deployed CORS proxy                                                            |
 | `PUBLIC_SHARED_CACHE_URL` | Frontend (`.env`)            | _(none)_                          | URL of shared cache API (same as CORS proxy when R2 is enabled)                            |
-| `ALLOWED_ORIGINS`         | Worker (`wrangler.toml`)     | gitstrata.com + Pages previews    | Comma-separated CORS allowlist (`https://*.host` wildcards OK); override in `.dev.vars`    |
+| `ALLOWED_ORIGINS`         | Worker (`wrangler.toml`)     | gitstrata.com, www + previews     | Comma-separated CORS allowlist (`https://*.host` wildcards OK); override in `.dev.vars`    |
 | `WRITE_KEY_HASHES`        | Worker secret / `.dev.vars`  | _(none)_                          | Comma-separated SHA-256 hex digests of the personal write keys (see step 3)                |
 | `PUBLIC_ANALYTICS_ID`     | Frontend (`.env`)            | _(none)_                          | Umami website ID (UUID from your Umami dashboard) — set to enable tracking                 |
 | `ANALYTICS_UPSTREAM`      | Pages Function (runtime var) | git strata's Umami instance       | Your Umami server URL that `/u/*` proxies to (for example, `https://umami.yourdomain.com`) |

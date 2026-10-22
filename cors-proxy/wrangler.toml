@@ -6,7 +6,7 @@ compatibility_date = "2025-01-01"
 # CORS origin allowlist: comma-separated exact origins, or `https://*.<host>` for one subdomain label (Cloudflare Pages
 # preview and branch builds). Other sites' requests get 403. Override locally via .dev.vars (for example
 # `ALLOWED_ORIGINS="http://localhost:<port>"`); an empty value allows any origin.
-ALLOWED_ORIGINS = "https://gitstrata.com,https://*.git-strata.pages.dev"
+ALLOWED_ORIGINS = "https://gitstrata.com,https://www.gitstrata.com,https://*.git-strata.pages.dev"
 
 # Shared results cache. Create the bucket first (see docs/deploying.md step 3).
 # Cache writes need the `WRITE_KEY_HASHES` secret (`wrangler secret put WRITE_KEY_HASHES`): comma-separated SHA-256
