@@ -12,6 +12,7 @@
     import { countingEngineVersion } from '#lib/engine-version.js'
     import { pickRefreshPlan } from '#lib/refresh-plan.js'
     import { createAnalyzer, type AnalyzerHandle } from '#lib/worker/analyzer.api.js'
+    import { repoLabel, trackEvent } from '#lib/analytics.js'
     import type { AnalysisResult, DayStats, ErrorKind, ProgressEvent } from '#lib/types.js'
     import GithubKeyForm from '#lib/components/GithubKeyForm.svelte'
     import RepoInput from '#lib/components/RepoInput.svelte'
@@ -61,6 +62,32 @@
     let rollOnSilent = false
     // Refresh is asking the remote and the shared cache which way to go
     let refreshChecking = $state(false)
+
+    // Analytics: what started the running analysis, and when
+    let runSource: 'fresh' | 'refresh' | 'auto-roll-on' = 'fresh'
+    let runStartedAt = 0
+
+    const trackRunStart = (repoUrl: string, source: typeof runSource) => {
+        runSource = source
+        runStartedAt = Date.now()
+        trackEvent('analysis-start', { repo: repoLabel(repoUrl), source })
+    }
+
+    const trackRunDone = (done: AnalysisResult, uploaded: boolean) => {
+        const isGapDay = (d: DayStats) => d.comments.length === 1 && d.comments[0] === '-'
+        trackEvent('analysis-done', {
+            repo: repoLabel(done.repoUrl),
+            mode: runSource === 'fresh' ? 'full' : 'roll-on',
+            seconds: Math.round((Date.now() - runStartedAt) / 1000),
+            days: done.days.length,
+            commits: done.days.reduce((sum, d) => sum + (isGapDay(d) ? 0 : d.comments.length), 0),
+            uploaded,
+        })
+    }
+
+    const trackRunError = (kind: string) => {
+        trackEvent('analysis-error', { repo: repoLabel(result?.repoUrl ?? lastRepoInput), kind })
+    }
 
     // Timer interval
     let timerInterval = $state<ReturnType<typeof setInterval> | undefined>()
@@ -275,12 +302,13 @@
                 void saveResult(event.result)
                 void uploadServerResult(event.result, {
                     usedGithubToken: tokenForHost(new URL(event.result.repoUrl).hostname) !== undefined,
-                })
+                }).then((uploaded) => trackRunDone(event.result, uploaded))
                 break
             case 'error':
                 stopTimer()
                 if (dayFlushTimeout) clearTimeout(dayFlushTimeout)
                 dayBuffer = []
+                trackRunError(event.kind)
                 if (rollingOn && rollOnSilent) {
                     phase = 'done'
                     break
@@ -360,6 +388,7 @@
                 result = cached
                 repoSizeBytes = cached.repoSizeBytes ?? null
                 phase = 'done'
+                trackEvent('cache-hit', { repo: repoLabel(parsed.url), source: 'local' })
                 void checkForNewCommits(cached, generation)
                 return
             }
@@ -373,6 +402,7 @@
                 repoSizeBytes = serverEntry.result.repoSizeBytes ?? null
                 fromServerCache = true
                 phase = 'done'
+                trackEvent('cache-hit', { repo: repoLabel(parsed.url), source: 'shared' })
                 void saveResult(serverEntry.result)
                 return
             }
@@ -383,6 +413,7 @@
                 if (generation !== analysisGeneration) return
                 if (sizeBytes !== null && sizeBytes > sizeGateThresholdBytes) {
                     sizeGateBytes = sizeBytes
+                    trackEvent('size-gate', { repo: repoLabel(parsed.url) })
                     return
                 }
             }
@@ -398,6 +429,7 @@
             startTimer('clone')
 
             analyzer = createAnalyzer()
+            trackRunStart(parsed.url, 'fresh')
 
             // Move focus to progress area for screen readers
             requestAnimationFrame(() => {
@@ -412,6 +444,7 @@
                 phase = 'error'
                 errorMessage = e instanceof Error ? e.message : 'Analysis failed'
                 errorKind = 'unknown'
+                trackRunError('unknown')
             }
         }
     }
@@ -439,6 +472,7 @@
 
     /** User-facing cancel: also resets URL so stale repo path doesn't linger. */
     const handleUserCancel = () => {
+        trackEvent('analysis-cancel', { repo: repoLabel(lastRepoInput) })
         cancel()
         updateUrl('')
     }
@@ -474,6 +508,7 @@
         startTimer('clone')
         const handle = createAnalyzer()
         analyzer = handle
+        trackRunStart(base.repoUrl, silent ? 'auto-roll-on' : 'refresh')
         try {
             const host = parseRepoUrl(base.repoUrl).host
             await handle.analyzeIncremental(
@@ -486,10 +521,11 @@
         } catch (e) {
             if (generation !== analysisGeneration) return
             stopTimer()
+            // handleProgress may have already reported (and tracked) a classified error
             if (silent) {
                 phase = 'done'
             } else if ((phase as Phase) !== 'error') {
-                // handleProgress may have already reported a classified error
+                trackRunError('unknown')
                 phase = 'error'
                 errorMessage = e instanceof Error ? e.message : 'Refresh failed'
                 errorKind = 'unknown'
@@ -536,6 +572,7 @@
             repoSizeBytes = server.repoSizeBytes ?? repoSizeBytes
             fromServerCache = true
             void saveResult(server)
+            trackEvent('shared-adopt', { repo: repoLabel(server.repoUrl) })
         } else if (plan === 'up-to-date') {
             if (silent) return
             // Nothing new: record that the shown result was confirmed current just now
@@ -561,6 +598,7 @@
 
     /** Stop a roll-on and keep showing the result it started from. */
     const cancelRollOn = () => {
+        trackEvent('analysis-cancel', { repo: repoLabel(result?.repoUrl ?? lastRepoInput) })
         analysisGeneration++
         cancel()
         rollingOn = false

@@ -35,7 +35,8 @@ a Web Worker.
   a GitHub token (may be a private repo). The upload sends `Authorization: Bearer <write key>`, `X-Repo-Url`, and
   `X-Head-Commit` headers plus the gzip body: the proxy never parses the body (free-plan CPU budget, see
   `cors-proxy/CLAUDE.md`), so the headers are what it checks. Errors are caught internally and never propagate. Uses
-  SHA-256 for repo URL hashing and CompressionStream for gzip upload.
+  SHA-256 for repo URL hashing and CompressionStream for gzip upload. The upload resolves to whether the proxy stored it
+  (feeds the `uploaded` analytics prop).
 - `write-key.ts` — Pure storage for the personal shared-cache write key (localStorage `gitstrata-write-key`, every
   storage access in try/catch) and `takeWriteKeyFromHash`, which parses a `#write-key=KEY` handoff link.
   `write-key.svelte.ts` is the reactive wrapper (`writeKeyState.current`, `deleteWriteKey`, `adoptWriteKeyFromUrl`).
@@ -143,6 +144,8 @@ a Web Worker.
   without auto-cloning even when it's stale; Refresh then rolls it on. During a roll-on the chart stays visible with
   `PipelineProgress` above it, silent failures keep the cached chart, and the `done` event saves to IndexedDB and
   uploads to the shared cache like a full run.
+- `analytics.ts` — `trackEvent(name, props)`, a typed no-throw wrapper around Umami's `window.umami?.track`, and
+  `repoLabel(repoUrl)`. The event list lives in `functions/CLAUDE.md` § Custom events.
 - `engine-version.ts` — `countingEngineVersion` (bump whenever counting rules change). Separate from `git/pipeline.ts`
   so the page reads it without bundling isomorphic-git.
 

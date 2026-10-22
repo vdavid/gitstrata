@@ -61,4 +61,15 @@ describe('uploadServerResult', () => {
         expect(headers.get('Content-Encoding')).toBe('gzip')
         expect(init.body).toBeInstanceOf(Blob)
     })
+
+    it('reports whether the upload went through', async () => {
+        vi.stubGlobal('localStorage', makeLocalStorage({ 'gitstrata-write-key': 'my-key' }))
+        expect(await uploadServerResult(result, { usedGithubToken: false })).toBe(true)
+
+        fetchMock.mockImplementation(async () => new Response('Forbidden', { status: 403 }))
+        expect(await uploadServerResult(result, { usedGithubToken: false })).toBe(false)
+
+        vi.stubGlobal('localStorage', makeLocalStorage())
+        expect(await uploadServerResult(result, { usedGithubToken: false })).toBe(false)
+    })
 })

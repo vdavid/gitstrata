@@ -54,15 +54,15 @@ export const fetchServerResult = async (repoUrl: string): Promise<SharedCacheEnt
 /**
  * Upload a result to the shared server cache. Only trusted devices (holding a write key) upload, and never a result
  * analyzed with a GitHub token, since that may be a private repo.
- * No-ops silently on error, without a key, or when the cache is disabled.
+ * No-ops silently on error, without a key, or when the cache is disabled. Resolves to whether the proxy stored it.
  */
 export const uploadServerResult = async (
     result: AnalysisResult,
     { usedGithubToken }: { usedGithubToken: boolean },
-): Promise<void> => {
+): Promise<boolean> => {
     const baseUrl = getBaseUrl()
     const writeKey = readWriteKey()
-    if (!baseUrl || !writeKey || usedGithubToken) return
+    if (!baseUrl || !writeKey || usedGithubToken) return false
 
     try {
         const entry: SharedCacheEntry = {
@@ -77,7 +77,7 @@ export const uploadServerResult = async (
         const compressed = await gzipCompress(JSON.stringify(entry))
 
         // The proxy never parses the body (CPU budget), so the headers tell it what this upload is.
-        await fetch(`${baseUrl}/cache/v1/${repoHash}`, {
+        const response = await fetch(`${baseUrl}/cache/v1/${repoHash}`, {
             method: 'PUT',
             headers: {
                 Authorization: `Bearer ${writeKey}`,
@@ -88,7 +88,9 @@ export const uploadServerResult = async (
             },
             body: compressed,
         })
+        return response.ok
     } catch {
         // Silently ignore — server cache is best-effort
+        return false
     }
 }

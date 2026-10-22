@@ -2,6 +2,7 @@
 
 import { browser } from '$app/env'
 import { readWriteKey, writeWriteKey, clearWriteKey, takeWriteKeyFromHash } from './write-key'
+import { trackEvent } from './analytics'
 
 let current = $state<string | undefined>(browser ? readWriteKey() : undefined)
 
@@ -18,6 +19,7 @@ export const adoptWriteKeyFromUrl = (): void => {
     if (key) {
         writeWriteKey(key)
         current = key
+        trackEvent('write-key-adopted')
     }
     history.replaceState(history.state, '', `${location.pathname}${location.search}${remainingHash}`)
 }
