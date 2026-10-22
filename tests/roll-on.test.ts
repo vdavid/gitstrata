@@ -4,6 +4,7 @@ import * as nodeFs from 'node:fs'
 import * as path from 'node:path'
 import * as os from 'node:os'
 import { analyzeLocalRepo, rollOnAnalysis, type LocalRepo } from '#lib/git/pipeline.js'
+import { countLinesForCommit } from '#lib/git/count.js'
 import type { AnalysisResult, ProgressEvent } from '#lib/types.js'
 
 type Files = Record<string, string>
@@ -228,5 +229,83 @@ describe('rollOnAnalysis', () => {
 
         expect(withoutTimestamp(rolled)).toEqual(withoutTimestamp(cached))
         expect(countProcessedDays(events)).toBe(cached.days.length)
+    })
+})
+
+describe('C/C++ header classification', () => {
+    let repo: Repo
+
+    afterEach(() => repo.cleanup())
+
+    /** `.h` files predate any `.cpp`; a `.cpp` lands on 01-03 and is deleted on 01-05, along with a header edit. */
+    const buildHeaderHistory = async (repo: Repo) => {
+        const c1Files: Files = { 'src/a.h': lines(3, 'h'), 'src/a.c': lines(2, 'c') }
+        const c1 = await repo.commit({ files: c1Files, date: '2024-01-01', parents: [] })
+        const c2Files = { ...c1Files, 'src/b.cpp': lines(4, 'cpp') }
+        const c2 = await repo.commit({ files: c2Files, date: '2024-01-03', parents: [c1] })
+        const base = { ...c1Files, 'src/a.h': lines(3, 'header') }
+        const c3 = await repo.commit({ files: base, date: '2024-01-05', parents: [c2] })
+        return { c1, c2, c3, base }
+    }
+
+    const languagesOn = (result: AnalysisResult, date: string) =>
+        Object.fromEntries(
+            Object.entries(result.days.find((day) => day.date === date)?.languages ?? {}).map(([id, count]) => [
+                id,
+                count.total,
+            ]),
+        )
+
+    it('classifies .h by the tree of each day alone', async () => {
+        repo = createRepo()
+        await repo.init()
+        const { c3 } = await buildHeaderHistory(repo)
+        const result = await analyzeLocalRepo(makeLocalRepo(repo, c3))
+
+        expect(languagesOn(result, '2024-01-01')).toEqual({ c: 5 })
+        expect(languagesOn(result, '2024-01-02')).toEqual({ c: 5 })
+        expect(languagesOn(result, '2024-01-03')).toEqual({ c: 2, cpp: 7 })
+        expect(languagesOn(result, '2024-01-04')).toEqual({ c: 2, cpp: 7 })
+        expect(languagesOn(result, '2024-01-05')).toEqual({ c: 5 })
+        // Velocity counts written lines only: the flips move the `.h` lines between languages without activity
+        const day3 = result.days.find((day) => day.date === '2024-01-03')
+        const day5 = result.days.find((day) => day.date === '2024-01-05')
+        expect([day3?.languageAdded, day3?.languageRemoved]).toEqual([{ cpp: 4 }, {}])
+        expect([day5?.languageAdded, day5?.languageRemoved]).toEqual([{}, { cpp: 4 }])
+    })
+
+    it('rolls on to the same result as a full run after .cpp files came and went', async () => {
+        repo = createRepo()
+        await repo.init()
+        const { c3, base } = await buildHeaderHistory(repo)
+        const cached = await analyzeLocalRepo(makeLocalRepo(repo, c3))
+
+        const c4 = await repo.commit({
+            files: { ...base, 'src/a.c': lines(6, 'c') },
+            date: '2024-01-07',
+            parents: [c3],
+        })
+        const full = await analyzeLocalRepo(makeLocalRepo(repo, c4))
+        const rolled = await rollOnAnalysis(makeLocalRepo(repo, c4), cached)
+
+        expect(languagesOn(full, '2024-01-07')).toEqual({ c: 9 })
+        expect(withoutTimestamp(rolled)).toEqual(withoutTimestamp(full))
+    })
+
+    it('ignores cached .h decisions made under a different tree', async () => {
+        repo = createRepo()
+        await repo.init()
+        const { c1, c2 } = await buildHeaderHistory(repo)
+        const blobCache = new Map()
+        const countAt = (commitOid: string) =>
+            countLinesForCommit(
+                { fs: repo.fs, dir: repo.dir, commitOid, blobCache, contentCache: new Map() },
+                '2024-01-01',
+                [],
+            )
+
+        expect((await countAt(c1)).languages.c?.total).toBe(5)
+        // Same `.h` blob and path, now next to a `.cpp`: the shared cache must not answer "C"
+        expect((await countAt(c2)).languages.cpp?.total).toBe(7)
     })
 })

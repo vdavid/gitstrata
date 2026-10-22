@@ -75,14 +75,10 @@ starts automatically, with the chart staying visible and progress shown.
     - Lazily fetch any older objects needed for per-commit attribution: `want <oid>` with `filter=tree:0`, which GitHub
       and GitLab support for partial clones.
     - Needs a spike first.
-2. **Fix tree-dependent classification.** The `.h` → C++ reassignment uses extensions seen across history (an
-   accumulated `allExtensions` set, plus a `blobCache` keyed by OID and path). So a rewound seed count can differ
-   slightly from the original pass for C/C++ repos with `.h` files that predate their `.cpp` files. Make classification
-   a pure function of the current tree.
-3. **Consider a first-parent day model** ("what the default branch looked like that day", bucketed by when commits
+2. **Consider a first-parent day model** ("what the default branch looked like that day", bucketed by when commits
    landed). It's append-only, so refreshes never rewind, and it removes branch interleaving from the language state.
    It's a product change (PR work shows on its merge day), so it's David's call.
-4. **Add Umami events** for analysis started, finished, served from cache, and rolled on, to see whether this works in
+3. **Add Umami events** for analysis started, finished, served from cache, and rolled on, to see whether this works in
    practice.
 
 ## Later: peer verification at scale
@@ -94,7 +90,8 @@ earlier design is in git history (`docs/specs/peer-verified-cache-plan.md`, comm
 - Promotion needs one matching full analysis from another network, plus K spot-checks. A spot-check is a random
   visitor's browser counting one day's commit snapshot and checking that day's messages and authors.
 - Tasks are opaque, single-use, and network-bound, with known-answer canary tasks mixed in.
-- Prerequisites: per-day commit OIDs, tree-pure classification (item 2 above), and a canonical serialization.
+- Prerequisites: per-day commit OIDs, tree-pure classification (done: `.h` follows each commit's own tree), and a
+  canonical serialization.
 - **The free-plan constraint changes the earlier design**: the Worker can't parse results. So all content checks run in
   voters' browsers, and the Worker only stores blobs and keeps the vote ledger (D1 free tier).
 
@@ -115,6 +112,8 @@ earlier design is in git history (`docs/specs/peer-verified-cache-plan.md`, comm
 - [x] Refresh uses it, cloning first when there's no local clone; auto roll-on when the remote HEAD moved
 - [x] Equivalence test: incremental after new commits (including a back-dated merge) equals a full analysis
 - [x] Docs (`src/lib/CLAUDE.md`)
+- [x] Tree-pure `.h` classification (C++ only while the tree has `.cpp`-style files), engine version 2, roll-on and
+      cache-independence tests
 
 ### Milestone 3: land and verify
 

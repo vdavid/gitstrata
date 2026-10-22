@@ -7,6 +7,7 @@ import {
     countLinesForCommitIncremental,
     LruMap,
     type FileState,
+    type TreeLanguageState,
 } from './count'
 import { createMailmapLookup, readMailmapFromRepo, readMailmapOid } from './mailmap'
 import { countingEngineVersion } from '../engine-version'
@@ -21,7 +22,7 @@ interface ProcessingState {
     prevCommitOid: string | undefined
     prevDay: DayStats | undefined
     fileStateMap: Map<string, FileState>
-    allExtensions: Set<string>
+    treeLanguage: TreeLanguageState
     authorLineTotals: Map<string, number>
 }
 
@@ -43,7 +44,7 @@ const createEmptyState = (): ProcessingState => ({
     prevCommitOid: undefined,
     prevDay: undefined,
     fileStateMap: new Map(),
-    allExtensions: new Set(),
+    treeLanguage: { cppSourceCount: 0 },
     authorLineTotals: new Map(),
 })
 
@@ -61,7 +62,7 @@ const processDays = async (params: {
 }): Promise<DayStats[]> => {
     const { fs, dir, dayEntries, caches, state, signal, onProgress } = params
     const { blobCache, contentCache, treeCache, gitCache } = caches
-    const { fileStateMap, allExtensions, authorLineTotals } = state
+    const { fileStateMap, treeLanguage, authorLineTotals } = state
     const totalDays = dayEntries.length
     const days: DayStats[] = []
 
@@ -80,7 +81,7 @@ const processDays = async (params: {
                       signal,
                   },
                   fileStateMap,
-                  allExtensions,
+                  treeLanguage,
                   date,
                   messages,
               )
@@ -92,7 +93,7 @@ const processDays = async (params: {
                       blobCache,
                       contentCache,
                       fileStateMap,
-                      allExtensions,
+                      treeLanguage,
                       treeCache,
                       gitCache,
                       signal,
@@ -136,7 +137,8 @@ const processDays = async (params: {
                             blobCache,
                             contentCache,
                             treeCache,
-                            allExtensions,
+                            // `treeLanguage` describes this commit's tree: it was just counted
+                            treeHasCppSources: treeLanguage.cppSourceCount > 0,
                             gitCache,
                         })
 
@@ -335,7 +337,7 @@ export const rollOnAnalysis = async (repo: LocalRepo, cachedResult: AnalysisResu
             blobCache: caches.blobCache,
             contentCache: caches.contentCache,
             fileStateMap: state.fileStateMap,
-            allExtensions: state.allExtensions,
+            treeLanguage: state.treeLanguage,
             treeCache: caches.treeCache,
             gitCache,
             signal,

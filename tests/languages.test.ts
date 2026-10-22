@@ -3,6 +3,7 @@ import {
     getLanguageByExtension,
     getLanguages,
     resolveHeaderLanguage,
+    isCppSourceExtension,
     matchPattern,
     isTestFile,
     isInTestDir,
@@ -69,24 +70,24 @@ describe('getLanguageByExtension', () => {
 })
 
 describe('resolveHeaderLanguage', () => {
-    it('assigns .h to C when no C++ files exist', () => {
-        const map = resolveHeaderLanguage(new Set(['.c', '.h']))
-        expect(map.get('.h')?.id).toBe('c')
+    it('assigns .h to C when the tree has no C++ sources', () => {
+        expect(resolveHeaderLanguage(false).get('.h')?.id).toBe('c')
     })
 
-    it('reassigns .h to C++ when .cpp files exist', () => {
-        const map = resolveHeaderLanguage(new Set(['.cpp', '.h']))
-        expect(map.get('.h')?.id).toBe('cpp')
+    it('reassigns .h to C++ when the tree has C++ sources', () => {
+        expect(resolveHeaderLanguage(true).get('.h')?.id).toBe('cpp')
     })
 
-    it('reassigns .h to C++ when .cc files exist', () => {
-        const map = resolveHeaderLanguage(new Set(['.cc', '.h']))
-        expect(map.get('.h')?.id).toBe('cpp')
+    it('leaves other extensions alone', () => {
+        expect(resolveHeaderLanguage(true).get('.c')?.id).toBe('c')
+        expect(resolveHeaderLanguage(false).get('.hpp')?.id).toBe('cpp')
     })
+})
 
-    it('reassigns .h to C++ when .cxx files exist', () => {
-        const map = resolveHeaderLanguage(new Set(['.cxx', '.h']))
-        expect(map.get('.h')?.id).toBe('cpp')
+describe('isCppSourceExtension', () => {
+    it('recognizes .cpp, .cc, and .cxx only', () => {
+        expect(['.cpp', '.cc', '.cxx'].every(isCppSourceExtension)).toBe(true)
+        expect(['.h', '.hpp', '.c', ''].some(isCppSourceExtension)).toBe(false)
     })
 })
 

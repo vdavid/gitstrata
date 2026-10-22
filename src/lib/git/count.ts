@@ -1,7 +1,14 @@
 import git, { type FsClient } from 'isomorphic-git'
 import type { LanguageDefinition } from '../types'
 import type { DayStats, LanguageCount } from '../types'
-import { defaultTestDirPatterns, getLanguages, isInTestDir, isTestFile, resolveHeaderLanguage } from '../languages'
+import {
+    defaultTestDirPatterns,
+    getLanguages,
+    isCppSourceExtension,
+    isInTestDir,
+    isTestFile,
+    resolveHeaderLanguage,
+} from '../languages'
 
 /**
  * Map with LRU eviction — entries beyond maxSize are evicted oldest-first.
@@ -214,8 +221,21 @@ export interface FileState {
     testLines: number
 }
 
-const makeBlobCacheKey = (oid: string, filePath: string): string => {
-    return `${oid}\0${filePath}`
+/**
+ * The tree-wide facts that classification depends on, kept in step with `fileStateMap`.
+ * `cppSourceCount` counts `.cpp`/`.cc`/`.cxx` paths in the current tree and decides whether `.h` is C or C++.
+ */
+export interface TreeLanguageState {
+    cppSourceCount: number
+}
+
+const isHeaderPath = (path: string): boolean => getExtension(path).toLowerCase() === '.h'
+
+const isCppSourcePath = (path: string): boolean => isCppSourceExtension(getExtension(path).toLowerCase())
+
+/** Keyed by language too: the same `.h` blob is C in one tree and C++ in another. */
+const makeBlobCacheKey = (oid: string, filePath: string, languageId: string | undefined): string => {
+    return `${oid}\0${filePath}\0${languageId ?? ''}`
 }
 
 interface FileEntry {
@@ -286,8 +306,8 @@ interface CountOptions {
     signal?: AbortSignal
     /** If provided, populated with per-file state for incremental diffing */
     fileStateMap?: Map<string, FileState>
-    /** If provided, updated with all file extensions seen */
-    allExtensions?: Set<string>
+    /** If provided, set to the counted tree's language facts for incremental diffing */
+    treeLanguage?: TreeLanguageState
     /** Tree object cache: treeOid -> entries (shared across commits for massive speedup) */
     treeCache?: Map<string, TreeEntry[]>
     /** isomorphic-git object cache — pass the same object to all git calls for in-memory caching */
@@ -359,7 +379,7 @@ export const countLinesForCommit = async (
     date: string,
     messages: string[],
 ): Promise<DayStats> => {
-    const { fs, dir, commitOid, blobCache, contentCache, signal, fileStateMap, allExtensions, treeCache, gitCache } =
+    const { fs, dir, commitOid, blobCache, contentCache, signal, fileStateMap, treeLanguage, treeCache, gitCache } =
         options
 
     const effectiveTreeCache = treeCache ?? new Map<string, TreeEntry[]>()
@@ -375,14 +395,10 @@ export const countLinesForCommit = async (
         throw new Error('Cancelled')
     }
 
-    // Collect all extensions to resolve .h ambiguity
-    const localExtensions = new Set<string>()
-    for (const file of files) {
-        const ext = getExtension(file.path).toLowerCase()
-        localExtensions.add(ext)
-        if (allExtensions) allExtensions.add(ext)
-    }
-    const extensionMap = resolveHeaderLanguage(allExtensions ?? localExtensions)
+    // `.h` is C or C++ depending on this tree alone
+    const cppSourceCount = files.filter((file) => isCppSourcePath(file.path)).length
+    if (treeLanguage) treeLanguage.cppSourceCount = cppSourceCount
+    const extensionMap = resolveHeaderLanguage(cppSourceCount > 0)
 
     // Process all files in parallel with concurrency limit
     const limit = createLimiter(8)
@@ -446,7 +462,7 @@ const processFile = async (
     dir: string,
     blobCache: Map<string, BlobCacheEntry>,
     contentCache: Map<string, string>,
-    extensionMap: Map<string, LanguageDefinition>,
+    extensionMap: ReadonlyMap<string, LanguageDefinition>,
     gitCache?: object,
 ): Promise<FileState> => {
     if (shouldSkip(filePath)) {
@@ -456,7 +472,7 @@ const processFile = async (
     const ext = getExtension(filePath).toLowerCase()
     const lang = extensionMap.get(ext)
 
-    const cacheKey = makeBlobCacheKey(oid, filePath)
+    const cacheKey = makeBlobCacheKey(oid, filePath, lang?.id)
     const cached = blobCache.get(cacheKey)
     if (cached) {
         return { oid, languageId: cached.languageId, lines: cached.lines, testLines: cached.testLines }
@@ -597,7 +613,7 @@ export const diffTreesDetailed = async (options: {
 export const countLinesForCommitIncremental = async (
     options: CountOptions & { prevCommitOid: string },
     fileStateMap: Map<string, FileState>,
-    allExtensions: Set<string>,
+    treeLanguage: TreeLanguageState,
     date: string,
     messages: string[],
 ): Promise<DayStats> => {
@@ -641,21 +657,29 @@ export const countLinesForCommitIncremental = async (
 
     if (signal?.aborted) throw new Error('Cancelled')
 
-    // Process deletions
+    // Apply the diff to the C++-source counter (a modified file keeps its path, so it can't change the count)
+    const hadCppSources = treeLanguage.cppSourceCount > 0
     for (const filepath of deleted) {
         fileStateMap.delete(filepath)
+        if (isCppSourcePath(filepath)) treeLanguage.cppSourceCount--
     }
-
-    // Update allExtensions with new/modified files
-    for (const file of [...added, ...modified]) {
-        allExtensions.add(getExtension(file.path).toLowerCase())
+    for (const file of added) {
+        if (isCppSourcePath(file.path)) treeLanguage.cppSourceCount++
     }
+    const hasCppSources = treeLanguage.cppSourceCount > 0
+    const extensionMap = resolveHeaderLanguage(hasCppSources)
 
-    // Re-resolve header language mapping with updated extensions
-    const extensionMap = resolveHeaderLanguage(allExtensions)
+    // When `.h` flips between C and C++, unchanged headers need reclassifying too. Flips are rare.
+    const changedPaths = new Set([...added, ...modified].map((file) => file.path))
+    const reclassifiedHeaders: FileEntry[] =
+        hasCppSources === hadCppSources
+            ? []
+            : [...fileStateMap]
+                  .filter(([path]) => isHeaderPath(path) && !changedPaths.has(path))
+                  .map(([path, state]) => ({ path, oid: state.oid }))
 
-    // Process added and modified files in parallel with concurrency limit
-    const changedFiles = [...added, ...modified]
+    // Process added, modified, and reclassified files in parallel with concurrency limit
+    const changedFiles = [...added, ...modified, ...reclassifiedHeaders]
     const limit = createLimiter(8)
     const fileResults = await Promise.all(
         changedFiles.map((file) => {
@@ -689,10 +713,14 @@ export const computeCommitContribution = async (options: {
     blobCache: Map<string, BlobCacheEntry>
     contentCache: Map<string, string>
     treeCache: Map<string, TreeEntry[]>
-    allExtensions: Set<string>
+    /**
+     * Whether the commit's own tree holds C++ sources. Both sides of the diff use the commit's `.h` mapping, so a
+     * header edit lands on one language and a C/C++ flip alone (no lines written) isn't counted as activity.
+     */
+    treeHasCppSources: boolean
     gitCache?: object
 }): Promise<CommitContribution> => {
-    const { fs, dir, commitOid, parentOid, blobCache, contentCache, treeCache, allExtensions, gitCache } = options
+    const { fs, dir, commitOid, parentOid, blobCache, contentCache, treeCache, treeHasCppSources, gitCache } = options
 
     // Read commit tree OIDs
     const currCommit = await git.readCommit({ fs, dir, oid: commitOid, cache: gitCache })
@@ -714,7 +742,7 @@ export const computeCommitContribution = async (options: {
         gitCache,
     })
 
-    const extensionMap = resolveHeaderLanguage(allExtensions)
+    const extensionMap = resolveHeaderLanguage(treeHasCppSources)
     const limit = createLimiter(8)
 
     const languageAdded: Record<string, number> = {}

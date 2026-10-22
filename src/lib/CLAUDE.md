@@ -11,8 +11,9 @@ a Web Worker.
   AnalysisResult (includes `headCommit` for freshness checking, optional `totalContributors`, and the roll-on guards
   `mailmapOid` (root `.mailmap` blob OID, `''` when absent) and `engineVersion`), SharedCacheEntry, ProgressEvent
 - `languages.ts` — Language registry (~35 languages), extension mapping, test file/dir pattern matching, Rust and Zig
-  inline test detection. `.h` defaults to C but reassigns to C++ when `.cpp`/`.cc`/`.cxx` files exist. Languages can set
-  `noTestSplit: true` to skip prod/test breakdown (used for HTML, CSS, SQL, Shell, Svelte, Vue, Astro, Docs, Config).
+  inline test detection. `.h` is C, or C++ when the CURRENT commit tree holds a `.cpp`/`.cc`/`.cxx` file
+  (`resolveHeaderLanguage(treeHasCppSources)` returns one of two prebuilt maps). Languages can set `noTestSplit: true`
+  to skip prod/test breakdown (used for HTML, CSS, SQL, Shell, Svelte, Vue, Astro, Docs, Config).
 - `url.ts` — Repo URL parsing and normalization (GitHub/GitLab/Bitbucket, owner/repo shorthand)
 - `github-token.ts` — Pure (non-reactive) GitHub personal access token storage and verification. localStorage under
   `gitstrata-github-token` (`{ token, account, addedAt }`). `verifyGithubToken` hits `api.github.com/user` directly
@@ -78,7 +79,16 @@ a Web Worker.
   recursively diffs two tree OIDs and returns a discriminated union of diff entries (added/modified/deleted) with path
   and relevant OIDs. `countLinesForCommitIncremental` delegates to `diffTreesDetailed` internally.
   `computeCommitContribution` (exported) computes per-language lines added/removed for a single commit vs its git parent
-  (not the previous commit in timestamp order), returning `languageAdded`, `languageRemoved`, and totals.
+  (not the previous commit in timestamp order), returning `languageAdded`, `languageRemoved`, and totals. It takes
+  `treeHasCppSources` for the commit being attributed and classifies BOTH diff sides with that `.h` mapping, so a C/C++
+  flip alone never shows up as activity.
+- Classification is a pure function of each commit's tree (regression anchor: `tests/roll-on.test.ts` "C/C++ header
+  classification"). `TreeLanguageState.cppSourceCount` counts `.cpp`/`.cc`/`.cxx` paths in the current tree: set by the
+  full count, then kept in step with `fileStateMap` by the incremental diff (added +1, deleted −1). When the count
+  crosses zero, `countLinesForCommitIncremental` reclassifies every unchanged `.h` entry through `processFile` (rare, so
+  re-reading blobs is fine). Decision/Why: an earlier accumulated-across-history extension set plus a language-blind
+  `blobCache` made a day's counts depend on processing order and cache pressure, so roll-on could disagree with a full
+  run.
 - `git/pipeline.ts` — Analysis of an already cloned repo on any `FsClient` (node fs in tests, LightningFS in the
   worker). `analyzeLocalRepo` runs the full history; `rollOnAnalysis` rolls a cached result forward (see "Roll-on
   refresh" below). Both share one `processDays` with a seedable `ProcessingState`. Reads `.mailmap` via
@@ -107,8 +117,9 @@ a Web Worker.
   entries, line counts). All layers are complementary.
 - Blob dedup: `contentCache` (OID -> decoded UTF-8 content) avoids redundant reads within a single commit — cleared
   after each commit to bound memory. `blobCache` (`LruMap`, 100K cap, OID+path -> result) avoids redundant
-  classification across commits. `treeCache` (`LruMap`, 10K cap) bounds parsed tree entry storage. These Maps are safe
-  for concurrent async access because JavaScript is single-threaded (Map operations are atomic between await points).
+  classification across commits; its key includes the language ID because the same `.h` blob is C in one tree and C++ in
+  another. `treeCache` (`LruMap`, 10K cap) bounds parsed tree entry storage. These Maps are safe for concurrent async
+  access because JavaScript is single-threaded (Map operations are atomic between await points).
 - Non-UTF-8 handling: `processFile` uses `TextDecoder('utf-8', { fatal: true })`. On decode failure, line counts are
   computed from raw bytes (0x0A counting) and inline test detection is skipped.
 - Diff-based processing: After the first commit (full tree walk via `listFilesAtCommitCached`), subsequent commits use
@@ -129,11 +140,9 @@ a Web Worker.
     - Otherwise, new commits = reachable from new HEAD but not from cached HEAD. Days are bucketed by AUTHOR date, so a
       merged branch can add commits to days long before the last cached day. The first day bucket holding a new commit
       is the earliest affected day; the bucket before it is the seed. Cached days up to the seed are kept verbatim; the
-      seed's last commit gets one full tree count (`fileStateMap`, `allExtensions`), contributors are seeded from the
-      cached seed day, and `processDays` recounts everything after the seed (including gap days).
-    - Known limit: `allExtensions` is seeded from the seed tree only, while a full run accumulates extensions of every
-      file ever seen. That only matters for `.h` C/C++ resolution when `.cpp`-style files existed earlier and were
-      deleted before the seed day.
+      seed's last commit gets one full tree count (`fileStateMap`, `treeLanguage`), contributors are seeded from the
+      cached seed day, and `processDays` recounts everything after the seed (including gap days). Because classification
+      depends only on the current tree, the seed count matches the full run's state exactly.
 - `+page.svelte` wiring: On a local cache hit, the page checks the remote HEAD in the background (`getRemoteHead`); when
   it moved, it goes through `refreshFromBestSource`, as does the Refresh button (which fetches the remote HEAD first).
   That fetches the shared entry and asks `pickRefreshPlan` (`refresh-plan.ts`, pure, tested in

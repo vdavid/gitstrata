@@ -359,21 +359,26 @@ export const getLanguageByExtension = (ext: string): LanguageDefinition | undefi
 /** Get all registered language definitions */
 export const getLanguages = (): readonly LanguageDefinition[] => languages
 
-/**
- * Check if the repo has C++ files, and if so, reassign .h to C++.
- * Call this once per commit tree before processing files.
- */
-export const resolveHeaderLanguage = (extensions: Set<string>): Map<string, LanguageDefinition> => {
+const cppSourceExtensions = new Set(['.cpp', '.cc', '.cxx'])
+
+/** Whether a lowercase extension marks a C++ source file, which turns `.h` headers in the same tree into C++. */
+export const isCppSourceExtension = (ext: string): boolean => cppSourceExtensions.has(ext)
+
+const buildCppExtensionMap = (): Map<string, LanguageDefinition> => {
     const map = new Map(extensionToLanguageMap)
-    const hasCpp = extensions.has('.cpp') || extensions.has('.cc') || extensions.has('.cxx')
-    if (hasCpp) {
-        const cppLang = languages.find((l) => l.id === 'cpp')
-        if (cppLang) {
-            map.set('.h', cppLang)
-        }
-    }
+    const cppLang = languages.find((l) => l.id === 'cpp')
+    if (cppLang) map.set('.h', cppLang)
     return map
 }
+
+const cppExtensionMap = buildCppExtensionMap()
+
+/**
+ * The extension map for one commit tree: `.h` is C++ when that tree holds a `.cpp`/`.cc`/`.cxx` file, C otherwise.
+ * Depends only on the current tree, so a day's counts never depend on history or processing order.
+ */
+export const resolveHeaderLanguage = (treeHasCppSources: boolean): ReadonlyMap<string, LanguageDefinition> =>
+    treeHasCppSources ? cppExtensionMap : extensionToLanguageMap
 
 /**
  * Match a filename against a glob-style pattern.

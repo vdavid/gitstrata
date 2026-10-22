@@ -345,7 +345,7 @@ describe('computeCommitContribution', () => {
         blobCache: new Map(),
         contentCache: new Map(),
         treeCache: new Map(),
-        allExtensions: new Set(['.ts']),
+        treeHasCppSources: false,
     })
 
     it('counts all lines as added for root commit (no parent)', async () => {
